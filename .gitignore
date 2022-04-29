@@ -1,0 +1,25 @@
+# Devtools
+.idea/*
+/**/.idea/*
+.vscode/
+__debug_bin
+info
+
+dist/
+bin/
+
+# Mac files
+.DS_Store
+bin/gen
+bin/goagen
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+*.tgz
+kubeconfig
+env/*
+!env/sample.env
+*.bak
