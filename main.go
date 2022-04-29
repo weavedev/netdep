@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 Team 1, Weave BV, TU Delft 
+Copyright © 2022 Team 1, Weave BV, TU Delft
 
 */
 package main

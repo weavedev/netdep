@@ -1,0 +1,35 @@
+image: golang:1.18
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - test
+
+compile-job:
+  stage: build
+  script:
+  - go build
+
+lint-job:
+  image: registry.gitlab.com/gitlab-org/gitlab-build-images:golangci-lint-alpine
+  stage: test
+  script:
+    # Use default .golangci.yml file from the image if one is not present in the project root.
+    - '[ -e .golangci.yml ] || cp /golangci/.golangci.yml .'
+    # Write the code coverage report to gl-code-quality-report.json
+    # and print linting issues to stdout in the format: path/to/file:line description
+    # remove `--issues-exit-code 0` or set to non-zero to fail the job if linting issues are detected
+    # ./lint.sh
+    - golangci-lint run
+  allow_failure: true
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - gl-code-quality-report.json
+
+test-job:
+  stage: test
+  script:
+  - go test ./... # Could be extended with -cover for test coverage
+
+
