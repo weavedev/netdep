@@ -3,7 +3,7 @@
 /weight
 /assign
 /label
-/milestone 
+/milestone %
 /estimate
 
 More quick actions: https://docs.gitlab.com/ee/user/project/quick_actions.html
@@ -23,6 +23,6 @@ Weights:
 <!-- Describe how you plan to resolve the issue or add a new feature!-->
 
 ## Definition of Done
-<!-- Here you can keep a list of TODO>
+<!-- Here you can keep a list of TODO!-->
 - [ ] 
 
