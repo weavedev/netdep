@@ -17,11 +17,11 @@ Returns a map with:
 */
 func ScanAndFilter(svcDir string) map[string][]*ast.File {
 	// // TODO: a sample outline is as follows:
-	//var servicesList = findAllServices(svcDir)
-	//for i := 0; i < len(servicesList); i++ {
+	// var servicesList = findAllServices(svcDir)
+	// for i := 0; i < len(servicesList); i++ {
 	//	var res = filter(servicesList[i], nil)
 	//	//TODO: add to map the resulting AST array
-	//}
+	// }
 	return nil
 }
 

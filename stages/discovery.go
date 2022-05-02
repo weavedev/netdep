@@ -13,7 +13,7 @@ A sample method for locating the callers of a specific endpoint,
 which is specified by the name of its parent service, its path in the target project,
 and its URI.
 */
-func FindCallersForEndpoint(parentService string, endpointPath string, endpointURI string) []interface{} {
+func FindCallersForEndpoint(parentService, endpointPath, endpointURI string) []interface{} {
 	// This is a placeholder; the signature of this method might need to be changed.
 	// Return empty slice for now.
 	return nil
