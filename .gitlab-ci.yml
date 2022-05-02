@@ -21,12 +21,6 @@ lint-job:
     # ./lint.sh
     - golangci-lint run
   allow_failure: true
-  artifacts:
-    reports:
-      codequality: gl-code-quality-report.json
-    paths:
-      - gl-code-quality-report.json
-
 test-job:
   stage: test
   script:
