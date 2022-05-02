@@ -35,3 +35,4 @@ linters:
 
 run:
   issues-exit-code: 10
+  modules-download-mode: vendor
