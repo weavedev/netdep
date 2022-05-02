@@ -8,3 +8,7 @@ This is done by traversing the lists of endpoints/clients and looking for the ot
 The Building stage should handle
 Refer to the Project plan, chapter 5.4 for more information.
 */
+
+func ConstructOutput(dataStructure interface{}) string {
+	return "{ type: \"error\", message: \"Not Implemented\" }"
+}
