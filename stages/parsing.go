@@ -16,6 +16,6 @@ Refer to the Project plan, chapter 5 for more information.
 /**
 A placeholder Call Graph creation method
 */
-func CreateCallGraph(ast []*ast.File) callgraph.Graph {
+func CreateCallGraph(astInst []*ast.File) callgraph.Graph {
 	return callgraph.Graph{}
 }
