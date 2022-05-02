@@ -12,6 +12,10 @@ wrapped HTTP types and methods (see https://pkg.go.dev/golang.org/x/tools/go/cal
 Refer to the Project plan, chapter 5 for more information.
 */
 
-func createCallGraph(ast []*ast.File) callgraph.Graph {
+// CreateCallGraph
+/**
+A placeholder Call Graph creation method
+*/
+func CreateCallGraph(ast []*ast.File) callgraph.Graph {
 	return callgraph.Graph{}
 }

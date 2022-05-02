@@ -8,3 +8,13 @@ Map<String(serviceName), Map<String(variable name), String(variable value)>>.
 This map is the output of the resolving stage.
 Refer to the Project plan, chapter 5.2 for more information.
 */
+
+func ResolveEnvVars(svcDir string) map[string]map[string]interface{} {
+	//TODO: Implement the resolution of environment variables
+	var testSvcName = svcDir + "SampleService"
+	m := make(map[string]map[string]interface{})
+	m[testSvcName] = make(map[string]interface{})
+	m[testSvcName]["VariableNameA"] = "1"
+	m[testSvcName]["VariableNameB"] = "False"
+	return m
+}
