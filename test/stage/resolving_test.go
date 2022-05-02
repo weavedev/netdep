@@ -2,7 +2,7 @@ package stage
 
 import (
 	"github.com/stretchr/testify/assert"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stage"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 	"testing"
 )
 
@@ -10,7 +10,7 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestResolving(t *testing.T) {
-	var res = stage.ResolveEnvVars("test")
+	var res = stages.ResolveEnvVars("test")
 
 	var expected = map[string]map[string]interface{}{
 		"testSampleService": {
