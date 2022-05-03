@@ -1,3 +1,6 @@
+// Package stages
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+
 package stages
 
 import (
