@@ -9,6 +9,9 @@ The Building stages should handle
 Refer to the Project plan, chapter 5.4 for more information.
 */
 
+// ConstructOutput
+// TODO: Remove the following line when implementing this method
+//goland:noinspection GoUnusedParameter
 func ConstructOutput(dataStructure interface{}) string {
 	return "{ type: \"error\", message: \"Not Implemented\" }"
 }

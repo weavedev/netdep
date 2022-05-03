@@ -1,7 +1,10 @@
 package stages
 
-import "go/ast"
-import "golang.org/x/tools/go/callgraph"
+import (
+	"go/ast"
+
+	"golang.org/x/tools/go/callgraph"
+)
 
 /*
 Copyright © 2022 Team 1, Weave BV, TU Delft
@@ -16,6 +19,8 @@ Refer to the Project plan, chapter 5 for more information.
 /**
 A placeholder Call Graph creation method
 */
+// TODO: Remove the following line when implementing this method
+//goland:noinspection GoUnusedParameter
 func CreateCallGraph(astInst []*ast.File) callgraph.Graph {
 	return callgraph.Graph{}
 }
