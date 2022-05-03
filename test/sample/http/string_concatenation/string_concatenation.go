@@ -6,6 +6,7 @@ import (
 
 const protocolSeperator string = ":"
 
+// target: GET example.com
 func main() {
 	protocol := "http"
 	host := "example.com"
