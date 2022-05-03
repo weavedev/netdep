@@ -42,8 +42,8 @@ func performRequestWithoutContext(client http.Client, host string) {
 	}
 }
 
-// http call using http request object
-func deadPerformcode(client http.Client, host string) {
+// A http call method that is *NOT* called.
+func deadPerformRequest(client http.Client, host string) {
 	req, _ := http.NewRequest(http.MethodGet, "https://"+host+"/hello4", nil)
 	client.Do(req)
 }
