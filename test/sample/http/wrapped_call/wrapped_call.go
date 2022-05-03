@@ -5,6 +5,7 @@ import (
 )
 
 func wrappedGetCall(url string) {
+	//nolint:errcheck
 	http.Get(url)
 }
 
