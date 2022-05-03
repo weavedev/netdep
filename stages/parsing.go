@@ -1,3 +1,6 @@
+// Package stages
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+
 package stages
 
 import (
@@ -7,8 +10,6 @@ import (
 )
 
 /*
-Copyright © 2022 Team 1, Weave BV, TU Delft
-
 The Parsing stages involves construction of necessary data structures for the analysis of the target project.
 This stages may include constructing the ASTs or some CallGraph structs, which help find usages of
 wrapped HTTP types and methods (see https://pkg.go.dev/golang.org/x/tools/go/callgraph).
