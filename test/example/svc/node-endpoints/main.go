@@ -24,5 +24,6 @@ func main() {
 		fmt.Fprintf(w, "Hello Foo")
 	})
 
+	// http listenAndServe is used in nid-core/svc/connectinmesh/main.go:64
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

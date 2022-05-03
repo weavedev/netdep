@@ -15,14 +15,6 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 )
 
-const (
-	retryMaxWait = 4 * time.Hour
-)
-
-type CallbackHandler struct {
-	Client httpClient.Client
-}
-
 func checkRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
 	if ctx.Err() != nil {
 		return false, ctx.Err()
@@ -32,17 +24,15 @@ func checkRetry(ctx context.Context, resp *http.Response, err error) (bool, erro
 }
 
 // NewCallbackHandler creates a new callback handler with a http retry client.
-func NewCallbackHandler(retryMax int) *CallbackHandler {
+func NewCallbackHandler(retryMax int) httpClient.Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.CheckRetry = checkRetry
 	retryClient.RetryMax = retryMax
-	retryClient.RetryWaitMax = retryMaxWait
+	retryClient.RetryWaitMax = 4 * time.Hour
 
 	httpClient := retryClient.StandardClient()
 
-	return &CallbackHandler{
-		Client: httpClient,
-	}
+	return httpClient
 }
 
 func main() {
@@ -63,5 +53,5 @@ func main() {
 	retryClient := NewCallbackHandler(2)
 	// @mark HTTP request to https://httpbin.org/get
 	req, err := http.NewRequestWithContext(context.Background(), "GET", targetUrl, nil)
-	retryClient.Client.Do(req)
+	retryClient.Do(req)
 }

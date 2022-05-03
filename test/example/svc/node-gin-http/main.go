@@ -4,14 +4,15 @@ import "github.com/gin-gonic/gin"
 
 func main() {
 	// Gin is used as http server in "lab.weave.nl/nid/nid-core/pkg/utilities/httpserver"
-	r := gin.Default()
+	// Used by a number of services
+	app := gin.Default()
 
 	// @mark HTTP endpoint "/ping"
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
+	app.GET("/ping", func(ctx *gin.Context) {
+		ctx.JSON(200, gin.H{
+			"message": "Hello world",
 		})
 	})
 
-	r.Run() // listen and serve on 0.0.0.0:8080
+	app.Run() // listen and serve on 0.0.0.0:8080
 }
