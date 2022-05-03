@@ -1,3 +1,4 @@
+//nolint
 package main
 
 import (
@@ -8,7 +9,6 @@ const protocolSeperator string = ":"
 
 // target: GET example.com
 func main() {
-	//nolint:errcheck
 	protocol := "http"
 	host := "example.com"
 	endpoint := "/"
