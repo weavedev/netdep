@@ -8,7 +8,7 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
-/**
+/*
 A test for the sample implementation of the resolution method
 */
 func TestResolving(t *testing.T) {
