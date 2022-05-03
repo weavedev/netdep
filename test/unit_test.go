@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"testing"
 )
@@ -7,3 +8,4 @@ import (
 func testMethod(t *testing.T) {
 	// ...
 }
+*/

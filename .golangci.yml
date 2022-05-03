@@ -1,0 +1,37 @@
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  govet:
+    check-shadowing: true
+
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - errcheck
+    - goconst
+    - gocritic
+    - goimports
+    - gomnd
+    - gocyclo
+    - gosec
+    - gosimple
+    - govet
+    - misspell
+    - nakedret
+    - staticcheck
+    - structcheck
+    - stylecheck
+
+run:
+  issues-exit-code: 10
