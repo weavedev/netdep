@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 	"net/http"
-
-	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/go-retryablehttp"
+	//"github.com/go-resty/resty/v2"
+	//"github.com/hashicorp/go-retryablehttp"
 )
 
 func main() {
+	// @mark HTTP request to http://httpbin.org/get
 	targetUrl := "http://httpbin.org/get"
 	// resty client get request
 	client := resty.New()
-	resp, err := client.R().Get(targetUrl)
+	_, err := client.R().Get(targetUrl)
 
 	// retryablehttp
 	retryClient := retryablehttp.NewClient()
