@@ -8,9 +8,9 @@ import (
 	"os"
 )
 
-// http call using http request object
+// http call using http request object with context
 func performRequestWithContext(client http.Client, host string) {
-	// intialise request, based on https://github.com/nID-sourcecode/nid-core/blob/main/svc/connectinmesh/main.go
+	// initialise request, based on https://github.com/nID-sourcecode/nid-core/blob/main/svc/connectinmesh/main.go
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://"+host+"/hello", nil)
 
 	// for testing purposes, mutate request object
@@ -29,7 +29,7 @@ func performRequestWithContext(client http.Client, host string) {
 
 // http call using http request object
 func performRequestWithoutContext(client http.Client, host string) {
-	// intialise request, based on https://github.com/nID-sourcecode/nid-core/blob/main/svc/connectinmesh/main.go
+	// initialise request, based on https://github.com/nID-sourcecode/nid-core/blob/main/svc/connectinmesh/main.go
 	req, err := http.NewRequest(http.MethodGet, "https://"+host+"/hello3", nil)
 
 	// @mark HTTP request to https://$OUTSIDE_MESH/hello3
