@@ -1,10 +1,12 @@
-package stage
+package stages
 
 import (
-	"github.com/stretchr/testify/assert"
 	"go/ast"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 	"testing"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
+
+	"github.com/stretchr/testify/assert"
 )
 
 /**
