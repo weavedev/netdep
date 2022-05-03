@@ -1,5 +1,9 @@
 package stages
 
+import (
+	"net/http"
+)
+
 /*
 Copyright © 2022 Team 1, Weave BV, TU Delft
 
@@ -10,5 +14,8 @@ Refer to the Project plan, chapter 5.4 for more information.
 */
 
 func ConstructOutput(dataStructure interface{}) string {
+	resp, err := http.Get("http://example.com/")
+	print(resp)
+	print(err)
 	return "{ type: \"error\", message: \"Not Implemented\" }"
 }
