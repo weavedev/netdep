@@ -1,6 +1,6 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
+Package cmd
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 */
 package cmd
 
@@ -14,6 +14,7 @@ import (
 var projectDir string
 var serviceDir string
 
+// depScanCmd creates and returns a depScan command object
 func depScanCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "depScan",
@@ -23,10 +24,10 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Path validation
-			if ex, err := exists(projectDir); !ex || err != nil {
+			if ex, err := pathExists(projectDir); !ex || err != nil {
 				return fmt.Errorf("invalid project directory specified: %s", projectDir)
 			}
-			if ex, err := exists(serviceDir); !ex || err != nil {
+			if ex, err := pathExists(serviceDir); !ex || err != nil {
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
@@ -43,12 +44,14 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	return cmd
 }
 
+// init initializes the depScan command and adds it as a subcommand of the root
 func init() {
 	depScanCmd := depScanCmd()
 	rootCmd.AddCommand(depScanCmd)
 }
 
-func exists(path string) (bool, error) {
+// pathExists determines whether a given path is valid by checking if it exists
+func pathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true, nil
