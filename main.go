@@ -1,7 +1,6 @@
-/*
-Copyright © 2022 Team 1, Weave BV, TU Delft 
+// Package main
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
-*/
 package main
 
 import "lab.weave.nl/internships/tud-2022/static-analysis-project/cmd"
