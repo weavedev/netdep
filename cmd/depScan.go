@@ -6,19 +6,18 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
+	"os"
 )
 
-var (
-	project_dir string
-	service_dir string
+var project_dir string
+var service_dir string
 
-	depScanCmd = &cobra.Command{
+func depScanCmd() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "depScan",
 		Short: "Scan and report dependencies between microservices",
-		Long: `Outputs network-communication-based dependencies of services within a microservice architecture Golang project. 
+		Long: `Outputs network-communication-based dependencies of services within a microservice architecture Golang project.
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -34,17 +33,18 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			fmt.Println("depScan called")
 			fmt.Println("Project directory: " + project_dir)
 			fmt.Println("Service directory: " + service_dir)
+
 			return nil
 		},
 	}
-)
+	cmd.Flags().StringVarP(&project_dir, "project-directory", "p", "./", "project directory")
+	cmd.Flags().StringVarP(&service_dir, "service-directory", "s", "./svc", "service directory")
+	return cmd
+}
 
 func init() {
+	depScanCmd := depScanCmd()
 	rootCmd.AddCommand(depScanCmd)
-
-	// Here you will define your flags and configuration settings.
-	depScanCmd.PersistentFlags().StringVarP(&project_dir, "project-directory", "p", "./", "project directory")
-	depScanCmd.PersistentFlags().StringVarP(&service_dir, "service-directory", "s", "./svc", "service directory")
 }
 
 func exists(path string) (bool, error) {
