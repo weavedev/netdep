@@ -9,6 +9,10 @@ This map is the output of the resolving stages.
 Refer to the Project plan, chapter 5.2 for more information.
 */
 
+// ResolveEnvVars
+// returns a map as described above, namely:
+//
+// map{ service: map{ var.name: var.value }}
 func ResolveEnvVars(svcDir string) map[string]map[string]interface{} {
 	//TODO: Implement the resolution of environment variables
 	var testSvcName = svcDir + "SampleService"

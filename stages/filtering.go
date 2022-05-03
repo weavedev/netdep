@@ -10,11 +10,11 @@ Refer to the Project plan, chapter 5.1 for more information.
 */
 
 // ScanAndFilter
-/**
-Returns a map with:
-- Key: service name
-- Value: array of the services' ASTs per file
-*/
+// returns a map with:
+//
+// - Key: service name
+//
+// - Value: array of the services' ASTs per file.
 func ScanAndFilter(svcDir string) map[string][]*ast.File {
 	// TODO: perhaps, for each service, filter its contents?
 	var servicesList = findAllServices(svcDir)
@@ -28,10 +28,9 @@ func ScanAndFilter(svcDir string) map[string][]*ast.File {
 }
 
 // FindAllServices
-/**
-A method for finding all services, which takes the path of the svc directory as an argument
-Returns a list of all services.
-*/
+// is a method for finding all services, which takes the path of the svc directory as an argument
+// Returns a list of all services.
+//
 // TODO: Remove the following line when implementing this method
 //goland:noinspection GoUnusedParameter,GoUnusedFunction
 func findAllServices(svcDir string) []string {
@@ -40,10 +39,10 @@ func findAllServices(svcDir string) []string {
 }
 
 // Filter
-/**
-A placeholder method for filtering the directory of a specified service.
-Return a list of ASTs (of each of the files).
-*/
+// is currently a placeholder method for filtering the directory of a specified service.
+//
+// Return a list of ASTs (of each of the files).
+//
 // TODO: Remove the following line when implementing this method
 //goland:noinspection GoUnusedParameter,GoUnusedFunction
 func filter(serviceLoc string, filterList []string) []*ast.File {

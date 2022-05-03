@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/**
+/*
 A test for the sample implementation of the resolution method
 */
 func TestFiltering(t *testing.T) {
