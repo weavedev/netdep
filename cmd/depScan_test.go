@@ -1,10 +1,14 @@
+/*
+Package cmd
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+*/
 package cmd
 
 import (
 	"testing"
 )
 
-func Test_ExecuteDepScan_Full(t *testing.T) {
+func TestExecuteDepScanFull(t *testing.T) {
 
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{
@@ -17,7 +21,7 @@ func Test_ExecuteDepScan_Full(t *testing.T) {
 	}
 }
 
-func Test_ExecuteDepScan_Shorthand(t *testing.T) {
+func TestExecuteDepScanShorthand(t *testing.T) {
 
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{
@@ -30,7 +34,7 @@ func Test_ExecuteDepScan_Shorthand(t *testing.T) {
 	}
 }
 
-func Test_ExecuteDepScan_InvalidProjectDir(t *testing.T) {
+func TestExecuteDepScanInvalidProjectDir(t *testing.T) {
 
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{"--project-directory", "invalid"})
@@ -43,7 +47,7 @@ func Test_ExecuteDepScan_InvalidProjectDir(t *testing.T) {
 	}
 }
 
-func Test_ExecuteDepScan_InvalidServiceDir(t *testing.T) {
+func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
 
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{"--service-directory", "invalid"})
