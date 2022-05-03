@@ -7,5 +7,6 @@ import (
 
 // target: GET $FOO
 func main() {
+	//nolint:errcheck
 	http.Get(os.Getenv("FOO"))
 }
