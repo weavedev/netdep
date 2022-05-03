@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// target: GET example.com
 func main() {
 	host := "example.com"
 	endpoint := ""
