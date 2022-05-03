@@ -42,6 +42,12 @@ func performRequestWithoutContext(client http.Client, host string) {
 	}
 }
 
+// http call using http request object
+func deadPerformcode(client http.Client, host string) {
+	req, _ := http.NewRequest(http.MethodGet, "https://"+host+"/hello4", nil)
+	client.Do(req)
+}
+
 func main() {
 	// initialise http client
 	httpClient := http.Client{}
