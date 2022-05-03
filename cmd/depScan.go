@@ -6,12 +6,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
-var project_dir string
-var service_dir string
+var projectDir string
+var serviceDir string
 
 func depScanCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -22,23 +23,23 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Path validation
-			if ex, err := exists(project_dir); ex == false || err != nil {
-				return fmt.Errorf("invalid project directory specified: %s", project_dir)
+			if ex, err := exists(projectDir); !ex || err != nil {
+				return fmt.Errorf("invalid project directory specified: %s", projectDir)
 			}
-			if ex, err := exists(service_dir); ex == false || err != nil {
-				return fmt.Errorf("invalid service directory specified: %s", service_dir)
+			if ex, err := exists(serviceDir); !ex || err != nil {
+				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
 			fmt.Println("depScan called")
-			fmt.Println("Project directory: " + project_dir)
-			fmt.Println("Service directory: " + service_dir)
+			fmt.Println("Project directory: " + projectDir)
+			fmt.Println("Service directory: " + serviceDir)
 
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&project_dir, "project-directory", "p", "./", "project directory")
-	cmd.Flags().StringVarP(&service_dir, "service-directory", "s", "./svc", "service directory")
+	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
+	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	return cmd
 }
 
