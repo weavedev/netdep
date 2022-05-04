@@ -80,7 +80,6 @@ func discoverCall(call *ssa.Call, params map[string]ssa.Value) {
 		if isInterestingFunction {
 			fmt.Println("Found call to function " + calledFunctionPackage + "." + calledFunction.Name() + "()")
 		}
-
 		if call.Call.Args != nil {
 			arguments := resolveVariables(call.Call.Args, params)
 			fmt.Println("Arguments: " + strings.Join(arguments, ", "))
