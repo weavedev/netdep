@@ -1,37 +1,470 @@
+run:
+  concurrency: 3
+  timeout: 15m
+  issues-exit-code: 1
+  tests: true
+
+  skip-dirs:
+    - design
+    - \.gopath
+  skip-files:
+  #TODO add generated models files
+  # - ".*\\.my\\.go$
+
+  # list of build tags, all linters use it. Default is empty list
+  build-tags:
+    - integration
+
+# output configuration options
+output:
+  # colored-line-number|line-number|json|tab|checkstyle|code-climate, default is "colored-line-number"
+  format: colored-line-number
+
+  # print lines of code with issue, default is true
+  print-issued-lines: true
+
+  # print linter name in the end of issue text, default is true
+  print-linter-name: true
+
+  uniq-by-line: false
+
+# all available settings of specific linters
 linters-settings:
+
+  goimports:
+    local-prefixes: lab.weave.nl
+
   errcheck:
-    check-type-assertions: true
-  goconst:
-    min-len: 2
-    min-occurrences: 3
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
+    check-type-assertions: false
+
+    check-blank: true
+
+    # path to a file containing a list of functions to exclude from checking
+    # see https://github.com/kisielk/errcheck#excluding-functions for details
+    # exclude: /path/to/file.txt
   govet:
-    check-shadowing: true
+    # report about shadowed variables
+    check-shadowing: false
+
+  gofmt:
+    simplify: true
+  gocyclo:
+    min-complexity: 18
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 175
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  funlen:
+    lines: 80
+    statements: 50
+  godox:
+    keywords:
+      - HACK
+      - OPTIMIZE
+      - TODO
+      - BUG
+  misspell:
+    locale: UK
+    ignore-words:
+      - color
+      - Color
+      - unauthorized
+      - Unauthorized
+  lll:
+    line-length: 120
+    tab-width: 2
+  unused:
+    check-exported: false
+
+  unparam:
+    check-exported: false
+
+  nakedret:
+    max-func-lines: 0
+  prealloc:
+    simple: true
+    range-loops: true # Report preallocation suggestions on range loops, true by default
+    for-loops: false # Report preallocation suggestions on for loops, false by default
+  gocritic:
+    enabled-checks:
+
+    disabled-checks:
+      - regexpMust
+
+    enabled-tags:
+      - performance
+
+    settings: # settings passed to gocritic
+      captLocal: # must be valid enabled check name
+        paramsOnly: true
+      rangeValCopy:
+        sizeThreshold: 32
+  gomodguard:
+    blocked:
+      modules:
+        # Standard library
+        - log:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/log/v2"
+            reason: "do not use standard lib, use the generic package"
+        - errors:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/errors"
+            reason: "do not use errors, use the generic package"
+        # Third-party packages
+        - github.com/dgrijalva/jwt-go:
+            recommendations:
+              - "github.com/golang-jwt/jwt"
+            reason: "Package of Dgrijalva is not maintained anymore and contains critical security issues"
+        - goa.design/goa/v2:
+            recommendations:
+              - goa.design/goa/v1
+            reason: "Usa goa version 1."
+        - goa.design/goa/v3:
+            recommendations:
+              - goa.design/goa/v1
+            reason: "Usa goa version 1."
+        - github.com/davecgh/go-spew:
+            recommendations:
+              - "fmt"
+            reason: "Don't use spew, use fmt.Printf(%+v) for example if you really need to print a whole struct"
+        - github.com/sirupsen/logrus:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/log/v2"
+            reason: "Use our internal log package"
+        - github.com/pkg/errors:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/errors"
+            reason: "Use our internal errors package"
+        # Internal packages
+        - lab.weave.nl/wim/goa-to-proto:
+            reason: "alles is lek"
+        - lab.weave.nl/weave/utils:
+            recommendations:
+              - "lab.weave.nl/backend/pkg"
+            reason: "Utils is deprecated, packages are moved to backend/pkg group in separate projects"
+        - lab.weave.nl/weave/utilities/jwks:
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/log/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/log/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/sendinblue:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/postmark/v2"
+            reason: "SendInBlue is the old mailing client, use Postmark instead"
+        - lab.weave.nl/weave/utilities/googlecloud":
+            recommendations:
+              - "lab.weave.nl/backend/pkg/bucket"
+            reason: "GoogleCloud is the old client, use recommended pkg"
+        - lab.weave.nl/backend/pkg/jwks:
+            reason: "Package was internalised in jwks svc"
+        - lab.weave.nl/weave/utilities/archive:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/archive"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/health/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/health/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/quitquitquit:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/quitquitquit"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/validator:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/validator"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/postmark/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/postmark/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/proxywasmfilterutils:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/proxywasmfilterutils"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/recaptcha/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/recaptcha/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/goalogadapter/v3:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/goalogadapter/v3"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/httpserver/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/httpserver/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/tablelogger:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/tablelogger"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/jetstream:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/jetstream"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/uuidparser:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/uuidparser"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/password:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/password"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/bucket:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/bucket"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/auditlogging/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/auditlogging/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/database/v3:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/database/v3"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/gqlclient:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/gqlclient"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/http:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/http"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/objectstorage:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/objectstorage"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/lua:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/lua"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/errors:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/errors"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/oauth:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/oauth"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/location/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/location/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/jwt/v4:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/jwt/v4"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/middleware/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/middleware/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/extproc:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/extproc"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/pushnotifications/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/pushnotifications/v2"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/jsonb:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/jsonb"
+            reason: "Package moved to backend/pkg"
+        - lab.weave.nl/weave/utilities/dates/v2:
+            recommendations:
+              - "lab.weave.nl/backend/pkg/dates/v2"
+            reason: "Package moved to backend/pkg"
+      versions:
+        - lab.weave.nl/backend/pkg/httpserver:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/httpserver/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/recaptcha:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/recaptcha/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/postmark:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/postmark/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/pushnotifications:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/pushnotifications/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/postmark:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/postmark/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/middleware:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/middleware/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/logrus:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/log/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/location:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/location/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/health:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/health/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/goalogadapter:
+            version: "< v3.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/goalogadapter/v3"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/dates:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/dates/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/database:
+            version: "< v3.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/database/v3"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/auditlogging:
+            version: "< v2.0.0"
+            recommendations:
+              - "lab.weave.nl/weave/utilities/auditlogging/v2"
+            reason: "Updated version available"
+        - lab.weave.nl/backend/pkg/jwt:
+            version: "< v4.0.0"
+            recommendations:
+              - "lab.weave.nl/backend/pkg/jwt/v4"
+            reason: "Updated version available"
 
 linters:
-  disable-all: true
+  linters:
+  enable-all: false
+  fast: false
   enable:
+    - asciicheck
+    - bodyclose
     - deadcode
+    - dupl
     - errcheck
+    - exhaustive
+    - exportloopref
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
     - goconst
     - gocritic
+    - gocyclo
+    - godox
+    - goerr113
+    - gofmt
+    - gofumpt
+    - goheader
     - goimports
     - gomnd
-    - gocyclo
+    - gomodguard
+    - goprintffuncname
     - gosec
     - gosimple
     - govet
+    - ineffassign
     - misspell
     - nakedret
+    - nestif
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - sqlclosecheck
     - staticcheck
     - structcheck
     - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - varcheck
+    - whitespace
+    #- wrapcheck # Temporarily disabled to be discussed in backend clan
+    - tparallel
+    - errorlint
+    - predeclared
+    - forbidigo
+    
+# linters not enabled because of:
+#  maligned
+#  prealloc
+#  lll
+#  gci # favour goimports because it's maintained by google
+#  depguard # Use gomodguard
+#  wsl
+#  dogsled
+#  unused # Results in panic: https://github.com/golangci/golangci-lint/issues/979
+#  godot
+#  testpackage
 
-run:
-  issues-exit-code: 10
+
+severity: 
+  default-severity: error
+  rules:
+    - linters:
+        - gomodguard
+      severity: warning
+
+issues:
+  exclude-rules:
+    # For projects that use cobra we allow globals and inits
+    - linters:
+        - gochecknoglobals
+        - gochecknoinits
+      path: cmd/
+
+    - path: _mock\.go
+      linters:
+        - gomnd
+        - gocritic
+
+
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - scopelint
+        - gocritic
+        - funlen
+
+    - linters:
+        - staticcheck
+      text: "SA9003:"
+
+    - linters:
+        - lll
+      text: "^//go:generate "
+
+      # These files are generated by gqlgen
+    - path: schema.resolvers\.go
+      linters:
+        - gocritic
+
+  exclude-use-default: false
+
+  max-issues-per-linter: 0
+
+  max-same-issues: 0
+
+  new: false
+
