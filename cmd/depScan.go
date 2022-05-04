@@ -1,5 +1,5 @@
 /*
-Package cmd
+Package cmd contains all the application command definitions
 Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 */
 package cmd
@@ -11,8 +11,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var projectDir string
-var serviceDir string
+var (
+	projectDir string
+	serviceDir string
+)
 
 // depScanCmd creates and returns a depScan command object
 func depScanCmd() *cobra.Command {
@@ -44,7 +46,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	return cmd
 }
 
-// init initializes the depScan command and adds it as a subcommand of the root
+// init initialises the depScan command and adds it as a subcommand of the root
 func init() {
 	depScanCmd := depScanCmd()
 	rootCmd.AddCommand(depScanCmd)
