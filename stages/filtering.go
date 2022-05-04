@@ -1,4 +1,4 @@
-// Package stages
+// Package stages defines different stages of analysis
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
 package stages
@@ -10,11 +10,8 @@ In the Filtering stages, irrelevant files and directories are removed from the t
 Refer to the Project plan, chapter 5.1 for more information.
 */
 
-// ScanAndFilter
-// returns a map with:
-//
+// ScanAndFilter returns a map with:
 // - Key: service name
-//
 // - Value: array of the services' ASTs per file.
 func ScanAndFilter(svcDir string) map[string][]*ast.File {
 	// TODO: perhaps, for each service, filter its contents?

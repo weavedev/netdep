@@ -1,5 +1,5 @@
 /*
-Package cmd
+Package cmd contains all the application command definitions
 Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 */
 package cmd

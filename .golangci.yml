@@ -1,3 +1,4 @@
+# This .yml file is internally used by Weave and was provided by them.
 run:
   concurrency: 3
   timeout: 15m
@@ -369,7 +370,6 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    #- goerr113
     - gofmt
     - gofumpt
     - goheader
@@ -390,7 +390,7 @@ linters:
     - sqlclosecheck
     - staticcheck
     - structcheck
-    #- stylecheck
+    - stylecheck
     - typecheck
     - unconvert
     - unparam
