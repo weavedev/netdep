@@ -29,7 +29,7 @@ func FindCallersForEndpoint(parentService string, endpointPath string, endpointU
 	// We get the absolute URL of the project as a parameter.
 	// Then we should locate all services and build a graph for each of them, separately.
 	arr := make([]string, 1)
-	arr[0] = "/Users/martynaskrupskis/Documents/code/main"
+	arr[0] = "C:\\Users\\Admin\\repos\\code\\stages"
 	var smth, _ = callgraph.DoCallGraph("", arr)
 	fmt.Println(reflect.TypeOf(smth))
 	return nil
