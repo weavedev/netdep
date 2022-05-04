@@ -15,6 +15,6 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestBuilding(t *testing.T) {
-	var res = stages.ConstructOutput(nil)
+	res := stages.ConstructOutput(nil)
 	assert.Equal(t, "{ type: \"error\", message: \"Not Implemented\" }", res, "Expect nil as the output of the sample ConstructOutput method")
 }

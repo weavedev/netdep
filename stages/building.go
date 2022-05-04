@@ -14,7 +14,7 @@ Refer to the Project plan, chapter 5.4 for more information.
 
 // ConstructOutput
 // is an example method for the building stage that could, for instance,
-// json.Marshal/serialize a nice data structure into a string.
+// json.Marshal/serialise a nice data structure into a string.
 //
 // TODO: Remove the following line when implementing this method
 //goland:noinspection GoUnusedParameter

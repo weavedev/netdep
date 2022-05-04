@@ -15,8 +15,8 @@ Refer to the Project plan, chapter 5.2 for more information.
 //
 // map{ service: map{ var.name: var.value }}
 func ResolveEnvVars(svcDir string) map[string]map[string]interface{} {
-	//TODO: Implement the resolution of environment variables
-	var testSvcName = svcDir + "SampleService"
+	// TODO: Implement the resolution of environment variables
+	testSvcName := svcDir + "SampleService"
 	m := make(map[string]map[string]interface{})
 	m[testSvcName] = make(map[string]interface{})
 	m[testSvcName]["VariableNameA"] = "1"

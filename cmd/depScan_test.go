@@ -9,7 +9,6 @@ import (
 )
 
 func TestExecuteDepScanFull(t *testing.T) {
-
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{
 		"--project-directory", "./",
@@ -22,7 +21,6 @@ func TestExecuteDepScanFull(t *testing.T) {
 }
 
 func TestExecuteDepScanShorthand(t *testing.T) {
-
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{
 		"-p", "./",
@@ -35,7 +33,6 @@ func TestExecuteDepScanShorthand(t *testing.T) {
 }
 
 func TestExecuteDepScanInvalidProjectDir(t *testing.T) {
-
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{"--project-directory", "invalid"})
 
@@ -48,7 +45,6 @@ func TestExecuteDepScanInvalidProjectDir(t *testing.T) {
 }
 
 func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
-
 	depScanCmd := depScanCmd()
 	depScanCmd.SetArgs([]string{"--service-directory", "invalid"})
 

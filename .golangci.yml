@@ -369,8 +369,7 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - godox
-    - goerr113
+    #- goerr113
     - gofmt
     - gofumpt
     - goheader
@@ -391,7 +390,7 @@ linters:
     - sqlclosecheck
     - staticcheck
     - structcheck
-    - stylecheck
+    #- stylecheck
     - typecheck
     - unconvert
     - unparam
@@ -401,7 +400,7 @@ linters:
     - tparallel
     - errorlint
     - predeclared
-    - forbidigo
+    #- forbidigo
     
 # linters not enabled because of:
 #  maligned
