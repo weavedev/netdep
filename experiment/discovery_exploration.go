@@ -25,7 +25,7 @@ var (
 	mode       = ssa.BuilderMode(0)
 	CpuProfile = ""
 	args       = []string{}
-	shouldRun  = false
+	shouldRun  = true
 )
 
 func main() {
@@ -56,14 +56,14 @@ func doMain() error {
 
 	config := &packages.Config{
 		//Dir:
-		Mode:  packages.LoadSyntax,
+		Mode:  packages.LoadAllSyntax,
 		Tests: false,
 	}
 
 	sizes := getSizes()
 
 	var interpretMode interp.Mode
-	interpretMode |= interp.EnableTracing
+	//interpretMode |= interp.EnableTracing
 	//interpretMode |= interp.DisableRecover
 
 	// Profiling support.
@@ -84,7 +84,7 @@ func doMain() error {
 		log.Println(err)
 	}
 	fmt.Println(path)
-	initial, err := packages.Load(config, "./test/sample/http/multiple_calls/multiple_calls.go")
+	initial, err := packages.Load(config, "./test/sample/http/string_join/string_join.go")
 
 	if err != nil {
 		return err
@@ -134,7 +134,8 @@ func doMain() error {
 		// Run first main package.
 		for _, main := range ssautil.MainPackages(pkgs) {
 			fmt.Fprintf(os.Stderr, "Running: %s\n", main.Pkg.Path())
-			os.Exit(interp.Interpret(main, interpretMode, sizes, main.Pkg.Path(), args))
+			interp.Interpret(main, interpretMode, sizes, main.Pkg.Path(), args)
+			return nil
 		}
 		return fmt.Errorf("no main package")
 	}
