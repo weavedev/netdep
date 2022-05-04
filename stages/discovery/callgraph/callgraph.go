@@ -1,6 +1,7 @@
 package callgraph
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"golang.org/x/tools/go/callgraph"
@@ -31,7 +32,7 @@ func ExtractMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 
 func DoCallGraph(dir string, pkgsArr []string) (*callgraph.Graph, error) {
 	var cg *callgraph.Graph
-	fmt.Println(pkgsArr[0])
+	//fmt.Println(pkgsArr[0])
 	cfg := &packages.Config{
 		Dir:  "",
 		Mode: packages.LoadAllSyntax,
@@ -50,7 +51,7 @@ func DoCallGraph(dir string, pkgsArr []string) (*callgraph.Graph, error) {
 
 	prog, discarded := ssautil.AllPackages(initial, 0)
 	for _, prog1 := range prog.AllPackages() {
-		fmt.Println(prog1.Pkg.Name())
+		//fmt.Println(prog1.Pkg.Name())
 		if prog1.Pkg.Name() == "stages" {
 			//callgraph.GraphVisitEdges(prog1.Members,visitCallback)
 			//for _, member := range prog1.Members {
@@ -60,7 +61,12 @@ func DoCallGraph(dir string, pkgsArr []string) (*callgraph.Graph, error) {
 			for _, member := range prog1.Members {
 				switch memT := member.(type) {
 				case *ssa.Function:
-					ast.Inspect(memT.Syntax().(*ast.FuncDecl), astInspectHandler)
+					switch syntaxT := memT.Syntax().(type) {
+					case ast.Node:
+						ast.Inspect(syntaxT, astInspectHandler)
+					default:
+						continue
+					}
 					// The following was an attempt at printing all calls manually. The above line is an attempt to do it automatically.
 					//for _, stmt := range memT.Syntax().(*ast.FuncDecl).Body.List { //ConstructOutput
 					//	switch stmtT := stmt.(type) {
@@ -87,12 +93,23 @@ func DoCallGraph(dir string, pkgsArr []string) (*callgraph.Graph, error) {
 	var _, _ = ExtractMainPackages(discarded)
 	prog.Build()
 	var gr = static.CallGraph(prog)
-	print(discarded)
-	print(gr)
+	//print(discarded)
+	//print(gr)
 	return gr, nil
 }
 
 func astInspectHandler(n ast.Node) bool {
-	fmt.Printf("Callback was called with node %+v\n", n)
+	//fmt.Printf("Callback was called with node %+v\n", n)
+	switch T := n.(type) {
+	case *ast.CallExpr:
+		fmt.Printf("%v", T)
+		//switch n.(*ast.CallExpr).Fun
+		var serialized, _ = json.MarshalIndent(n.(*ast.CallExpr).Fun, "", "\t")
+		var serialized2, _ = json.MarshalIndent(n.(*ast.CallExpr).Args, "", "\t")
+
+		fmt.Printf("It was a callexpression that calls the function: %+v \n", string(serialized))
+		fmt.Printf("With arguments: %+v\n", string(serialized2))
+
+	}
 	return true
 }
