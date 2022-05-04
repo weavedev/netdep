@@ -1,4 +1,4 @@
-// Package stages
+// Package stages defines different stages of analysis
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
 package stages
@@ -8,10 +8,10 @@ In the Discovery stages, clients and endpoints are discovered and mapped to thei
 Refer to the Project plan, chapter 5.3 for more information.
 */
 
-// FindCallersForEndpoint
-// is a sample method for locating the callers of a specific endpoint,
-// which is specified by the name of its parent service, its path in the target project,
-// and its URI.
+// FindCallersForEndpoint is a sample method for locating
+// the callers of a specific endpoint, which is specified
+// by the name of its parent service, its path in the target
+// project, and its URI.
 func FindCallersForEndpoint(parentService, endpointPath, endpointURI string) []interface{} {
 	// This is a placeholder; the signature of this method might need to be changed.
 	// Return empty slice for now.

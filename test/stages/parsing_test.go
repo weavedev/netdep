@@ -17,6 +17,6 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestParsing(t *testing.T) {
-	var res = stages.CreateCallGraph(nil)
+	res := stages.CreateCallGraph(nil)
 	assert.Equal(t, callgraph.Graph{}, res, "Expect empty graph as the output of the CreateCallGraph method")
 }
