@@ -2,6 +2,8 @@ package analyze
 
 import (
 	"fmt"
+	"go/constant"
+	"go/token"
 	"golang.org/x/tools/go/ssa"
 	"strings"
 )
@@ -31,27 +33,42 @@ func getMainFunction(pkg *ssa.Package) *ssa.Function {
 	return mainFunction
 }
 
-func resolveVariables(parameters []ssa.Value) []string {
+func resolveVariables(parameters []ssa.Value, params map[string]ssa.Value) []string {
 	stringParameters := make([]string, len(parameters))
 	for i, val := range parameters {
-		stringParameters[i] = resolveVariable(val)
+		stringParameters[i] = resolveVariable(val, params)
 	}
 
 	return stringParameters
 }
 
-func resolveVariable(value ssa.Value) string {
+func resolveVariable(value ssa.Value, params map[string]ssa.Value) string {
 	switch val := value.(type) {
 	case *ssa.Parameter:
-		return "par(" + val.Name() + ") = ??"
+		paramValue, hasValue := params[val.Name()]
+		if hasValue {
+			return resolveVariable(paramValue, params)
+		} else {
+			return "[[Unknown]]"
+		}
+	case *ssa.BinOp:
+		switch val.Op {
+		case token.ADD:
+			return resolveVariable(val.X, params) + resolveVariable(val.Y, params)
+		}
+		return "[[OP]]"
 	case *ssa.Const:
-		return val.Value.String()
+		switch val.Value.Kind() {
+		case constant.String:
+			return constant.StringVal(val.Value)
+		}
+		return "[[CONST]]"
 	}
 
 	return "var(" + value.Name() + ") = ??"
 }
 
-func discoverCall(call *ssa.Call) {
+func discoverCall(call *ssa.Call, params map[string]ssa.Value) {
 	calledFunction, _ := call.Call.Value.(*ssa.Function)
 	calledFunctionPackage := calledFunction.Pkg.Pkg.Path()
 
@@ -62,20 +79,25 @@ func discoverCall(call *ssa.Call) {
 		_, isInterestingFunction := interestingPackage[calledFunction.Name()]
 		if isInterestingFunction {
 			fmt.Println("Found call to function " + calledFunctionPackage + "." + calledFunction.Name() + "()")
+		}
 
-			if call.Call.Args != nil {
-				arguments := resolveVariables(call.Call.Args)
-				fmt.Println("Arguments: " + strings.Join(arguments, ", "))
-			}
+		if call.Call.Args != nil {
+			arguments := resolveVariables(call.Call.Args, params)
+			fmt.Println("Arguments: " + strings.Join(arguments, ", "))
 		}
 	}
 
+	paramMap := make(map[string]ssa.Value)
+	for i, param := range calledFunction.Params {
+		paramMap[param.Name()] = call.Call.Args[i]
+	}
+
 	if calledFunction.Blocks != nil {
-		discoverBlocks(calledFunction.Blocks)
+		discoverBlocks(calledFunction.Blocks, paramMap)
 	}
 }
 
-func discoverBlock(block *ssa.BasicBlock) {
+func discoverBlock(block *ssa.BasicBlock, params map[string]ssa.Value) {
 	if block.Instrs == nil {
 		return
 	}
@@ -83,14 +105,14 @@ func discoverBlock(block *ssa.BasicBlock) {
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case *ssa.Call:
-			discoverCall(instruction)
+			discoverCall(instruction, params)
 		}
 	}
 }
 
-func discoverBlocks(blocks []*ssa.BasicBlock) {
+func discoverBlocks(blocks []*ssa.BasicBlock, params map[string]ssa.Value) {
 	for _, block := range blocks {
-		discoverBlock(block)
+		discoverBlock(block, params)
 	}
 }
 
@@ -102,5 +124,5 @@ func AnalyzePackage(pkg *ssa.Package) {
 		return
 	}
 
-	discoverBlocks(mainFunction.Blocks)
+	discoverBlocks(mainFunction.Blocks, nil)
 }
