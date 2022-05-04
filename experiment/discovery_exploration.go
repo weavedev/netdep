@@ -25,7 +25,7 @@ var (
 	mode       = ssa.BuilderMode(0)
 	CpuProfile = ""
 	args       = []string{}
-	shouldRun  = true
+	shouldRun  = false
 )
 
 func main() {
@@ -84,7 +84,7 @@ func doMain() error {
 		log.Println(err)
 	}
 	fmt.Println(path)
-	initial, err := packages.Load(config, "./test/sample/http/string_join/string_join.go")
+	initial, err := packages.Load(config, "./test/sample/http/basic_call/basic_call.go")
 
 	if err != nil {
 		return err
