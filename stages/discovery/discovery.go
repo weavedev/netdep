@@ -3,6 +3,7 @@ package stages
 import (
 	"fmt"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callgraph"
+	"reflect"
 )
 
 func main() {
@@ -28,7 +29,8 @@ func FindCallersForEndpoint(parentService string, endpointPath string, endpointU
 	// We get the absolute URL of the project as a parameter.
 	// Then we should locate all services and build a graph for each of them, separately.
 	arr := make([]string, 1)
-	arr[0] = "C:\\Users\\Admin\\repos\\code\\stages"
-	fmt.Println(callgraph.DoCallGraph("", arr))
+	arr[0] = "/Users/martynaskrupskis/Documents/code/main"
+	var smth, _ = callgraph.DoCallGraph("", arr)
+	fmt.Println(reflect.TypeOf(smth))
 	return nil
 }
