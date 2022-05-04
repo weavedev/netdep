@@ -84,7 +84,7 @@ func doMain() error {
 		log.Println(err)
 	}
 	fmt.Println(path)
-	initial, err := packages.Load(config, "./test/sample/http/aliased_call/aliased_call.go")
+	initial, err := packages.Load(config, "./test/sample/http/wrapped_call/wrapped_call.go")
 
 	if err != nil {
 		return err
