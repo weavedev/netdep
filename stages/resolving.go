@@ -4,12 +4,12 @@
 package stages
 
 import (
-	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"io/ioutil"
 	"log"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 /*
@@ -22,25 +22,26 @@ Refer to the Project plan, chapter 5.2 for more information.
 // ResolveEnvVars returns a map as described above, namely:
 // map{ service: map{ var.name: var.value }}
 func ResolveEnvVars(svcDir string) map[string]map[string]interface{} {
-
 	m := make(map[string]map[string]interface{})
 
-	//iterate through service directory
-	items, _ := ioutil.ReadDir(svcDir)
+	// iterate through service directory
+	items, err := ioutil.ReadDir(svcDir)
+	if err != nil {
+		log.Fatal(err)
+	}
 	for _, item := range items {
-		//for every service within the directory, find .yaml files
-		fmt.Println(item.Name())
+		// for every service within the directory, find .yaml files
 		if item.IsDir() {
-			var env = make(map[string]interface{})
-			var yamlFiles = findYaml(svcDir+"/"+item.Name(), ".yaml")
-			//for every .yaml file, create a map of env vars
+			env := make(map[string]interface{})
+			yamlFiles := findYaml(svcDir+"/"+item.Name(), ".yaml")
+			// for every .yaml file, create a map of env vars
 			for _, file := range yamlFiles {
-				var envVars = envMap(file)
+				envVars := envMap(file)
 				for k, v := range envVars {
 					env[k] = v
 				}
 			}
-			//append env map to service name key
+			// append env map to service name key
 			if len(env) != 0 {
 				m[item.Name()] = env
 			}
@@ -51,28 +52,28 @@ func ResolveEnvVars(svcDir string) map[string]map[string]interface{} {
 	return m
 }
 
-//given a directory, extract files with "ext" extension
+// given a directory, extract files with "ext" extension
 func findYaml(root, ext string) []string {
 	var yamlFiles []string
-	filepath.WalkDir(root, func(s string, d fs.DirEntry, e error) error {
+	err := filepath.WalkDir(root, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
-			return e
+			log.Fatal(e)
 		}
 		if filepath.Ext(d.Name()) == ext {
 			yamlFiles = append(yamlFiles, s)
 		}
 		return nil
 	})
+	if err != nil {
+		return nil
+	}
 	return yamlFiles
 }
 
-//given a .yaml file, create a map of env vars(name, value)
+// given a .yaml file, create a map of env vars(name, value)
 func envMap(path string) map[string]interface{} {
-
-	file, err := ioutil.ReadFile(path)
-
+	file, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
-
 		log.Fatal(err)
 	}
 
@@ -81,14 +82,7 @@ func envMap(path string) map[string]interface{} {
 	err2 := yaml.Unmarshal(file, &envVars)
 
 	if err2 != nil {
-
 		log.Fatal(err2)
 	}
-
-	/*
-		for k, v := range data {
-
-			fmt.Printf("%s -> %s\n", k, v)
-		}*/
 	return envVars
 }
