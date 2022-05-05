@@ -1,10 +1,11 @@
-// Package stages
+// Package stages defines different stages of analysis
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
 package stages
 
 import (
-	"gopkg.in/yaml.v2"
+	"fmt"
+	"gopkg.in/yaml.v3"
 	"io/fs"
 	"io/ioutil"
 	"log"
@@ -18,25 +19,30 @@ This map is the output of the resolving stages.
 Refer to the Project plan, chapter 5.2 for more information.
 */
 
-// ResolveEnvVars
-// returns a map as described above, namely:
-//
+// ResolveEnvVars returns a map as described above, namely:
 // map{ service: map{ var.name: var.value }}
 func ResolveEnvVars(svcDir string) map[string]map[string]interface{} {
-	//TODO: Implement the resolution of environment variables
+
 	m := make(map[string]map[string]interface{})
 
 	//iterate through service directory
 	items, _ := ioutil.ReadDir(svcDir)
 	for _, item := range items {
 		//for every service within the directory, find .yaml files
+		fmt.Println(item.Name())
 		if item.IsDir() {
-			var yamlFiles = findYaml(svcDir+item.Name(), ".yaml")
+			var env = make(map[string]interface{})
+			var yamlFiles = findYaml(svcDir+"/"+item.Name(), ".yaml")
 			//for every .yaml file, create a map of env vars
 			for _, file := range yamlFiles {
-				var envVars = envMap(svcDir + item.Name() + file)
-				//append envVar map to service name key
-				m[item.Name()] = envVars
+				var envVars = envMap(file)
+				for k, v := range envVars {
+					env[k] = v
+				}
+			}
+			//append env map to service name key
+			if len(env) != 0 {
+				m[item.Name()] = env
 			}
 		} else {
 			continue
