@@ -1,4 +1,4 @@
-// Package stages
+// Package stages defines different stages of analysis
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
 package stages
@@ -16,9 +16,7 @@ wrapped HTTP types and methods (see https://pkg.go.dev/golang.org/x/tools/go/cal
 Refer to the Project plan, chapter 5 for more information.
 */
 
-// CreateCallGraph
-// is a placeholder Call Graph creation method
-//
+// CreateCallGraph is a placeholder Call Graph creation method
 // TODO: Remove the following line when implementing this method
 //goland:noinspection GoUnusedParameter
 func CreateCallGraph(astInst []*ast.File) callgraph.Graph {
