@@ -8,14 +8,18 @@ import (
 	"strings"
 )
 
+// interestingCalls Stores Relevant Libraries
+// their Relevant Methods and for each method
+// a position of location in the Args of ssa.Call
 var (
-	interestingCalls = map[string]map[string]bool{
+	interestingCalls = map[string]map[string][]int{
 		"net/http": {
-			"Get":      true,
-			"Post":     true,
-			"Put":      true,
-			"PostForm": true,
-			"Do":       true,
+			"Get":      []int{0},
+			"Post":     []int{0},
+			"Put":      []int{0},
+			"PostForm": []int{0},
+			"Do":       []int{0}, // this is a bit different, as it uses http.Request
+			// Where 2nd argument of NewRequest is a URL.
 		},
 	}
 )
@@ -33,10 +37,10 @@ func getMainFunction(pkg *ssa.Package) *ssa.Function {
 	return mainFunction
 }
 
-func resolveVariables(parameters []ssa.Value, params map[string]ssa.Value) []string {
-	stringParameters := make([]string, len(parameters))
-	for i, val := range parameters {
-		stringParameters[i] = resolveVariable(val, params)
+func resolveVariables(parameters []ssa.Value, params map[string]ssa.Value, positions []int) []string {
+	stringParameters := make([]string, len(positions))
+	for i, idx := range positions {
+		stringParameters[i] = resolveVariable(parameters[idx], params)
 	}
 
 	return stringParameters
@@ -69,30 +73,33 @@ func resolveVariable(value ssa.Value, params map[string]ssa.Value) string {
 }
 
 func discoverCall(call *ssa.Call, params map[string]ssa.Value) {
-	calledFunction, _ := call.Call.Value.(*ssa.Function)
-	calledFunctionPackage := calledFunction.Pkg.Pkg.Path()
+	switch call.Call.Value.(type) {
+	case *ssa.Function:
+		calledFunction, _ := call.Call.Value.(*ssa.Function)
+		calledFunctionPackage := calledFunction.Pkg.Pkg.Path()
 
-	fmt.Println("Called function " + calledFunctionPackage + "->" + calledFunction.Name())
+		fmt.Println("Called function " + calledFunctionPackage + "->" + calledFunction.Name())
 
-	interestingPackage, isInterestingPackage := interestingCalls[calledFunctionPackage]
-	if isInterestingPackage {
-		_, isInterestingFunction := interestingPackage[calledFunction.Name()]
-		if isInterestingFunction {
-			fmt.Println("Found call to function " + calledFunctionPackage + "." + calledFunction.Name() + "()")
+		interestingPackage, isInterestingPackage := interestingCalls[calledFunctionPackage]
+		if isInterestingPackage {
+			positions, isInterestingFunction := interestingPackage[calledFunction.Name()]
+			if isInterestingFunction {
+				fmt.Println("Found call to function " + calledFunctionPackage + "." + calledFunction.Name() + "()")
+			}
+			if call.Call.Args != nil {
+				arguments := resolveVariables(call.Call.Args, params, positions)
+				fmt.Println("Arguments: " + strings.Join(arguments, ", "))
+			}
 		}
-		if call.Call.Args != nil {
-			arguments := resolveVariables(call.Call.Args, params)
-			fmt.Println("Arguments: " + strings.Join(arguments, ", "))
+
+		paramMap := make(map[string]ssa.Value)
+		for i, param := range calledFunction.Params {
+			paramMap[param.Name()] = call.Call.Args[i]
 		}
-	}
 
-	paramMap := make(map[string]ssa.Value)
-	for i, param := range calledFunction.Params {
-		paramMap[param.Name()] = call.Call.Args[i]
-	}
-
-	if calledFunction.Blocks != nil {
-		discoverBlocks(calledFunction.Blocks, paramMap)
+		if calledFunction.Blocks != nil {
+			discoverBlocks(calledFunction.Blocks, paramMap)
+		}
 	}
 }
 
@@ -103,6 +110,9 @@ func discoverBlock(block *ssa.BasicBlock, params map[string]ssa.Value) {
 
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
+		// Every complex is split into several instructions
+		// so even if the call is part of variable assignment
+		// or a loop it will be stored as a separate ssa.Call instruction
 		case *ssa.Call:
 			discoverCall(instruction, params)
 		}
