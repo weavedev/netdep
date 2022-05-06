@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"go/build"
 	"go/types"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/experiment/analyze"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/CallAnalyzer"
 	"log"
 	"os"
 	"runtime"
@@ -84,7 +84,7 @@ func doMain() error {
 		log.Println(err)
 	}
 	fmt.Println(path)
-	initial, err := packages.Load(config, "./test/sample/http/basic_call/basic_call.go")
+	initial, err := packages.Load(config, "./test/sample/http/wrapped_call/wrapped_call.go")
 
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func doMain() error {
 		// (and synthetic wrappers).
 		for _, p := range pkgs {
 			p.Build()
-			analyze.AnalyzePackage(p)
+			CallAnalyzer.AnalyzePackage(p)
 		}
 	} else {
 		// Run the interpreter.

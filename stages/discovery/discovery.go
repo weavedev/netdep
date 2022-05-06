@@ -1,7 +1,7 @@
 // Package stages
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
-package stages
+package discovery
 
 /*
 In the Discovery stages, clients and endpoints are discovered and mapped to their parent service.
