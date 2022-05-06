@@ -84,6 +84,7 @@ func doMain() error {
 		log.Println(err)
 	}
 	fmt.Println(path)
+	//initial, err := packages.Load(config, "../nid-core/svc/autopseudo/main.go")
 	initial, err := packages.Load(config, "./test/sample/http/wrapped_call/wrapped_call.go")
 
 	if err != nil {
