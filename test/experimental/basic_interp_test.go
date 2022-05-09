@@ -1,15 +1,17 @@
-// This is a heavily modified version of the file found at https://cs.opensource.google/go/x/tools/+/refs/tags/v0.1.10:go/ssa/interp/interp_test.go
-// Team 13C IS NOT the original author of this file. For testing only, with absolutely no warranty.
+// This is a heavily simplified version of the file found at https://cs.opensource.google/go/x/tools/+/refs/tags/v0.1.10:go/ssa/interp/interp_test.go
+// Team 13C IS NOT the original author of this file. For testing purposes only, with absolutely no warranty.
 // IMPORTANT: The following changes were made to the original file:
 // - Hardcoded paths for testing
 // - Replaced GOOS from Linux to Win
 // - Use imported package instead of created one
 // - Hardcode actual goroot
+// - Rename package
+// - Remove TestTestdataFiles method
 
-// Copyright 2013 The Go Authors. All rights reserved.
+// Package experimental_test Copyright 2013 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-package interp_test
+package experimental_test
 
 // This test runs the SSA interpreter over sample Go programs.
 // Because the interpreter requires intrinsics for assembly
@@ -27,7 +29,6 @@ import (
 	"fmt"
 	"go/build"
 	"go/types"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,101 +40,6 @@ import (
 	"golang.org/x/tools/go/ssa/interp"
 	"golang.org/x/tools/go/ssa/ssautil"
 )
-
-// Each line contains a space-separated list of $GOROOT/test/
-// filenames comprising the main package of a program.
-// They are ordered quickest-first, roughly.
-//
-// If a test in this list fails spuriously, remove it.
-var gorootTestTests = []string{
-	"235.go",
-	"alias1.go",
-	"func5.go",
-	"func6.go",
-	"func7.go",
-	"func8.go",
-	"helloworld.go",
-	"varinit.go",
-	"escape3.go",
-	"initcomma.go",
-	"cmp.go",
-	"compos.go",
-	"turing.go",
-	"indirect.go",
-	"complit.go",
-	"for.go",
-	"struct0.go",
-	"intcvt.go",
-	"printbig.go",
-	"deferprint.go",
-	"escape.go",
-	"range.go",
-	"const4.go",
-	"float_lit.go",
-	"bigalg.go",
-	"decl.go",
-	"if.go",
-	"named.go",
-	"bigmap.go",
-	"func.go",
-	"reorder2.go",
-	"gc.go",
-	"simassign.go",
-	"iota.go",
-	"nilptr2.go",
-	"utf.go",
-	"method.go",
-	"char_lit.go",
-	"env.go",
-	"int_lit.go",
-	"string_lit.go",
-	"defer.go",
-	"typeswitch.go",
-	"stringrange.go",
-	"reorder.go",
-	"method3.go",
-	"literal.go",
-	"nul1.go", // doesn't actually assert anything (errorcheckoutput)
-	"zerodivide.go",
-	"convert.go",
-	"convT2X.go",
-	"switch.go",
-	"ddd.go",
-	"blank.go", // partly disabled
-	"closedchan.go",
-	"divide.go",
-	"rename.go",
-	"nil.go",
-	"recover1.go",
-	"recover2.go",
-	"recover3.go",
-	"typeswitch1.go",
-	"floatcmp.go",
-	"crlf.go", // doesn't actually assert anything (runoutput)
-}
-
-// These are files in go.tools/go/ssa/interp/testdata/.
-var testdataTests = []string{
-	"boundmeth.go",
-	"complit.go",
-	"convert.go",
-	"coverage.go",
-	"deepequal.go",
-	"defer.go",
-	"fieldprom.go",
-	"ifaceconv.go",
-	"ifaceprom.go",
-	"initorder.go",
-	"methprom.go",
-	"mrvchain.go",
-	"range.go",
-	"recover.go",
-	"reflect.go",
-	"static.go",
-	"width32.go",
-
-	"fixedbugs/issue52342.go",
-}
 
 // Specific GOARCH to use for a test case in go.tools/go/ssa/interp/testdata/.
 // Defaults to amd64 otherwise.
@@ -239,30 +145,13 @@ func printFailures(failures []string) {
 	}
 }
 
-// TestTestdataFiles runs the interpreter on testdata/*.go.
-func TestTestdataFiles(t *testing.T) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+// TestInterpBasic runs the interpreter on the hardcoded file
+func TestInterpBasic(t *testing.T) {
 	var failures []string
-	for _, input := range testdataTests {
-		if !run(t, filepath.Join(cwd, "testdata", input)) {
-			failures = append(failures, input)
-		}
-	}
-	printFailures(failures)
-}
-
-// TestGorootTest runs the interpreter on $GOROOT/test/*.go.
-func TestGorootTest(t *testing.T) {
-	var failures []string
-
-	for _, input := range gorootTestTests {
-		if !run(t, "C:\\Users\\Admin\\repos\\code\\test\\sample\\http\\multiple_calls") {
-			failures = append(failures, input)
-		}
+	currentDir, _ := os.Getwd()
+	input := currentDir + "\\..\\sample\\uri_discovery\\basic_concat"
+	if !run(t, input) {
+		failures = append(failures, input)
 	}
 	printFailures(failures)
 }
