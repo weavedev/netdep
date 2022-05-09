@@ -4,6 +4,7 @@ package stages
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 /*
@@ -47,6 +48,10 @@ func ConstructAdjacencyList(data *DiscoveredData) map[string][]Conn {
 
 // SerialiseOutput serialises the given adjacency list and returns the output as a string in JSON format.
 func SerialiseOutput(m map[string][]Conn) string {
-	out, _ := json.Marshal(m)
+	out, err := json.Marshal(m)
+	if err != nil {
+		fmt.Println("JSON encode error")
+		return ""
+	}
 	return string(out)
 }
