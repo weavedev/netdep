@@ -15,9 +15,9 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestResolving(t *testing.T) {
-	var res = stages.ResolveEnvVars("test")
+	res := stages.ResolveEnvVars("test")
 
-	var expected = map[string]map[string]interface{}{
+	expected := map[string]map[string]interface{}{
 		"testSampleService": {
 			"VariableNameA": "1",
 			"VariableNameB": "False",
