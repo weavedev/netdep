@@ -42,7 +42,6 @@ func main() {
 	// resty client get request
 	client := resty.New()
 	_, err := client.R().Get(targetUrl)
-
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 

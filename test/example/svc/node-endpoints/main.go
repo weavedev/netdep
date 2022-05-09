@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	// Void endpoint
 	// @mark HTTP endpoint "/bar"
 	http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
