@@ -211,7 +211,7 @@ func run(t *testing.T, input string) bool {
 	hint = fmt.Sprintf("To trace execution, run:\n%% go build golang.org/x/tools/cmd/ssadump && ./ssadump -build=C -test -run --interp=T %s\n", input)
 	var imode interp.Mode // default mode
 	// imode |= interp.DisableRecover // enable for debugging
-	// imode |= interp.EnableTracing // enable for debugging
+	imode |= interp.EnableTracing // enable for debugging
 	exitCode := interp.Interpret(mainPkg, imode, sizes, input, []string{})
 	if exitCode != 0 {
 		t.Fatalf("interpreting %s: exit code was %d", input, exitCode)
@@ -260,7 +260,7 @@ func TestGorootTest(t *testing.T) {
 	var failures []string
 
 	for _, input := range gorootTestTests {
-		if !run(t, "C:\\Users\\Admin\\repos\\code\\test\\sample\\http\\basic_call") {
+		if !run(t, "C:\\Users\\Admin\\repos\\code\\test\\sample\\http\\multiple_calls") {
 			failures = append(failures, input)
 		}
 	}

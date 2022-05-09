@@ -1,13 +1,17 @@
 //nolint
 package main
 
-import (
-	"net/http"
-	"net/url"
-)
+import "fmt"
 
 // target: GET example.com and POST example2.com
 func main() {
-	http.Get("http://example.com/")
-	http.PostForm("http://example2.com/form", url.Values{"key": {"Value"}, "id": {"123"}})
+	url := make([]string, 5)
+	url[0] = "foo"
+	url[1] = " "
+	url[2] = "bar"
+	print(url[0] + url[1] + url[2])
+}
+
+func fail2() {
+	fmt.Sprintf("")
 }

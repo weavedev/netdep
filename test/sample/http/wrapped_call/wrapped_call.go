@@ -1,13 +1,10 @@
 //nolint
 package main
 
-import (
-	"net/http"
-)
-
 func wrappedGetCall(url string) {
 	location := url + "endpoint"
-	http.Get(location)
+	//http.Get(location)
+	print(location)
 }
 
 // target: GET example.com
