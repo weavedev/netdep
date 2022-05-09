@@ -29,7 +29,7 @@ var (
 	//rootDir    = "/../nid-core"
 	//projectDir = "./svc/autopseudo/"
 	rootDir    = "/"
-	projectDir = "./test/sample/http/multiple_calls/"
+	projectDir = "./test/sample/http/integration/"
 	//rootDir    = "/test/example"
 	//projectDir = "./svc/node-basic-http/"
 	CpuProfile = ""
@@ -149,7 +149,7 @@ func doMain() error {
 		// (and synthetic wrappers).
 		for _, p := range pkgs {
 			p.Build()
-			analyze.AnalyzePackage(p)
+			analyze.Package(p)
 		}
 	} else {
 		// Run the interpreter.

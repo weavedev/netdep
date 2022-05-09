@@ -12,13 +12,22 @@ import (
 // their Relevant Methods and for each method
 // a position of location in the Args of ssa.Call
 var blackList = map[string]bool{
-	"fmt":     true,
-	"reflect": true,
+	"fmt":                  true,
+	"reflect":              true,
+	"net/url":              true,
+	"strings":              true,
+	"bytes":                true,
+	"io":                   true,
+	"errors":               true,
+	"runtime":              true,
+	"math/bits":            true,
+	"internal/reflectlite": true,
 }
 
 var (
 	interestingCalls = map[string][]int{
-		"(*net/http.Client).Do": []int{0},
+		"(*net/http.Client).Do": {0},
+		"os.Getenv":             {0},
 		//	"Post":     []int{0},
 		//	"Put":      []int{0},
 		//	"PostForm": []int{0},
@@ -32,8 +41,8 @@ var (
 	}
 )
 
-func getMainFunction(pkg *ssa.Package) *ssa.Function {
-	mainMember, hasMain := pkg.Members["main"]
+func getPackageFunction(pkg *ssa.Package, name string) *ssa.Function {
+	mainMember, hasMain := pkg.Members[name]
 	if !hasMain {
 		return nil
 	}
@@ -81,23 +90,19 @@ func resolveVariable(value ssa.Value, fr frame) string {
 }
 
 func discoverCall(call *ssa.Call, fr frame) {
-	switch call.Call.Value.(type) {
+	switch fn := call.Call.Value.(type) {
 	case *ssa.Function:
-		calledFunction, _ := call.Call.Value.(*ssa.Function)
-		signature := calledFunction.RelString(nil)
-		rootPackage := calledFunction.Pkg.Pkg.Name()
-		_, isBlacklisted := blackList[rootPackage]
-
-		if isBlacklisted {
-			return
-		}
-
-		fmt.Println("Called function " + signature + " " + rootPackage)
+		signature := fn.RelString(nil)
+		rootPackage := fn.Pkg.Pkg.Path()
 
 		_, isInteresting := interestingCalls[signature]
 		if isInteresting {
 			if call.Call.Args != nil {
 				arguments := resolveVariables(call.Call.Args, fr)
+				for _, arg := range call.Call.Args {
+					var visited = make([]*ssa.Value, 0)
+					findStringConstants(arg, visited)
+				}
 				fmt.Println("Arguments: " + strings.Join(arguments, ", "))
 			}
 
@@ -105,15 +110,31 @@ func discoverCall(call *ssa.Call, fr frame) {
 			return
 		}
 
-		//fr.mappings = make(map[string]ssa.Value)
+		_, isBlacklisted := blackList[rootPackage]
 
-		for i, param := range calledFunction.Params {
+		if isBlacklisted {
+			return
+		}
+
+		//fr.mappings = make(map[string]ssa.Value)
+		//fmt.Println("Called function " + signature + " " + rootPackage)
+
+		for i, param := range fn.Params {
 			fr.mappings[param.Name()] = call.Call.Args[i]
 		}
 
-		if calledFunction.Blocks != nil {
-			discoverBlocks(calledFunction.Blocks, fr)
+		if fn.Blocks != nil {
+			discoverBlocks(fn.Blocks, fr)
 		}
+	}
+}
+
+func discoverStore(store *ssa.Store, fr frame) {
+	switch val := store.Val.(type) {
+	case *ssa.Call:
+		fmt.Println(store.Addr.Name() + " = ")
+		discoverCall(val, fr)
+		break
 	}
 }
 
@@ -134,6 +155,8 @@ func discoverBlock(block *ssa.BasicBlock, fr frame) {
 		// or a loop it will be stored as a separate ssa.Call instruction
 		case *ssa.Call:
 			discoverCall(instruction, fr)
+		case *ssa.Store:
+			discoverStore(instruction, fr)
 		}
 	}
 }
@@ -154,11 +177,12 @@ func discoverBlocks(blocks []*ssa.BasicBlock, fr frame) {
 	}
 }
 
-func AnalyzePackage(pkg *ssa.Package) {
-	mainFunction := getMainFunction(pkg)
+func Package(pkg *ssa.Package) {
+	mainFunction := getPackageFunction(pkg, "main")
+	//initFunction := getPackageFunction(pkg, "init")
 
 	if mainFunction == nil {
-		fmt.Println("No main function found!")
+		fmt.Println("No main function found in package!")
 		return
 	}
 
@@ -166,5 +190,7 @@ func AnalyzePackage(pkg *ssa.Package) {
 		visited:  make([]*ssa.BasicBlock, 0),
 		mappings: make(map[string]ssa.Value),
 	}
+
 	discoverBlocks(mainFunction.Blocks, baseFrame)
+
 }
