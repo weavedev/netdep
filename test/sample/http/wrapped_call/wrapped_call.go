@@ -6,7 +6,8 @@ import (
 )
 
 func wrappedGetCall(url string) {
-	http.Get(url)
+	location := url + "endpoint"
+	http.Get(location)
 }
 
 // target: GET example.com
