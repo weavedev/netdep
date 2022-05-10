@@ -1,7 +1,5 @@
-/*
-Package cmd
-Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-*/
+// Package cmd contains all the application command definitions
+// Copyright © 2022 Team 1, Weave BV, TU Delft
 package cmd
 
 import (
