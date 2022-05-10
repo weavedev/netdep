@@ -8,10 +8,16 @@ In the Discovery stages, clients and endpoints are discovered and mapped to thei
 Refer to the Project plan, chapter 5.3 for more information.
 */
 
+// CallData stores for each call the full path of the file in which it happens and the exact line in that file
+type CallData struct {
+	Filepath string `json:"filepath"`
+	Line     int    `json:"line"`
+}
+
 // ServiceCalls stores for each service its name and the calls that it makes (strings of URLs / method names)
 type ServiceCalls struct {
-	Service string
-	Calls   map[string]int
+	Service string                `json:"service"`
+	Calls   map[string][]CallData `json:"calls"`
 }
 
 // DiscoveredData is initialised and populated during the discovery stage.

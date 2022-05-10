@@ -16,15 +16,33 @@ func TestConstructAdjacencyList(t *testing.T) {
 	servCalls := []stages.ServiceCalls{
 		{
 			Service: "servA",
-			Calls:   map[string]int{"URL_2": 2},
+			Calls: map[string][]stages.CallData{
+				"URL_2": {
+					{Filepath: "./path/to/some/file.go", Line: 24},
+					{Filepath: "/path/to/some/otherfile.go", Line: 36},
+				},
+			},
 		},
 		{
 			Service: "servB",
-			Calls:   map[string]int{"URL_1": 1, "URL_3": 3},
+			Calls: map[string][]stages.CallData{
+				"URL_1": {
+					{Filepath: "./path/to/some/cool/file.go", Line: 632},
+				},
+				"URL_3": {
+					{Filepath: "./path1/to/some/file.go", Line: 245},
+					{Filepath: "/path1/to/some/file.go", Line: 436},
+					{Filepath: "/path1/to/some/file.go", Line: 623},
+				},
+			},
 		},
 		{
 			Service: "servC",
-			Calls:   map[string]int{"URL_5": 1},
+			Calls: map[string][]stages.CallData{
+				"URL_5": {
+					{Filepath: "./path5/to/some/file.go", Line: 215},
+				},
+			},
 		},
 	}
 	data := &stages.DiscoveredData{
@@ -58,8 +76,45 @@ func TestSerialiseOutput(t *testing.T) {
 	m["servA"] = append(m["servA"], stages.Conn{Service: "servB", Amount: 2})
 	m["servB"] = append(m["servB"], stages.Conn{Service: "servA", Amount: 1})
 	m["servB"] = append(m["servB"], stages.Conn{Service: "servC", Amount: 3})
-	m["servC"] = append(m["servC"], stages.Conn{Service: "Unknown Service", Amount: 2})
-	res := stages.SerialiseOutput(m)
-	expected := `{"servA":[{"service":"servB","amount":2}],"servB":[{"service":"servA","amount":1},{"service":"servC","amount":3}],"servC":[{"service":"Unknown Service","amount":2}]}`
-	assert.Equal(t, expected, res)
+	m["servC"] = append(m["servC"], stages.Conn{Service: "Unknown Service", Amount: 1})
+
+	servCalls := []stages.ServiceCalls{
+		{
+			Service: "servA",
+			Calls: map[string][]stages.CallData{
+				"URL_2": {
+					{Filepath: "./path/to/some/file.go", Line: 24},
+					{Filepath: "/path/to/some/otherfile.go", Line: 36},
+				},
+			},
+		},
+		{
+			Service: "servB",
+			Calls: map[string][]stages.CallData{
+				"URL_1": {
+					{Filepath: "./path/to/some/cool/file.go", Line: 632},
+				},
+				"URL_3": {
+					{Filepath: "./path1/to/some/file.go", Line: 245},
+					{Filepath: "/path1/to/some/file.go", Line: 436},
+					{Filepath: "/path1/to/some/file.go", Line: 623},
+				},
+			},
+		},
+		{
+			Service: "servC",
+			Calls: map[string][]stages.CallData{
+				"URL_5": {
+					{Filepath: "./path5/to/some/file.go", Line: 215},
+				},
+			},
+		},
+	}
+
+	adjList, callData := stages.SerialiseOutput(m, servCalls)
+
+	expectedAdjList := `{"servA":[{"service":"servB","amount":2}],"servB":[{"service":"servA","amount":1},{"service":"servC","amount":3}],"servC":[{"service":"Unknown Service","amount":1}]}`
+	expectedCallData := `[{"service":"servA","calls":{"URL_2":[{"filepath":"./path/to/some/file.go","line":24},{"filepath":"/path/to/some/otherfile.go","line":36}]}},{"service":"servB","calls":{"URL_1":[{"filepath":"./path/to/some/cool/file.go","line":632}],"URL_3":[{"filepath":"./path1/to/some/file.go","line":245},{"filepath":"/path1/to/some/file.go","line":436},{"filepath":"/path1/to/some/file.go","line":623}]}},{"service":"servC","calls":{"URL_5":[{"filepath":"./path5/to/some/file.go","line":215}]}}]`
+	assert.Equal(t, expectedAdjList, adjList)
+	assert.Equal(t, expectedCallData, callData)
 }
