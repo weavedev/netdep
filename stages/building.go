@@ -22,9 +22,10 @@ type Conn struct {
 }
 
 // ConstructOutput constructs and returns the output of the tool as a string in JSON format.
-func ConstructOutput(discoveredData *DiscoveredData) string {
-	m := ConstructAdjacencyList(discoveredData)
-	return SerialiseOutput(m)
+func ConstructOutput(discoveredData *DiscoveredData) (string, string) {
+	adjList := ConstructAdjacencyList(discoveredData)
+	servCalls := discoveredData.ServCalls
+	return SerialiseOutput(adjList, servCalls)
 }
 
 // ConstructAdjacencyList constructs an adjacency list of service dependencies.
@@ -34,11 +35,11 @@ func ConstructAdjacencyList(data *DiscoveredData) map[string][]Conn {
 
 	// Assuming DiscoveredData is something like currently defined in stages/discovery.go
 	for _, servCall := range data.ServCalls {
-		for k, amount := range servCall.Calls {
+		for k, callDataList := range servCall.Calls {
 			if targetServ, ok := data.Handled[k]; ok {
-				m[servCall.Service] = append(m[servCall.Service], Conn{targetServ, amount})
+				m[servCall.Service] = append(m[servCall.Service], Conn{targetServ, len(callDataList)})
 			} else {
-				m[servCall.Service] = append(m[servCall.Service], Conn{"Unknown Service", amount})
+				m[servCall.Service] = append(m[servCall.Service], Conn{"Unknown Service", len(callDataList)})
 			}
 		}
 	}
@@ -47,11 +48,18 @@ func ConstructAdjacencyList(data *DiscoveredData) map[string][]Conn {
 }
 
 // SerialiseOutput serialises the given adjacency list and returns the output as a string in JSON format.
-func SerialiseOutput(m map[string][]Conn) string {
-	out, err := json.Marshal(m)
+func SerialiseOutput(adjList map[string][]Conn, servCalls []ServiceCalls) (string, string) {
+	outAdj, err := json.Marshal(adjList)
 	if err != nil {
 		fmt.Println("JSON encode error")
-		return ""
+		return "", ""
 	}
-	return string(out)
+
+	outCalls, err := json.Marshal(servCalls)
+	if err != nil {
+		fmt.Println("JSON encode error")
+		return string(outAdj), ""
+	}
+
+	return string(outAdj), string(outCalls)
 }
