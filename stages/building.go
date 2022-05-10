@@ -49,13 +49,13 @@ func ConstructAdjacencyList(data *DiscoveredData) map[string][]Conn {
 
 // SerialiseOutput serialises the given adjacency list and returns the output as a string in JSON format.
 func SerialiseOutput(adjList map[string][]Conn, servCalls []ServiceCalls) (string, string) {
-	outAdj, err := json.Marshal(adjList)
+	outAdj, err := json.MarshalIndent(adjList, "", "\t")
 	if err != nil {
 		fmt.Println("JSON encode error")
 		return "", ""
 	}
 
-	outCalls, err := json.Marshal(servCalls)
+	outCalls, err := json.MarshalIndent(servCalls, "", "\t")
 	if err != nil {
 		fmt.Println("JSON encode error")
 		return string(outAdj), ""
