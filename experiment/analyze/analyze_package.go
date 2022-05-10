@@ -11,16 +11,24 @@ import (
 // interestingCalls Stores Relevant Libraries
 // their Relevant Methods and for each method
 // a position of location in the Args of ssa.Call
+var blackList = map[string]bool{
+	"fmt":     true,
+	"reflect": true,
+}
+
 var (
-	interestingCalls = map[string]map[string][]int{
-		"net/http": {
-			"Get":      []int{0},
-			"Post":     []int{0},
-			"Put":      []int{0},
-			"PostForm": []int{0},
-			"Do":       []int{0}, // this is a bit different, as it uses http.Request
-			// Where 2nd argument of NewRequest is a URL.
-		},
+	interestingCalls = map[string][]int{
+		"(*net/http.Client).Do": []int{0},
+		//	"Post":     []int{0},
+		//	"Put":      []int{0},
+		//	"PostForm": []int{0},
+		//	"Do":       []int{0}, // this is a bit different, as it uses http.Request
+		//	// Where 2nd argument of NewRequest is a URL.
+		//},
+		//"github.com/gin-gonic/gin": {
+		//	"GET": []int{0, 1},
+		//	"Any": []int{0, 1},
+		//},
 	}
 )
 
@@ -37,28 +45,28 @@ func getMainFunction(pkg *ssa.Package) *ssa.Function {
 	return mainFunction
 }
 
-func resolveVariables(parameters []ssa.Value, params map[string]ssa.Value, positions []int) []string {
-	stringParameters := make([]string, len(positions))
-	for i, idx := range positions {
-		stringParameters[i] = resolveVariable(parameters[idx], params)
+func resolveVariables(parameters []ssa.Value, fr frame) []string {
+	stringParameters := make([]string, len(parameters))
+	for i, param := range parameters {
+		stringParameters[i] = resolveVariable(param, fr)
 	}
 
 	return stringParameters
 }
 
-func resolveVariable(value ssa.Value, params map[string]ssa.Value) string {
+func resolveVariable(value ssa.Value, fr frame) string {
 	switch val := value.(type) {
 	case *ssa.Parameter:
-		paramValue, hasValue := params[val.Name()]
+		paramValue, hasValue := fr.mappings[val.Name()]
 		if hasValue {
-			return resolveVariable(paramValue, params)
+			return resolveVariable(paramValue, fr)
 		} else {
 			return "[[Unknown]]"
 		}
 	case *ssa.BinOp:
 		switch val.Op {
 		case token.ADD:
-			return resolveVariable(val.X, params) + resolveVariable(val.Y, params)
+			return resolveVariable(val.X, fr) + resolveVariable(val.Y, fr)
 		}
 		return "[[OP]]"
 	case *ssa.Const:
@@ -72,39 +80,50 @@ func resolveVariable(value ssa.Value, params map[string]ssa.Value) string {
 	return "var(" + value.Name() + ") = ??"
 }
 
-func discoverCall(call *ssa.Call, params map[string]ssa.Value) {
+func discoverCall(call *ssa.Call, fr frame) {
 	switch call.Call.Value.(type) {
 	case *ssa.Function:
 		calledFunction, _ := call.Call.Value.(*ssa.Function)
-		calledFunctionPackage := calledFunction.Pkg.Pkg.Path()
+		signature := calledFunction.RelString(nil)
+		rootPackage := calledFunction.Pkg.Pkg.Name()
+		_, isBlacklisted := blackList[rootPackage]
 
-		fmt.Println("Called function " + calledFunctionPackage + "->" + calledFunction.Name())
-
-		interestingPackage, isInterestingPackage := interestingCalls[calledFunctionPackage]
-		if isInterestingPackage {
-			positions, isInterestingFunction := interestingPackage[calledFunction.Name()]
-			if isInterestingFunction {
-				fmt.Println("Found call to function " + calledFunctionPackage + "." + calledFunction.Name() + "()")
-			}
-			if call.Call.Args != nil {
-				arguments := resolveVariables(call.Call.Args, params, positions)
-				fmt.Println("Arguments: " + strings.Join(arguments, ", "))
-			}
+		if isBlacklisted {
+			return
 		}
 
-		paramMap := make(map[string]ssa.Value)
+		fmt.Println("Called function " + signature + " " + rootPackage)
+
+		_, isInteresting := interestingCalls[signature]
+		if isInteresting {
+			if call.Call.Args != nil {
+				arguments := resolveVariables(call.Call.Args, fr)
+				fmt.Println("Arguments: " + strings.Join(arguments, ", "))
+			}
+
+			fmt.Println("Found call to function " + signature)
+			return
+		}
+
+		//fr.mappings = make(map[string]ssa.Value)
+
 		for i, param := range calledFunction.Params {
-			paramMap[param.Name()] = call.Call.Args[i]
+			fr.mappings[param.Name()] = call.Call.Args[i]
 		}
 
 		if calledFunction.Blocks != nil {
-			discoverBlocks(calledFunction.Blocks, paramMap)
+			discoverBlocks(calledFunction.Blocks, fr)
 		}
 	}
 }
 
-func discoverBlock(block *ssa.BasicBlock, params map[string]ssa.Value) {
+func discoverBlock(block *ssa.BasicBlock, fr frame) {
 	if block.Instrs == nil {
+		return
+	}
+
+	if len(fr.visited) > 16 {
+		//fmt.Println("Nested > 32")
 		return
 	}
 
@@ -114,14 +133,24 @@ func discoverBlock(block *ssa.BasicBlock, params map[string]ssa.Value) {
 		// so even if the call is part of variable assignment
 		// or a loop it will be stored as a separate ssa.Call instruction
 		case *ssa.Call:
-			discoverCall(instruction, params)
+			discoverCall(instruction, fr)
 		}
 	}
 }
 
-func discoverBlocks(blocks []*ssa.BasicBlock, params map[string]ssa.Value) {
+func discoverBlocks(blocks []*ssa.BasicBlock, fr frame) {
+	if len(fr.visited) > 16 {
+		//fmt.Println("Nested > 32")
+		return
+	}
+
 	for _, block := range blocks {
-		discoverBlock(block, params)
+		if fr.hasVisited(block) || block == nil {
+			continue
+		}
+		newFr := fr
+		newFr.visited = append(fr.visited, block)
+		discoverBlock(block, newFr)
 	}
 }
 
@@ -133,5 +162,9 @@ func AnalyzePackage(pkg *ssa.Package) {
 		return
 	}
 
-	discoverBlocks(mainFunction.Blocks, nil)
+	baseFrame := frame{
+		visited:  make([]*ssa.BasicBlock, 0),
+		mappings: make(map[string]ssa.Value),
+	}
+	discoverBlocks(mainFunction.Blocks, baseFrame)
 }

@@ -8,21 +8,30 @@ import (
 	"fmt"
 	"go/build"
 	"go/types"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/experiment/analyze"
-	"log"
-	"os"
-	"runtime"
-	"runtime/pprof"
-
+	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/packages"
+	"golang.org/x/tools/go/pointer"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/interp"
 	"golang.org/x/tools/go/ssa/ssautil"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/experiment/analyze"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+	"runtime/pprof"
+	"strings"
 )
 
 // flags
 var (
-	mode       = ssa.BuilderMode(0)
+	mode = ssa.BuilderMode(0)
+	//rootDir    = "/../nid-core"
+	//projectDir = "./svc/autopseudo/"
+	rootDir    = "/"
+	projectDir = "./test/sample/http/multiple_calls/"
+	//rootDir    = "/test/example"
+	//projectDir = "./svc/node-basic-http/"
 	CpuProfile = ""
 	args       = []string{}
 	shouldRun  = false
@@ -54,8 +63,17 @@ func getSizes() *types.StdSizes {
 
 func doMain() error {
 
+	path, cwdErr := os.Getwd()
+
+	fmt.Println(path)
+
+	if cwdErr != nil {
+		log.Println(cwdErr)
+	}
+
 	config := &packages.Config{
-		//Dir:
+		Dir: filepath.Clean(path + rootDir),
+		//Mode:  packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
 		Mode:  packages.LoadAllSyntax,
 		Tests: false,
 	}
@@ -79,13 +97,7 @@ func doMain() error {
 		defer pprof.StopCPUProfile()
 	}
 
-	path, err := os.Getwd()
-	if err != nil {
-		log.Println(err)
-	}
-	fmt.Println(path)
-	//initial, err := packages.Load(config, "../nid-core/svc/autopseudo/main.go")
-	initial, err := packages.Load(config, "./test/sample/http/wrapped_call/wrapped_call.go")
+	initial, err := packages.Load(config, projectDir)
 
 	if err != nil {
 		return err
@@ -100,12 +112,37 @@ func doMain() error {
 
 	// Create SSA-form program representation.
 	prog, pkgs := ssautil.AllPackages(initial, mode)
+	prog.Build()
 
 	for i, p := range pkgs {
 		if p == nil {
 			return fmt.Errorf("cannot build SSA for package %s", initial[i])
 		}
 	}
+
+	mains := ssautil.MainPackages(pkgs)
+
+	ptConfig := &pointer.Config{
+		Mains:          mains,
+		BuildCallGraph: true,
+	}
+
+	ptares, err := pointer.Analyze(ptConfig)
+	if err != nil {
+		return err // internal error in pointer analysis
+	}
+
+	cg := ptares.CallGraph
+
+	callgraph.GraphVisitEdges(cg, func(edge *callgraph.Edge) error {
+		if edge.Callee.Func.Pkg != nil && edge.Callee.Func.Pkg.Pkg.Path() == "net/http" {
+			funcName := edge.Callee.Func.RelString(nil)
+			if strings.Contains(funcName, "Do") {
+				//fmt.Println(edge)
+			}
+		}
+		return nil
+	})
 
 	if !shouldRun {
 		// Build and display only the initial packages

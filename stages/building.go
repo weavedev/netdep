@@ -1,6 +1,5 @@
-// Package stages
+// Package stages defines different stages of analysis
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-
 package stages
 
 /*
@@ -12,10 +11,9 @@ The Building stages should handle
 Refer to the Project plan, chapter 5.4 for more information.
 */
 
-// ConstructOutput
-// is an example method for the building stage that could, for instance,
-// json.Marshal/serialize a nice data structure into a string.
-//
+// ConstructOutput is an example method for the building stage
+// that could, for instance, json.Marshal/serialise a nice
+// data structure into a string.
 // TODO: Remove the following line when implementing this method
 //goland:noinspection GoUnusedParameter
 func ConstructOutput(dataStructure interface{}) string {
