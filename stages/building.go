@@ -5,6 +5,7 @@ package stages
 import (
 	"encoding/json"
 	"fmt"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 )
 
 /*
@@ -22,7 +23,7 @@ type Conn struct {
 }
 
 // ConstructOutput constructs and returns the output of the tool as a string in JSON format.
-func ConstructOutput(discoveredData *DiscoveredData) (string, string) {
+func ConstructOutput(discoveredData *discovery.DiscoveredData) (string, string) {
 	adjList := ConstructAdjacencyList(discoveredData)
 	servCalls := discoveredData.ServCalls
 	return SerialiseOutput(adjList, servCalls)
@@ -30,7 +31,7 @@ func ConstructOutput(discoveredData *DiscoveredData) (string, string) {
 
 // ConstructAdjacencyList constructs an adjacency list of service dependencies.
 // Format of entries in the list is `"serviceName": [] Conn`
-func ConstructAdjacencyList(data *DiscoveredData) map[string][]Conn {
+func ConstructAdjacencyList(data *discovery.DiscoveredData) map[string][]Conn {
 	m := make(map[string][]Conn)
 
 	// Assuming DiscoveredData is something like currently defined in stages/discovery.go
@@ -48,7 +49,7 @@ func ConstructAdjacencyList(data *DiscoveredData) map[string][]Conn {
 }
 
 // SerialiseOutput serialises the given adjacency list and returns the output as a string in JSON format.
-func SerialiseOutput(adjList map[string][]Conn, servCalls []ServiceCalls) (string, string) {
+func SerialiseOutput(adjList map[string][]Conn, servCalls []discovery.ServiceCalls) (string, string) {
 	outAdj, err := json.MarshalIndent(adjList, "", "\t")
 	if err != nil {
 		fmt.Println("JSON encode error")

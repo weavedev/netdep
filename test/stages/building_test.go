@@ -4,6 +4,7 @@
 package stages
 
 import (
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,10 +14,10 @@ import (
 
 // Tests adjacency list construction based on data found in discovery stage
 func TestConstructAdjacencyList(t *testing.T) {
-	servCalls := []stages.ServiceCalls{
+	servCalls := []discovery.ServiceCalls{
 		{
 			Service: "servA",
-			Calls: map[string][]stages.CallData{
+			Calls: map[string][]discovery.CallData{
 				"URL_2": {
 					{Filepath: "./path/to/some/file.go", Line: 24},
 					{Filepath: "/path/to/some/otherfile.go", Line: 36},
@@ -25,7 +26,7 @@ func TestConstructAdjacencyList(t *testing.T) {
 		},
 		{
 			Service: "servB",
-			Calls: map[string][]stages.CallData{
+			Calls: map[string][]discovery.CallData{
 				"URL_1": {
 					{Filepath: "./path/to/some/cool/file.go", Line: 632},
 				},
@@ -38,14 +39,14 @@ func TestConstructAdjacencyList(t *testing.T) {
 		},
 		{
 			Service: "servC",
-			Calls: map[string][]stages.CallData{
+			Calls: map[string][]discovery.CallData{
 				"URL_5": {
 					{Filepath: "./path5/to/some/file.go", Line: 215},
 				},
 			},
 		},
 	}
-	data := &stages.DiscoveredData{
+	data := &discovery.DiscoveredData{
 		ServCalls: servCalls,
 		Handled:   map[string]string{"URL_1": "servA", "URL_2": "servB", "URL_3": "servC"},
 	}
@@ -78,10 +79,10 @@ func TestSerialiseOutput(t *testing.T) {
 	m["servB"] = append(m["servB"], stages.Conn{Service: "servC", Amount: 3})
 	m["servC"] = append(m["servC"], stages.Conn{Service: "Unknown Service", Amount: 1})
 
-	servCalls := []stages.ServiceCalls{
+	servCalls := []discovery.ServiceCalls{
 		{
 			Service: "servA",
-			Calls: map[string][]stages.CallData{
+			Calls: map[string][]discovery.CallData{
 				"URL_2": {
 					{Filepath: "./path/to/some/file.go", Line: 24},
 					{Filepath: "/path/to/some/otherfile.go", Line: 36},
@@ -90,7 +91,7 @@ func TestSerialiseOutput(t *testing.T) {
 		},
 		{
 			Service: "servB",
-			Calls: map[string][]stages.CallData{
+			Calls: map[string][]discovery.CallData{
 				"URL_1": {
 					{Filepath: "./path/to/some/cool/file.go", Line: 632},
 				},
@@ -103,7 +104,7 @@ func TestSerialiseOutput(t *testing.T) {
 		},
 		{
 			Service: "servC",
-			Calls: map[string][]stages.CallData{
+			Calls: map[string][]discovery.CallData{
 				"URL_5": {
 					{Filepath: "./path5/to/some/file.go", Line: 215},
 				},
