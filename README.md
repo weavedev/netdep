@@ -58,10 +58,9 @@ Documentation can be found in the [project wiki](https://gitlab.ewi.tudelft.nl/c
 
 ## Contributing
 
-See `contributing.md`[TODO] for ways to get started.
+See `CONTRIBUTING.md` for ways to get started.
 
-Please adhere to this project's `code of conduct`[TODO].
-
+Please adhere to this project's `code of conduct`.
 
 ## Authors
 
@@ -73,5 +72,5 @@ Please adhere to this project's `code of conduct`[TODO].
 
 
 ## License
-[TODO]
+
 
