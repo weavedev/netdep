@@ -11,81 +11,113 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-// locationIdx Stores Relevant Libraries
+var blackList = map[string]bool{
+	"fmt":                  true,
+	"reflect":              true,
+	"net/url":              true,
+	"strings":              true,
+	"bytes":                true,
+	"io":                   true,
+	"errors":               true,
+	"runtime":              true,
+	"math/bits":            true,
+	"internal/reflectlite": true,
+}
+
+// interestingCalls Stores Relevant Libraries
 // their Relevant Methods and for each method
 // a position of location in the Args of ssa.Call
 //nolint
 var (
-	locationIdx = map[string]map[string][]int{
-		"net/http": {
-			"Get":      []int{0},
-			"Post":     []int{0},
-			"Put":      []int{0},
-			"PostForm": []int{0},
-			// "Do":       []int{0},  this is a bit different, as it uses http.Request
-			// as an argument. This will be completed in the future.
-		},
+	interestingCalls = map[string][]int{
+		"(*net/http.Client).Do": {0},
+		"os.Getenv":             {0},
+		//	"Post":     []int{0},
+		//	"Put":      []int{0},
+		//	"PostForm": []int{0},
+		//	"Do":       []int{0}, // this is a bit different, as it uses http.Request
+		//	// Where 2nd argument of NewRequest is a URL.
+		//},
+		//"github.com/gin-gonic/gin": {
+		//	"GET": []int{0, 1},
+		//	"Any": []int{0, 1},
+		//},
 	}
 )
 
-type Caller struct {
+type Target struct {
 	requestLocation string
 	library         string
 	methodName      string
 	// TODO: Add package name, filename, code line
 }
 
-func getMainFunction(pkg *ssa.Package) *ssa.Function {
-	mainMember, hasMain := pkg.Members["main"]
-	if !hasMain {
+// getPackageFunction finds the method by within the specified package
+// Except it only looks for Exported functions
+func getPackageFunction(pkg *ssa.Package, name string) *ssa.Function {
+	member, hasSpecifiedMember := pkg.Members[name]
+	if !hasSpecifiedMember {
 		return nil
 	}
-	mainFunction, ok := mainMember.(*ssa.Function)
+	specifiedFunction, ok := member.(*ssa.Function)
 	if !ok {
+		// Not a function
 		return nil
 	}
 
-	return mainFunction
+	return specifiedFunction
 }
 
-func discoverCall(call *ssa.Call) *Caller {
-	var caller *Caller
+// Finds
+func recurseOnTheTarget(call *ssa.Call, fr Frame) {
+	switch fn := call.Call.Value.(type) {
 
-	//nolint
-	switch call.Call.Value.(type) {
 	case *ssa.Function:
-		calledFunction, _ := call.Call.Value.(*ssa.Function)
-		calledFunctionPackage := calledFunction.Pkg.Pkg.Path()
+		signature := fn.RelString(nil)
+		rootPackage := fn.Pkg.Pkg.Path()
 
-		relevantPackage, isRelevantPackage := locationIdx[calledFunctionPackage]
-		if isRelevantPackage {
-			indices, isRelevantFunction := relevantPackage[calledFunction.Name()]
-			if call.Call.Args != nil && isRelevantFunction {
-				arguments := resolveVariables(call.Call.Args, indices)
-				caller = &Caller{
-					requestLocation: strings.Join(arguments, "/"),
-					library:         calledFunctionPackage,
-					methodName:      calledFunction.Name(),
-				}
+		_, isInteresting := interestingCalls[signature]
+		if isInteresting {
+
+			arguments := resolveVariables(call.Call.Args, fr)
+			fmt.Println("Arguments: " + strings.Join(arguments, ", "))
+
+			caller := &Target{
+				requestLocation: strings.Join(arguments, "/"),
+				library:         rootPackage,
+				methodName:      signature,
 			}
+
+			fmt.Println("Found call to function " + signature)
+			//TODO Handle error
+			_ = append(*fr.targets, caller)
+			return
 		}
 
-		if calledFunction.Blocks != nil {
-			discoverBlocks(calledFunction.Blocks)
+		_, isBlacklisted := blackList[rootPackage]
+
+		if isBlacklisted {
+			return
 		}
 
-		return caller
-	default:
-		return nil
+		//fr.mappings = make(map[string]ssa.Value)
+		fmt.Println("Called function " + signature + " " + rootPackage)
+
+		for i, param := range fn.Params {
+			fr.Mappings[param.Name()] = call.Call.Args[i]
+		}
+
+		if fn.Blocks != nil {
+			discoverBlocks(fn.Blocks, fr)
+		}
 	}
 }
 
-func discoverBlock(block *ssa.BasicBlock) []*Caller {
+//
+func discoverBlock(block *ssa.BasicBlock, fr Frame) {
 	if block.Instrs == nil {
-		return nil
+		return
 	}
-
-	var calls []*Caller
 
 	for _, instr := range block.Instrs {
 		//nolint // can't rewrite switch with 1 case into if,
@@ -95,30 +127,43 @@ func discoverBlock(block *ssa.BasicBlock) []*Caller {
 		// so even if the call is part of variable assignment
 		// or a loop it will be stored as a separate ssa.Call instruction
 		case *ssa.Call:
-			calls = append(calls, discoverCall(instruction))
+			recurseOnTheTarget(instruction, fr)
 		}
 	}
-
-	return calls
+	return
 }
 
-func discoverBlocks(blocks []*ssa.BasicBlock) []*Caller {
-	var calls []*Caller
+// discoverBlocks
+func discoverBlocks(blocks []*ssa.BasicBlock, fr Frame) []*Target {
+	var calls []*Target
 
 	for _, block := range blocks {
-		calls = append(calls, discoverBlock(block)...)
+		discoverBlock(block, fr)
 	}
 
 	return calls
 }
 
-func AnalyzePackageCalls(pkg *ssa.Package) ([]*Caller, error) {
-	mainFunction := getMainFunction(pkg)
-	// TODO: Expand with endpoint searching
+// AnalyzePackageCalls takes a main package and finds all 'interesting' methods that are called
+func AnalyzePackageCalls(pkg *ssa.Package) ([]*Target, error) {
+	mainFunction := getPackageFunction(pkg, "main")
+	//initFunction := getPackageFunction(pkg, "init")
 
 	if mainFunction == nil {
-		return nil, fmt.Errorf("no main function found")
+		return nil, fmt.Errorf("no main function found in package %v", pkg)
 	}
 
-	return discoverBlocks(mainFunction.Blocks), nil
+	// List of stuff this package calls
+	targets := make([]*Target, 0)
+
+	baseFrame := Frame{
+		visited:  make([]*ssa.BasicBlock, 0),
+		Mappings: make(map[string]ssa.Value),
+		// Reference to the final list of all targets of the entire package
+		targets: &targets,
+	}
+
+	discoverBlocks(mainFunction.Blocks, baseFrame)
+
+	return targets, nil
 }

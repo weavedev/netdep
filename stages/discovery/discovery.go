@@ -2,6 +2,12 @@
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package discovery
 
+import (
+	"golang.org/x/tools/go/ssa"
+	"golang.org/x/tools/go/ssa/ssautil"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+)
+
 /*
 In the Discovery stages, clients and endpoints are discovered and mapped to their parent service.
 Refer to the Project plan, chapter 5.3 for more information.
@@ -27,12 +33,23 @@ type DiscoveredData struct {
 	Handled   map[string]string
 }
 
-// FindCallersForEndpoint is a sample method for locating
-// the callers of a specific endpoint, which is specified
-// by the name of its parent service, its path in the target
-// project, and its URI.
-func FindCallersForEndpoint(parentService, endpointPath, endpointURI string) []interface{} {
-	// This is a placeholder; the signature of this method might need to be changed.
-	// Return empty slice for now.
-	return nil
+func discover(projDir, svcDir string) ([]*callanalyzer.Target, error) {
+	conf := callanalyzer.SSAConfig{
+		Mode:    ssa.BuilderMode(0),
+		SvcDir:  svcDir,
+		ProjDir: projDir,
+	}
+
+	_, pkg, err := callanalyzer.CreateSSA(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	mains := ssautil.MainPackages(pkg)
+
+	for _, mainPkg := range mains {
+		_, _ = callanalyzer.AnalyzePackageCalls(mainPkg)
+	}
+
+	return nil, nil
 }
