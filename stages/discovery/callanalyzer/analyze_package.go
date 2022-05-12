@@ -42,6 +42,8 @@ var (
 		"(*net/http.Client).Do": Output,
 		"os.Getenv":             Substitute,
 	}
+	// List of stuff this package calls
+	Targets []*Target
 )
 
 // Target holds information about the destination of a certain call
@@ -49,7 +51,7 @@ var (
 type Target struct {
 	requestLocation string
 	library         string
-	methodName      string
+	MethodName      string
 	packageName     string
 	// TODO: Add filename and the position in code
 }
@@ -94,12 +96,12 @@ func recurseOnTheTarget(call *ssa.Call, frame Frame) {
 			callTarget := &Target{
 				requestLocation: strings.Join(arguments, "/"),
 				library:         rootPackage,
-				methodName:      qualifiedFunctionName,
+				MethodName:      qualifiedFunctionName,
 			}
 
 			//fmt.Println("Found call to function " + qualifiedFunctionName)
-			//TODO Handle error
-			_ = append(*frame.targets, callTarget)
+
+			Targets = append(Targets, callTarget)
 			return
 		}
 
@@ -130,14 +132,14 @@ func discoverBlock(block *ssa.BasicBlock, fr Frame) {
 	}
 
 	for _, instr := range block.Instrs {
-		//nolint // can't rewrite switch with 1 case into if,
-		// because .(type) is not allowed outside switch.
 		switch instruction := instr.(type) {
 		// Every complex Instruction is split into several instructions
 		// so even if the call is part of variable assignment
 		// or a loop it will be stored as a separate ssa.Call instruction
 		case *ssa.Call:
 			recurseOnTheTarget(instruction, fr)
+		default:
+			continue
 		}
 	}
 	return
@@ -163,17 +165,14 @@ func AnalyzePackageCalls(pkg *ssa.Package) ([]*Target, error) {
 		return nil, fmt.Errorf("no main function found in package %v", pkg)
 	}
 
-	// List of stuff this package calls
-	targets := make([]*Target, 0)
-
 	baseFrame := Frame{
 		visited:  make([]*ssa.BasicBlock, 0),
 		Mappings: make(map[string]ssa.Value),
 		// Reference to the final list of all targets of the entire package
-		targets: &targets,
 	}
+	Targets = make([]*Target, 0)
 
 	discoverBlocks(mainFunction.Blocks, baseFrame)
 
-	return targets, nil
+	return Targets, nil
 }

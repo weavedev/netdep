@@ -4,7 +4,6 @@ import "golang.org/x/tools/go/ssa"
 
 type Frame struct {
 	visited  []*ssa.BasicBlock
-	targets  *[]*Target
 	Mappings map[string]ssa.Value
 }
 
