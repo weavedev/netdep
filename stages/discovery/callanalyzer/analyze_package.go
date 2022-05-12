@@ -24,32 +24,32 @@ var blackList = map[string]bool{
 	"internal/reflectlite": true,
 }
 
-// interestingCalls Stores Relevant Libraries
+type DiscoveryAction int64
+
+const (
+	Output     DiscoveryAction = 0
+	Substitute                 = 1
+)
+
+// interestingCalls is used Stores Relevant Libraries
 // their Relevant Methods and for each method
 // a position of location in the Args of ssa.Call
 //nolint
 var (
-	interestingCalls = map[string][]int{
-		"(*net/http.Client).Do": {0},
-		"os.Getenv":             {0},
-		//	"Post":     []int{0},
-		//	"Put":      []int{0},
-		//	"PostForm": []int{0},
-		//	"Do":       []int{0}, // this is a bit different, as it uses http.Request
-		//	// Where 2nd argument of NewRequest is a URL.
-		//},
-		//"github.com/gin-gonic/gin": {
-		//	"GET": []int{0, 1},
-		//	"Any": []int{0, 1},
-		//},
+	interestingCalls = map[string]DiscoveryAction{
+		"(*net/http.Client).Do": Output,
+		"os.Getenv":             Substitute,
 	}
 )
 
+// Target holds information about the destination of a certain call
+// executed by the main program; found in the SSA tree.
 type Target struct {
 	requestLocation string
 	library         string
 	methodName      string
-	// TODO: Add package name, filename, code line
+	packageName     string
+	// TODO: Add filename and the position in code
 }
 
 // getPackageFunction finds the method by within the specified package
@@ -68,18 +68,19 @@ func getPackageFunction(pkg *ssa.Package, name string) *ssa.Function {
 	return specifiedFunction
 }
 
-// Finds
-func recurseOnTheTarget(call *ssa.Call, fr Frame) {
-	switch fn := call.Call.Value.(type) {
+// recurseOnTheTarget recursively traverses the SSA, with call being the starting point,
+// and using the environment specified in the frame
+func recurseOnTheTarget(call *ssa.Call, frame Frame) {
+	switch fnCallType := call.Call.Value.(type) {
 
 	case *ssa.Function:
-		signature := fn.RelString(nil)
-		rootPackage := fn.Pkg.Pkg.Path()
+		signature := fnCallType.RelString(nil)
+		rootPackage := fnCallType.Pkg.Pkg.Path()
 
 		_, isInteresting := interestingCalls[signature]
 		if isInteresting {
 
-			arguments := resolveVariables(call.Call.Args, fr)
+			arguments := resolveVariables(call.Call.Args, frame)
 			fmt.Println("Arguments: " + strings.Join(arguments, ", "))
 
 			caller := &Target{
@@ -90,25 +91,26 @@ func recurseOnTheTarget(call *ssa.Call, fr Frame) {
 
 			fmt.Println("Found call to function " + signature)
 			//TODO Handle error
-			_ = append(*fr.targets, caller)
+			_ = append(*frame.targets, caller)
 			return
 		}
 
 		_, isBlacklisted := blackList[rootPackage]
 
 		if isBlacklisted {
+			// Do not step into the library if it is blacklisted for recursion
 			return
 		}
 
-		//fr.mappings = make(map[string]ssa.Value)
+		//frame.mappings = make(map[string]ssa.Value)
 		fmt.Println("Called function " + signature + " " + rootPackage)
 
-		for i, param := range fn.Params {
-			fr.Mappings[param.Name()] = call.Call.Args[i]
+		for i, param := range fnCallType.Params {
+			frame.Mappings[param.Name()] = call.Call.Args[i]
 		}
 
-		if fn.Blocks != nil {
-			discoverBlocks(fn.Blocks, fr)
+		if fnCallType.Blocks != nil {
+			discoverBlocks(fnCallType.Blocks, frame)
 		}
 	}
 }
