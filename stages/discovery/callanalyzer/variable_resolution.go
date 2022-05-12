@@ -9,6 +9,7 @@ import (
 func resolveVariable(value ssa.Value) string {
 	switch val := value.(type) {
 	case *ssa.Const:
+		//nolint
 		switch val.Value.Kind() {
 		case constant.String:
 			return constant.StringVal(val.Value)

@@ -14,6 +14,7 @@ import (
 // locationIdx Stores Relevant Libraries
 // their Relevant Methods and for each method
 // a position of location in the Args of ssa.Call
+//nolint
 var (
 	locationIdx = map[string]map[string][]int{
 		"net/http": {
@@ -111,14 +112,13 @@ func discoverBlocks(blocks []*ssa.BasicBlock) []*Caller {
 	return calls
 }
 
-func AnalyzePackageCalls(pkg *ssa.Package) []*Caller {
+func AnalyzePackageCalls(pkg *ssa.Package) ([]*Caller, error) {
 	mainFunction := getMainFunction(pkg)
 	// TODO: Expand with endpoint searching
 
 	if mainFunction == nil {
-		fmt.Println("No main function found!")
-		return nil
+		return nil, fmt.Errorf("no main function found")
 	}
 
-	return discoverBlocks(mainFunction.Blocks)
+	return discoverBlocks(mainFunction.Blocks), nil
 }

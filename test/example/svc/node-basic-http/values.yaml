@@ -1,0 +1,8 @@
+scopes:
+  secure:
+    - name: ServiceA
+      endpoint: /services/ServiceA
+      scope: service_a
+  public:
+    - name: ServiceB
+      endpoint: /services/ServiceB
