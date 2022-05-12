@@ -4,9 +4,11 @@ When contributing to this repository, and you are not part of the team developin
 
 Please note we have a code of conduct, please follow it in all your interactions with the project.
 
-## Commit linting
+## Linting & Commit message linting
 
-Make sure that all commits adhere to the standards defined in [the commit linter](https://github.com/conventional-changelog/commitlint/#what-is-commitlint), otherwise your commits will be rejected.
+Make sure that all commit messages adhere to the standards defined in [the commit linter](https://github.com/conventional-changelog/commitlint/#what-is-commitlint), otherwise your commits will be rejected.
+
+Make sure you also adhere to the [normal lint rules](https://github.com/golangci/golangci-lint). If you have issues getting the normal linting right, you can use the `//nolint` comment, but please use it sparingly and accompany it with a reason _why_ the linting is disabled. 
 
 ## Merge Request Process
 
