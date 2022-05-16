@@ -3,6 +3,9 @@
 package discovery
 
 import (
+	"fmt"
+	"golang.org/x/tools/go/callgraph"
+	"golang.org/x/tools/go/pointer"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -33,6 +36,14 @@ type DiscoveredData struct {
 	Handled   map[string]string
 }
 
+var (
+	interestingCalls = map[string]int{
+		"(*net/http.Client).Do": 1,
+		//"net/http.NewRequest":   1,
+		//"os.Getenv":             0,
+	}
+)
+
 // Discover finds client calls in the specified project directory
 func Discover(projDir, svcDir string) ([]*callanalyzer.Target, error) {
 	conf := callanalyzer.SSAConfig{
@@ -41,18 +52,69 @@ func Discover(projDir, svcDir string) ([]*callanalyzer.Target, error) {
 		ProjDir: projDir,
 	}
 
-	_, pkg, err := callanalyzer.CreateSSA(conf)
+	prg, pkgs, err := callanalyzer.CreateSSA(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	mains := ssautil.MainPackages(pkg)
+	prg.Build()
+
+	mains := ssautil.MainPackages(pkgs)
+
+	ptConfig := &pointer.Config{
+		Mains:          mains,
+		BuildCallGraph: true,
+	}
+
+	for fn := range ssautil.AllFunctions(prg) {
+		for _, b := range fn.Blocks {
+			for _, instr := range b.Instrs {
+				if instr, ok := instr.(*ssa.Call); ok {
+					if fn, ok := instr.Call.Value.(*ssa.Function); ok {
+						sign := fn.RelString(nil)
+						index, isInteresting := interestingCalls[sign]
+						if isInteresting {
+							ptConfig.AddQuery(instr.Call.Args[index])
+						}
+					}
+				}
+			}
+		}
+	}
+
+	ptares, err := pointer.Analyze(ptConfig)
+	if err != nil {
+		return nil, err // internal error in pointer analysis
+	}
+
+	cg := ptares.CallGraph
+	cg.DeleteSyntheticNodes()
+
+	callgraph.GraphVisitEdges(cg, func(edge *callgraph.Edge) error {
+		sign := edge.Callee.Func.RelString(nil)
+		index, isInteresting := interestingCalls[sign]
+		if isInteresting {
+			common := edge.Site.Common()
+			fmt.Println(edge.Description())
+			pointer, found := ptares.Queries[common.Args[index]]
+			if !found {
+				return nil
+			}
+			pointerSet := pointer.PointsTo()
+			fmt.Println(edge)
+			for _, label := range pointerSet.Labels() {
+				fmt.Println(prg.Fset.Position(label.Pos()).String() + " - " + label.String())
+			}
+		}
+
+		return nil
+	})
 
 	allTargets := make([]*callanalyzer.Target, 0)
-	for _, mainPkg := range mains {
-		targetsOfCurrPkg, _ := callanalyzer.AnalyzePackageCalls(mainPkg)
-		allTargets = append(allTargets, targetsOfCurrPkg...)
-	}
+	//for _, mainPkg := range mains {
+	//	targetsOfCurrPkg, _ := callanalyzer.AnalyzePackageCalls(mainPkg)
+	//	allTargets = append(allTargets, targetsOfCurrPkg...)
+	//}
 
 	return allTargets, nil
 }
