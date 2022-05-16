@@ -5,8 +5,15 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path"
+
+	"golang.org/x/tools/go/ssa"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
 )
@@ -29,14 +36,22 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			if ex, err := pathExists(projectDir); !ex || err != nil {
 				return fmt.Errorf("invalid project directory specified: %s", projectDir)
 			}
-			if ex, err := pathExists(serviceDir); !ex || err != nil {
+			if ex, err := pathExists(path.Join(projectDir, serviceDir)); !ex || err != nil {
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			fmt.Println("depScan called")
+
+			fmt.Println("Starting call scanning...")
 			fmt.Println("Project directory: " + projectDir)
 			fmt.Println("Service directory: " + serviceDir)
+			dependencies, err := buildDependencies(serviceDir, projectDir)
+			if err != nil {
+				return err
+			}
+			for _, dependency := range dependencies {
+				fmt.Println(dependency)
+			}
 
 			return nil
 		},
@@ -62,4 +77,47 @@ func pathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// buildDependencies is responsible for integrating different stages
+// of the program.
+func buildDependencies(svcDir string, projectDir string) ([]string, error) {
+	// Filtering
+	initial, err := stages.LoadPackages(svcDir, projectDir)
+	fmt.Printf("Starting to analyse %s\n", initial)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Endpoint discovery
+	// Client Call Discovery
+	clientCalls, err := clientCallDiscovery(initial)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Matching
+
+	// For now this returns client calls,
+	// as we don't have any other functionality in place.
+	return clientCalls, nil
+}
+
+func clientCallDiscovery(initial []*ssa.Package) ([]string, error) {
+	clientCalls := make([]string, 0)
+
+	for _, pkg := range initial {
+		if caller, err := callanalyzer.AnalyzePackageCalls(pkg); err == nil {
+			out, jErr := json.Marshal(caller)
+			if jErr != nil {
+				panic(err)
+			}
+			clientCalls = append(clientCalls, string(out))
+		} else {
+			fmt.Println("Unable to analyse package calls")
+			return nil, err
+		}
+	}
+
+	return clientCalls, nil
 }

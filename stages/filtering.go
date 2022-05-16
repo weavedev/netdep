@@ -3,7 +3,41 @@
 
 package stages
 
-import "go/ast"
+import (
+	"fmt"
+	"go/ast"
+
+	"golang.org/x/tools/go/packages"
+	"golang.org/x/tools/go/ssa"
+	"golang.org/x/tools/go/ssa/ssautil"
+)
+
+func LoadPackages(svcDir string, projectDir string) ([]*ssa.Package, error) {
+	config := &packages.Config{
+		Dir: projectDir,
+		//nolint // We are using this, as cmd/callgraph is using it.
+		Mode:  packages.LoadAllSyntax,
+		Tests: false,
+	}
+	mode := ssa.BuilderMode(0)
+
+	initial, err := packages.Load(config, svcDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(initial) == 0 {
+		return nil, fmt.Errorf("no packages")
+	}
+
+	if packages.PrintErrors(initial) > 0 {
+		return nil, fmt.Errorf("packages contain errors")
+	}
+
+	prog, pkgs := ssautil.AllPackages(initial, mode)
+	prog.Build()
+	return pkgs, nil
+}
 
 /*
 In the Filtering stages, irrelevant files and directories are removed from the target project.

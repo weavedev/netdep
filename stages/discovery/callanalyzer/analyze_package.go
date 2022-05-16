@@ -32,9 +32,9 @@ var locationIdx = map[string]map[string][]int{
 }
 
 type Caller struct {
-	requestLocation string
-	library         string
-	methodName      string
+	RequestLocation string
+	Library         string
+	MethodName      string
 	// TODO: Add package name, filename, code line
 }
 
@@ -66,14 +66,14 @@ func discoverCall(call *ssa.Call) *Caller {
 			if call.Call.Args != nil && isRelevantFunction {
 				arguments := resolveVariables(call.Call.Args, indices)
 				caller = &Caller{
-					requestLocation: strings.Join(arguments, ""),
-					library:         calledFunctionPackage,
-					methodName:      calledFunction.Name(),
+					RequestLocation: strings.Join(arguments, ""),
+					Library:         calledFunctionPackage,
+					MethodName:      calledFunction.Name(),
 				}
 			}
 		}
 
-		if calledFunction.Blocks != nil {
+		if calledFunction.Blocks != nil && caller == nil {
 			discoverBlocks(calledFunction.Blocks)
 		}
 		return caller
