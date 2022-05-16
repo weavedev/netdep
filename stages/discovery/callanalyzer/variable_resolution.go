@@ -2,8 +2,8 @@ package callanalyzer
 
 import (
 	"go/constant"
-
 	"golang.org/x/tools/go/ssa"
+	"strings"
 )
 
 func resolveVariable(value ssa.Value) string {
@@ -24,7 +24,12 @@ func resolveVariable(value ssa.Value) string {
 func resolveVariables(parameters []ssa.Value, positions []int) []string {
 	stringParameters := make([]string, len(positions))
 	for i, idx := range positions {
-		stringParameters[i] = resolveVariable(parameters[idx])
+		if idx < len(parameters) {
+			variable := resolveVariable(parameters[idx])
+			if !strings.HasPrefix(variable, "not a constant") {
+				stringParameters[i] = variable
+			}
+		}
 	}
 
 	return stringParameters

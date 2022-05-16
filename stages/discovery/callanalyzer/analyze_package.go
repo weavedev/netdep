@@ -14,19 +14,22 @@ import (
 // locationIdx Stores Relevant Libraries
 // their Relevant Methods and for each method
 // a position of location in the Args of ssa.Call
+
 //nolint
-var (
-	locationIdx = map[string]map[string][]int{
-		"net/http": {
-			"Get":      []int{0},
-			"Post":     []int{0},
-			"Put":      []int{0},
-			"PostForm": []int{0},
-			// "Do":       []int{0},  this is a bit different, as it uses http.Request
-			// as an argument. This will be completed in the future.
-		},
-	}
-)
+var locationIdx = map[string]map[string][]int{
+	"net/http": {
+		"Get":      []int{0, 1},
+		"Post":     []int{0, 1},
+		"Put":      []int{0, 1},
+		"PostForm": []int{0, 1},
+		"Head":     []int{0, 1},
+		// "Do":                    []int{0},
+		"NewRequest":            []int{1},
+		"NewRequestWithContext": []int{2},
+		// this is a bit different, as it uses http.Request
+		// as an argument. This will be completed in the future.
+	},
+}
 
 type Caller struct {
 	requestLocation string
@@ -63,7 +66,7 @@ func discoverCall(call *ssa.Call) *Caller {
 			if call.Call.Args != nil && isRelevantFunction {
 				arguments := resolveVariables(call.Call.Args, indices)
 				caller = &Caller{
-					requestLocation: strings.Join(arguments, "/"),
+					requestLocation: strings.Join(arguments, ""),
 					library:         calledFunctionPackage,
 					methodName:      calledFunction.Name(),
 				}
@@ -73,7 +76,6 @@ func discoverCall(call *ssa.Call) *Caller {
 		if calledFunction.Blocks != nil {
 			discoverBlocks(calledFunction.Blocks)
 		}
-
 		return caller
 	default:
 		return nil
