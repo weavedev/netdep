@@ -2,8 +2,9 @@ package callanalyzer
 
 import (
 	"go/constant"
-	"golang.org/x/tools/go/ssa"
 	"strings"
+
+	"golang.org/x/tools/go/ssa"
 )
 
 func resolveVariable(value ssa.Value) string {
