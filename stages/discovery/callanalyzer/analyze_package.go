@@ -23,6 +23,7 @@ var ignoreList = map[string]bool{
 	"runtime":              true,
 	"math/bits":            true,
 	"internal/reflectlite": true,
+	"(*sync.Once).Do":      true,
 }
 
 // DiscoveryAction indicates what to do when encountering
@@ -39,11 +40,13 @@ const (
 // outputted as a party in a dependency (0) or substituted with a constant (1)
 var (
 	interestingCalls = map[string]DiscoveryAction{
-		"(*net/http.Client).Do": Output,
-		"os.Getenv":             Substitute,
+		"net/http.NewRequest": Output,
+		"os.Getenv":           Substitute,
 	}
 	// List of stuff this package calls
 	Targets []*Target
+
+	frameMap = make(map[*Frame]*Frame, 0)
 )
 
 // Target holds information about the destination of a certain call
@@ -76,7 +79,7 @@ func getPackageFunction(pkg *ssa.Package, name string) *ssa.Function {
 // and using the environment specified in the frame
 // Variables are only resolved if the call is 'interesting'
 // Recursion is only continued if the call is not in the 'ignoreList'
-func recurseOnTheTarget(call *ssa.Call, frame Frame) {
+func recurseOnTheTarget(call *ssa.Call, frame *Frame) {
 	// The fnCallType can be the function type, the anonymous function type, or something else.
 	// See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call
 	switch fnCallType := call.Call.Value.(type) {
@@ -114,19 +117,21 @@ func recurseOnTheTarget(call *ssa.Call, frame Frame) {
 
 		//frame.mappings = make(map[string]ssa.Value)
 		//fmt.Println("Called function " + qualifiedFunctionName + " " + rootPackage)
-
+		newFrame := *frame
+		frameMap[&newFrame] = frame
+		newFrame.OldFrame = frame
 		for i, param := range fnCallType.Params {
-			frame.Mappings[param.Name()] = call.Call.Args[i]
+			newFrame.Mappings[param.Name()] = call.Call.Args[i]
 		}
 
 		if fnCallType.Blocks != nil {
-			discoverBlocks(fnCallType.Blocks, frame)
+			discoverBlocks(fnCallType.Blocks, &newFrame)
 		}
 	}
 }
 
 //
-func discoverBlock(block *ssa.BasicBlock, fr Frame) {
+func discoverBlock(block *ssa.BasicBlock, fr *Frame) {
 	if block.Instrs == nil {
 		return
 	}
@@ -146,7 +151,7 @@ func discoverBlock(block *ssa.BasicBlock, fr Frame) {
 }
 
 // discoverBlocks
-func discoverBlocks(blocks []*ssa.BasicBlock, fr Frame) []*Target {
+func discoverBlocks(blocks []*ssa.BasicBlock, fr *Frame) []*Target {
 	var calls []*Target
 
 	for _, block := range blocks {
@@ -172,7 +177,7 @@ func AnalyzePackageCalls(pkg *ssa.Package) ([]*Target, error) {
 	}
 	Targets = make([]*Target, 0)
 
-	discoverBlocks(mainFunction.Blocks, baseFrame)
+	discoverBlocks(mainFunction.Blocks, &baseFrame)
 
 	return Targets, nil
 }

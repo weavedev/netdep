@@ -7,12 +7,15 @@ import (
 )
 
 // Resolves the value of a variable with respect to a specific frame of execution
-func resolveVariable(value ssa.Value, fr Frame) string {
+func resolveVariable(value ssa.Value, fr *Frame) string {
 	switch val := value.(type) {
 	case *ssa.Parameter:
 		paramValue, hasValue := fr.Mappings[val.Name()]
 		if hasValue {
-			return resolveVariable(paramValue, fr)
+			oldFrame := fr.OldFrame
+			if oldFrame != nil {
+				return resolveVariable(paramValue, oldFrame)
+			}
 		} else {
 			return "[[Unknown]]"
 		}
@@ -23,6 +26,9 @@ func resolveVariable(value ssa.Value, fr Frame) string {
 		}
 		return "[[OP]]"
 	case *ssa.Const:
+		if val.Value == nil {
+			return "nil"
+		}
 		switch val.Value.Kind() {
 		case constant.String:
 			return constant.StringVal(val.Value)
@@ -33,7 +39,7 @@ func resolveVariable(value ssa.Value, fr Frame) string {
 	return "var(" + value.Name() + ") = ??"
 }
 
-func resolveVariables(parameters []ssa.Value, fr Frame) []string {
+func resolveVariables(parameters []ssa.Value, fr *Frame) []string {
 	if parameters == nil {
 		return []string{}
 	}
