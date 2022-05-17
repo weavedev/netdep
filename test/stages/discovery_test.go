@@ -6,9 +6,9 @@ package stages
 import (
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
-
 	"github.com/stretchr/testify/assert"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 )
 
 /*
