@@ -2,6 +2,12 @@
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package discovery
 
+import (
+	"golang.org/x/tools/go/ssa"
+	"golang.org/x/tools/go/ssa/ssautil"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+)
+
 /*
 In the Discovery stages, clients and endpoints are discovered and mapped to their parent service.
 Refer to the Project plan, chapter 5.3 for more information.
@@ -35,4 +41,30 @@ func FindCallersForEndpoint(parentService, endpointPath, endpointURI string) []i
 	// This is a placeholder; the signature of this method might need to be changed.
 	// Return empty slice for now.
 	return nil
+}
+
+// Discover finds client calls in the specified project directory
+func Discover(projDir, svcDir string) ([]*callanalyzer.Caller, []*callanalyzer.Caller, error) {
+	conf := callanalyzer.SSAConfig{
+		Mode:    ssa.BuilderMode(0),
+		SvcDir:  svcDir,
+		ProjDir: projDir,
+	}
+
+	_, pkg, err := callanalyzer.CreateSSA(conf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mains := ssautil.MainPackages(pkg)
+
+	allTargetsClient := make([]*callanalyzer.Caller, 0)
+	allTargetsServer := make([]*callanalyzer.Caller, 0)
+	for _, mainPkg := range mains {
+		targetsOfCurrPkgClient, targetOfCurrPkgServer, _ := callanalyzer.AnalyzePackageCalls(mainPkg)
+		allTargetsClient = append(allTargetsClient, targetsOfCurrPkgClient...)
+		allTargetsServer = append(allTargetsServer, targetOfCurrPkgServer...)
+	}
+
+	return allTargetsClient, allTargetsServer, nil
 }
