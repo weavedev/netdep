@@ -2,6 +2,7 @@ package callanalyzer
 
 import (
 	"fmt"
+
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
@@ -24,7 +25,6 @@ func CreateSSA(ssaConf SSAConfig) (*ssa.Program, []*ssa.Package, error) {
 	}
 
 	initial, err := packages.Load(pkgConf, ssaConf.SvcDir)
-
 	if err != nil {
 		return nil, nil, err
 	}

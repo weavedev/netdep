@@ -6,6 +6,7 @@ package callanalyzer
 
 import (
 	"fmt"
+
 	"golang.org/x/tools/go/ssa"
 )
 
