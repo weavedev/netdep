@@ -53,7 +53,7 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
+func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	switch fnCallType := call.Call.Value.(type) {
@@ -65,13 +65,13 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
-		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionNameOfTarget]
-		if isInteresting {
+		interestingStuffClient, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
-			if interestingStuff.action == Output {
+			if interestingStuffClient.action == Output {
 				requestLocation := ""
-				if call.Call.Args != nil && len(interestingStuff.interestingArgs) > 0 {
-					requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuff.interestingArgs)...)
+				if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
+					requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs)...)
 				}
 				callTarget := &CallTarget{
 					packageName:     calledFunctionPackage,
@@ -81,9 +81,36 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 
 				// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
 
-				*targets = append(*targets, callTarget)
+				*targetsClient = append(*targetsClient, callTarget)
 				return
-			} else if interestingStuff.action == Substitute {
+			} else if interestingStuffClient.action == Substitute {
+				// TODO: implement substitution of env calls
+			}
+		}
+
+		interestingStuffServer, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+		if isInterestingServer {
+			// TODO: Resolve the arguments of the function call
+			if interestingStuffServer.action == Output {
+				requestLocation := ""
+				if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
+					if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
+						requestLocation = path.Join(resolveGinAddrSlice(call.Call.Args[1])...)
+					} else {
+						requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs)...)
+					}
+				}
+				callTarget := &CallTarget{
+					packageName:     calledFunctionPackage,
+					MethodName:      qualifiedFunctionNameOfTarget,
+					requestLocation: requestLocation,
+				}
+
+				// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
+
+				*targetsServer = append(*targetsServer, callTarget)
+				return
+			} else if interestingStuffServer.action == Substitute {
 				// TODO: implement substitution of env calls
 			}
 		}
@@ -99,7 +126,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		newFrame := *frame
 
 		if fnCallType.Blocks != nil {
-			visitBlocks(fnCallType.Blocks, &newFrame, config, targets)
+			visitBlocks(fnCallType.Blocks, &newFrame, config, targetsClient, targetsServer)
 		}
 	default:
 		// Unsupported call type
@@ -115,7 +142,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
+func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
 	if block.Instrs == nil {
 		return
 	}
@@ -123,7 +150,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case *ssa.Call:
-			analyseCall(instruction, fr, config, targets)
+			analyseCall(instruction, fr, config, targetsClient, targetsServer)
 		default:
 			continue
 		}
@@ -137,7 +164,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
+func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
 	if len(fr.visited) > config.maxTraversalDepth {
 		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
 		return
@@ -150,7 +177,7 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, ta
 		newFr := fr
 		// Mark the block as visited
 		newFr.visited[block] = true
-		analyseInstructionsOfBlock(block, newFr, config, targets)
+		analyseInstructionsOfBlock(block, newFr, config, targetsClient, targetsServer)
 	}
 }
 
@@ -162,7 +189,7 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, ta
 //
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
-func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, error) {
+func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
 	mainFunction := findFunctionInPackage(pkg, "main")
 
 	// TODO: look for the init function will be useful if we want to know
@@ -171,7 +198,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 
 	// Find the main function
 	if mainFunction == nil {
-		return nil, fmt.Errorf("no main function found in package %v", pkg)
+		return nil, nil, fmt.Errorf("no main function found in package %v", pkg)
 	}
 
 	baseFrame := Frame{
@@ -179,10 +206,11 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 		// Reference to the final list of all _targets of the entire package
 	}
 
-	targets := make([]*CallTarget, 0)
+	targetsClient := make([]*CallTarget, 0)
+	targetsServer := make([]*CallTarget, 0)
 
 	// Visit each of the block of the main function
-	visitBlocks(mainFunction.Blocks, &baseFrame, config, &targets)
+	visitBlocks(mainFunction.Blocks, &baseFrame, config, &targetsClient, &targetsServer)
 
-	return targets, nil
+	return targetsClient, targetsServer, nil
 }

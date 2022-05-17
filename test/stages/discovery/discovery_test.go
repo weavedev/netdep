@@ -16,12 +16,42 @@ import (
 /*
 A test for the sample implementation of the resolution method
 */
-func TestDiscovery(t *testing.T) {
+func TestDiscoveryBasicCall(t *testing.T) {
 	_, thisFilePath, _, _ := runtime.Caller(0)
 	thisFileParent := path.Dir(thisFilePath)
 
 	projDir := path.Join(path.Dir(path.Dir(thisFileParent)), path.Join("sample", path.Join("http", "basic_call")))
-	res, _ := discovery.Discover(projDir, projDir)
-	assert.Equal(t, 1, len(res), "Expect 1 interesting call")
-	assert.Equal(t, "(*net/http.Client).Get", res[0].MethodName, "Expect net/http.Client+Do to be called")
+	resC, _, _ := discovery.Discover(projDir, projDir)
+	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
+	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
+}
+
+func TestDiscoveryBasicHandle(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+
+	projDir := path.Join(path.Dir(path.Dir(thisFileParent)), path.Join("sample", path.Join("http", "basic_handle")))
+	_, resS, _ := discovery.Discover(projDir, projDir)
+	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
+	assert.Equal(t, "net/http.Handle", resS[0].MethodName, "Expect net/http.Handle to be called")
+}
+
+func TestDiscoveryBasicHandleFunc(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+
+	projDir := path.Join(path.Dir(path.Dir(thisFileParent)), path.Join("sample", path.Join("http", "basic_handlefunc")))
+	_, resS, _ := discovery.Discover(projDir, projDir)
+	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
+	assert.Equal(t, "net/http.HandleFunc", resS[0].MethodName, "Expect net/http.HandleFunc to be called")
+}
+
+func TestDiscoveryGinHandle(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+
+	projDir := path.Join(path.Dir(path.Dir(thisFileParent)), path.Join("sample", path.Join("http", "gin_handle")))
+	_, resS, _ := discovery.Discover(projDir, projDir)
+	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
+	assert.Equal(t, "github.com/gin-gonic/gin.GET", resS[0].MethodName, "Expect github.com/gin-gonic/gin.GET to be called")
 }

@@ -37,7 +37,7 @@ type DiscoveredData struct {
 }
 
 // Discover finds client calls in the specified project directory
-func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, error) {
+func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Config for the SSA building function
 	conf := callanalyzer.SSAConfig{
 		Mode:    ssa.BuilderMode(0),
@@ -47,23 +47,25 @@ func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, error) {
 
 	_, ssaPkg, err := callanalyzer.CreateSSA(conf)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	mainPackages := ssautil.MainPackages(ssaPkg)
 
 	// The current output data structure. TODO: add additional fields
-	allTargets := make([]*callanalyzer.CallTarget, 0)
+	allClientTargets := make([]*callanalyzer.CallTarget, 0)
+	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	// TODO: change the following line to adapt the analyser for server-side endpoint detection
 	config := callanalyzer.DefaultConfigForFindingHTTPClientCalls()
 	for _, pkg := range mainPackages {
 		// Analyse each package
-		targetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
+		clientTargetsOfCurrPkg, serverTargetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
 		if err != nil {
 			fmt.Printf("Non-fatal error while searching for interesting calls: %v\n", err)
 		}
-		allTargets = append(allTargets, targetsOfCurrPkg...)
+		allClientTargets = append(allClientTargets, clientTargetsOfCurrPkg...)
+		allServerTargets = append(allServerTargets, serverTargetsOfCurrPkg...)
 	}
 
-	return allTargets, nil
+	return allClientTargets, allServerTargets, nil
 }
