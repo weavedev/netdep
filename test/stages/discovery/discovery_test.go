@@ -22,5 +22,5 @@ func TestDiscovery(t *testing.T) {
 	projDir := path.Join(path.Dir(path.Dir(thisFileParent)), path.Join("sample", path.Join("http", "basic_call")))
 	res, _ := discovery.Discover(projDir, projDir)
 	assert.Equal(t, 1, len(res), "Expect 1 interesting call")
-	assert.Equal(t, "(*net/http.Client).Do", res[0].MethodName, "Expect net/http.Client+Do to be called")
+	assert.Equal(t, "(*net/http.Client).Get", res[0].MethodName, "Expect net/http.Client+Do to be called")
 }

@@ -34,7 +34,7 @@ type DiscoveredData struct {
 }
 
 // Discover finds client calls in the specified project directory
-func Discover(projDir, svcDir string) ([]*callanalyzer.Target, error) {
+func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, error) {
 	conf := callanalyzer.SSAConfig{
 		Mode:    ssa.BuilderMode(0),
 		SvcDir:  svcDir,
@@ -48,9 +48,10 @@ func Discover(projDir, svcDir string) ([]*callanalyzer.Target, error) {
 
 	mains := ssautil.MainPackages(pkg)
 
-	allTargets := make([]*callanalyzer.Target, 0)
+	allTargets := make([]*callanalyzer.CallTarget, 0)
+	config := callanalyzer.DefaultConfig()
 	for _, mainPkg := range mains {
-		targetsOfCurrPkg, _ := callanalyzer.AnalyzePackageCalls(mainPkg)
+		targetsOfCurrPkg, _ := callanalyzer.AnalyzePackageCalls(mainPkg, &config)
 		allTargets = append(allTargets, targetsOfCurrPkg...)
 	}
 
