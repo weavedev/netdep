@@ -24,12 +24,12 @@ type AnalyzerConfig struct {
 func DefaultConfig() AnalyzerConfig {
 	return AnalyzerConfig{
 		interestingCalls: map[string]DiscoveryAction{
-			"(*net/http.Client).Do":   Output,
-			"os.Getenv":               Substitute,
-			"(*net/http.Client).Get":  Output,
-			"(*net/http.Client).Post": Output,
-			"(*net/http.Client).Head": Output,
-			"NewRequestWithContext":   Output,
+			"(*net/http.Client).Do":          Output,
+			"(*net/http.Client).Get":         Output,
+			"(*net/http.Client).Post":        Output,
+			"(*net/http.Client).Head":        Output,
+			"net/http.NewRequestWithContext": Output,
+			"os.Getenv":                      Substitute, // TODO: substitute
 			// "net/http.NewRequest":   Output,
 			// "(*net/http.Client).PostForm":      Output,
 		},
