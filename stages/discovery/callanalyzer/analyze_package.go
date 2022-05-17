@@ -10,54 +10,64 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-// CallTarget holds information about the destination of a certain call
-// executed by the main program; found in the SSA tree.
+// CallTarget holds information about a certain call made by the analyzed package.
+// This used to be named "Caller" (which was slightly misleading, as it is in fact the target,
+// thus rather a 'callee' than a 'caller'.
 type CallTarget struct {
-	library    string
+	// The name of the package the method belongs to
+	packageName string
+	// The name of the call (i.e. name of function or some other target)
 	MethodName string
-	// packageName     string
-	// requestLocation string
-	// TODO: Add filename and the position in code
+	// TODO: Add support for the following:
+	// fileName			string
+	// positionInFile	string
 }
 
-// findFunctionInPackage finds the method by within the specified package
-// Except it only looks for Exported functions
+// findFunctionInPackage finds the method by its name within the specified package.
+// Important: it only looks for Exported functions
 func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
+	// Find member
 	member, hasSpecifiedMember := pkg.Members[name]
 	if !hasSpecifiedMember {
 		return nil
 	}
-	specifiedFunction, ok := member.(*ssa.Function)
+	// Check that member is a Function
+	foundFunction, ok := member.(*ssa.Function)
 	if !ok {
 		// Not a function
 		return nil
 	}
-
-	return specifiedFunction
+	return foundFunction
 }
 
 // analyzeCall recursively traverses the SSA, with call being the starting point,
 // and using the environment specified in the frame
 // Variables are only resolved if the call is 'interesting'
 // Recursion is only continued if the call is not in the 'ignoreList'
+//
+// Arguments:
+// call is the call to analyze,
+// frame is a structure for keeping track of the recursion,
+// config specifies how the analyzer should behave, and
+// targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
-	// The fnCallType can be the function type, the anonymous function type, or something else.
-	// See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call
+	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
+	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	switch fnCallType := call.Call.Value.(type) {
-	// TODO: handle other kinds of call _targets
+	// TODO: handle other cases
 	case *ssa.Function:
-		// The full qualified name of the function, including its package
+		// Qualified function name is: package + interface + function
 		qualifiedFunctionName := fnCallType.RelString(nil)
 		rootPackage := fnCallType.Pkg.Pkg.Path()
 
 		_, isInteresting := config.interestingCalls[qualifiedFunctionName]
 		if isInteresting {
-			// TODO: Resolve all arguments of the function call (because it is in the interesting list)
-
+			// TODO: Resolve the arguments of the function call
 			callTarget := &CallTarget{
-				library:    rootPackage,
-				MethodName: qualifiedFunctionName,
+				packageName: rootPackage,
+				MethodName:  qualifiedFunctionName,
 			}
+
 			// fmt.Println("Found call to function " + qualifiedFunctionName)
 
 			*targets = append(*targets, callTarget)
@@ -67,31 +77,37 @@ func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *
 		_, isIgnored := config.ignoreList[rootPackage]
 
 		if isIgnored {
-			// Do not recurse into the library if it is ignored (for recursion)
+			// Do not recurse into the packageName if it is ignored
 			return
 		}
-		// Create a copy of the frame for the discovery of child call _targets
+		// The following creates a copy of 'frame'.
+		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
 
 		if fnCallType.Blocks != nil {
 			visitBlocks(fnCallType.Blocks, &newFrame, config, targets)
 		}
 	default:
+		// Unsupported call type
 		return
 	}
 }
 
-// analyzeBlock checks the type of block, and
-func analyzeBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
+// analyzeInstructionsOfBlock checks the type of each iteration in a block.
+// If it finds a call, it analyzed it to check if it is interesting.
+//
+// Arguments:
+// blocks is the array of blocks to analyze,
+// fr keeps track of the traversal,
+// config specifies the behavior of the analyzer,
+// targets is a reference to the ultimate data structure that is to be completed and returned.
+func analyzeInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
 	if block.Instrs == nil {
 		return
 	}
 
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
-		// Every complex Instruction is split into several instructions
-		// so even if the call is part of variable assignment
-		// or a loop it will be stored as a separate ssa.Call instruction
 		case *ssa.Call:
 			analyzeCall(instruction, fr, config, targets)
 		default:
@@ -100,10 +116,16 @@ func analyzeBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targ
 	}
 }
 
-// visitBlocks
+// visitBlocks visits each of the blocks in the specified 'blocks' list and analyzes each of the block's instructions.
+//
+// Arguments:
+// blocks is the array of blocks to analyze,
+// fr keeps track of the traversal,
+// config specifies the behavior of the analyzer,
+// targets is a reference to the ultimate data structure that is to be completed and returned.
 func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
-	if len(fr.visited) > config.maxRecDepth {
-		// fmt.Println("Visited more than 16 times")
+	if len(fr.visited) > config.maxTraversalDepth {
+		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
 		return
 	}
 
@@ -112,16 +134,28 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, ta
 			continue
 		}
 		newFr := fr
+		// Mark the block as visited
 		newFr.visited[block] = true
-		analyzeBlock(block, newFr, config, targets)
+		analyzeInstructionsOfBlock(block, newFr, config, targets)
 	}
 }
 
 // AnalyzePackageCalls takes a main package and finds all 'interesting' methods that are called
+//
+// Arguments:
+// pkg is the package to analyze
+// config specifies the behavior of the analyzer,
+//
+// Returns:
+// List of pointers to callTargets, or an error if something went wrong.
 func AnalyzePackageCalls(pkg *ssa.Package, config *AnalyzerConfig) ([]*CallTarget, error) {
 	mainFunction := findFunctionInPackage(pkg, "main")
+
+	// TODO: look for the init function will be useful if we want to know
+	// the values of global file-scoped variables
 	// initFunction := findFunctionInPackage(pkg, "init")
 
+	// Find the main function
 	if mainFunction == nil {
 		return nil, fmt.Errorf("no main function found in package %v", pkg)
 	}
@@ -133,6 +167,7 @@ func AnalyzePackageCalls(pkg *ssa.Package, config *AnalyzerConfig) ([]*CallTarge
 
 	targets := make([]*CallTarget, 0)
 
+	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config, &targets)
 
 	return targets, nil

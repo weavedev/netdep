@@ -24,8 +24,8 @@ type CallData struct {
 
 // ServiceCalls stores for each service its name and the calls that it makes (strings of URLs / method names)
 type ServiceCalls struct {
-	Service string                `json:"service"`
-	Calls   map[string][]CallData `json:"calls"`
+	Service string                `json:"service"` // TODO: is it possible to just specify lowerCamelCase to the JSON marshaller?
+	Calls   map[string][]CallData `json:"calls"`   // TODO: see above ^
 }
 
 // DiscoveredData is initialised and populated during the discovery stage.
@@ -38,25 +38,29 @@ type DiscoveredData struct {
 
 // Discover finds client calls in the specified project directory
 func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, error) {
+	// Config for the SSA building function
 	conf := callanalyzer.SSAConfig{
 		Mode:    ssa.BuilderMode(0),
 		SvcDir:  svcDir,
 		ProjDir: projDir,
 	}
 
-	_, pkg, err := callanalyzer.CreateSSA(conf)
+	_, ssaPkg, err := callanalyzer.CreateSSA(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	mains := ssautil.MainPackages(pkg)
+	mainPackages := ssautil.MainPackages(ssaPkg)
 
+	// The current output data structure. TODO: add additional fields
 	allTargets := make([]*callanalyzer.CallTarget, 0)
-	config := callanalyzer.DefaultConfig()
-	for _, mainPkg := range mains {
-		targetsOfCurrPkg, err := callanalyzer.AnalyzePackageCalls(mainPkg, &config)
+	// TODO: change the following line to adapt the analyzer for server-side endpoint detection
+	config := callanalyzer.DefaultConfigForFindingHTTPClientCalls()
+	for _, pkg := range mainPackages {
+		// Analyze each package
+		targetsOfCurrPkg, err := callanalyzer.AnalyzePackageCalls(pkg, &config)
 		if err != nil {
-			fmt.Printf("Error while searching for interesting calls: %v\n", err)
+			fmt.Printf("Non-fatal error while searching for interesting calls: %v\n", err)
 		}
 		allTargets = append(allTargets, targetsOfCurrPkg...)
 	}
