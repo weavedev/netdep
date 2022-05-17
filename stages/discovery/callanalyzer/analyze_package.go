@@ -39,8 +39,13 @@ const (
 var (
 	interestingCalls = map[string]DiscoveryAction{
 		//"net/http.NewRequest":   Output,
-		"(*net/http.Client).Do": Output,
-		"os.Getenv":             Substitute,
+		"(*net/http.Client).Do":   Output,
+		"os.Getenv":               Substitute,
+		"(*net/http.Client).Get":  Output,
+		"(*net/http.Client).Post": Output,
+		"(*net/http.Client).Head": Output,
+		"NewRequestWithContext":   Output,
+		//"(*net/http.Client).PostForm":      Output,
 	}
 	// targets is the list of stuff this package calls
 	targets []*Target
@@ -115,6 +120,8 @@ func analyzeCall(call *ssa.Call, frame *Frame) {
 		if fnCallType.Blocks != nil {
 			visitBlocks(fnCallType.Blocks, &newFrame)
 		}
+	default:
+		return
 	}
 }
 
