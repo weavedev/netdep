@@ -15,7 +15,6 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestDiscovery(t *testing.T) {
-
 	_, thisFilePath, _, _ := runtime.Caller(0)
 	thisFileParent := path.Dir(thisFilePath)
 

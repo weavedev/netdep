@@ -9,6 +9,8 @@ const (
 	Substitute
 )
 
+const depth = 16
+
 type AnalyzerConfig struct {
 	// interestingCalls is a map from target to action that is to be taken when encountering the target.
 	// Used internally to distinguish whether a call is to be:
@@ -31,7 +33,7 @@ func DefaultConfig() AnalyzerConfig {
 			// "net/http.NewRequest":   Output,
 			// "(*net/http.Client).PostForm":      Output,
 		},
-		maxRecDepth: 16,
+		maxRecDepth: depth,
 		ignoreList: map[string]bool{
 			"fmt":                  true,
 			"reflect":              true,

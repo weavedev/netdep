@@ -12,10 +12,10 @@ import (
 // CallTarget holds information about the destination of a certain call
 // executed by the main program; found in the SSA tree.
 type CallTarget struct {
-	requestLocation string
-	library         string
-	MethodName      string
-	packageName     string
+	library    string
+	MethodName string
+	// packageName     string
+	// requestLocation string
 	// TODO: Add filename and the position in code
 }
 
@@ -43,7 +43,6 @@ func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *
 	// The fnCallType can be the function type, the anonymous function type, or something else.
 	// See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call
 	switch fnCallType := call.Call.Value.(type) {
-
 	// TODO: handle other kinds of call _targets
 	case *ssa.Function:
 		// The full qualified name of the function, including its package

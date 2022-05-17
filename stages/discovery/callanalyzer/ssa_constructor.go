@@ -15,7 +15,6 @@ type SSAConfig struct {
 
 // CreateSSA constructs a default SSA
 func CreateSSA(ssaConf SSAConfig) (*ssa.Program, []*ssa.Package, error) {
-
 	pkgConf := &packages.Config{
 		Dir: ssaConf.ProjDir,
 		// Mode:  packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
