@@ -30,7 +30,7 @@ func ScanAndFilter(svcDir string) map[string][]*ast.File {
 // Returns a list of all services.
 //
 // TODO: Remove the following line when implementing this method
-//goland:noinspection GoUnusedParameter,GoUnusedFunction
+// goland:noinspection GoUnusedParameter,GoUnusedFunction
 func findAllServices(svcDir string) []string {
 	// TODO extract a list of the paths of each service
 	return nil
@@ -42,7 +42,7 @@ func findAllServices(svcDir string) []string {
 // Return a list of ASTs (of each of the files).
 //
 // TODO: Remove the following line when implementing this method
-//goland:noinspection GoUnusedParameter,GoUnusedFunction
+// goland:noinspection GoUnusedParameter,GoUnusedFunction
 func filter(serviceLoc string, filterList []string) []*ast.File {
 	// TODO: This is a placeholder; the signature of this method might need to be changed.
 	// TODO: Loop over all subdirectories/files of this service, looking for relevant files

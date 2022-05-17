@@ -52,14 +52,13 @@ func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *
 
 		_, isInteresting := config.interestingCalls[qualifiedFunctionName]
 		if isInteresting {
-			//TODO: Resolve all arguments of the function call (because it is in the interesting list)
+			// TODO: Resolve all arguments of the function call (because it is in the interesting list)
 
 			callTarget := &CallTarget{
 				library:    rootPackage,
 				MethodName: qualifiedFunctionName,
 			}
-
-			//fmt.Println("Found call to function " + qualifiedFunctionName)
+			// fmt.Println("Found call to function " + qualifiedFunctionName)
 
 			*targets = append(*targets, callTarget)
 			return
@@ -71,8 +70,7 @@ func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *
 			// Do not recurse into the library if it is ignored (for recursion)
 			return
 		}
-
-		//Create a copy of the frame for the discovery of child call _targets
+		// Create a copy of the frame for the discovery of child call _targets
 		newFrame := *frame
 
 		if fnCallType.Blocks != nil {
@@ -83,7 +81,7 @@ func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *
 	}
 }
 
-//analyzeBlock checks the type of block, and
+// analyzeBlock checks the type of block, and
 func analyzeBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
 	if block.Instrs == nil {
 		return
@@ -105,7 +103,7 @@ func analyzeBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targ
 // visitBlocks
 func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
 	if len(fr.visited) > config.maxRecDepth {
-		//fmt.Println("Visited more than 16 times")
+		// fmt.Println("Visited more than 16 times")
 		return
 	}
 
@@ -122,7 +120,7 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, ta
 // AnalyzePackageCalls takes a main package and finds all 'interesting' methods that are called
 func AnalyzePackageCalls(pkg *ssa.Package, config *AnalyzerConfig) ([]*CallTarget, error) {
 	mainFunction := findFunctionInPackage(pkg, "main")
-	//initFunction := findFunctionInPackage(pkg, "init")
+	// initFunction := findFunctionInPackage(pkg, "init")
 
 	if mainFunction == nil {
 		return nil, fmt.Errorf("no main function found in package %v", pkg)

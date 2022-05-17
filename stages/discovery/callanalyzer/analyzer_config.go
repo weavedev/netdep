@@ -28,8 +28,8 @@ func DefaultConfig() AnalyzerConfig {
 			"(*net/http.Client).Post": Output,
 			"(*net/http.Client).Head": Output,
 			"NewRequestWithContext":   Output,
-			//"net/http.NewRequest":   Output,
-			//"(*net/http.Client).PostForm":      Output,
+			// "net/http.NewRequest":   Output,
+			// "(*net/http.Client).PostForm":      Output,
 		},
 		maxRecDepth: 16,
 		ignoreList: map[string]bool{
