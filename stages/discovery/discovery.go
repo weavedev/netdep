@@ -3,6 +3,7 @@
 package discovery
 
 import (
+	"fmt"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -61,7 +62,10 @@ func Discover(projDir, svcDir string) ([]*callanalyzer.Caller, []*callanalyzer.C
 	allTargetsClient := make([]*callanalyzer.Caller, 0)
 	allTargetsServer := make([]*callanalyzer.Caller, 0)
 	for _, mainPkg := range mains {
-		targetsOfCurrPkgClient, targetOfCurrPkgServer, _ := callanalyzer.AnalyzePackageCalls(mainPkg)
+		targetsOfCurrPkgClient, targetOfCurrPkgServer, err := callanalyzer.AnalyzePackageCalls(mainPkg)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 		allTargetsClient = append(allTargetsClient, targetsOfCurrPkgClient...)
 		allTargetsServer = append(allTargetsServer, targetOfCurrPkgServer...)
 	}

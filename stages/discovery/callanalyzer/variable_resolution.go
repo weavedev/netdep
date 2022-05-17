@@ -1,3 +1,9 @@
+/*
+Package callanalyzer defines call scanning methods
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+*/
+
+//nolint:gocritic,exhaustive
 package callanalyzer
 
 import (

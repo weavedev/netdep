@@ -1,7 +1,12 @@
+/*
+Package callanalyzer defines call scanning methods
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+*/
 package callanalyzer
 
 import (
 	"fmt"
+
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
@@ -15,16 +20,15 @@ type SSAConfig struct {
 
 // CreateSSA constructs a default SSA
 func CreateSSA(ssaConf SSAConfig) (*ssa.Program, []*ssa.Package, error) {
-
 	pkgConf := &packages.Config{
 		Dir: ssaConf.ProjDir,
 		//Mode:  packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
+		//nolint
 		Mode:  packages.LoadAllSyntax,
 		Tests: false,
 	}
 
 	initial, err := packages.Load(pkgConf, ssaConf.SvcDir)
-
 	if err != nil {
 		return nil, nil, err
 	}
