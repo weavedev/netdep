@@ -53,7 +53,6 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-//nolint:gocognit
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
@@ -69,53 +68,15 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		interestingStuffClient, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
-			if interestingStuffClient.action == Output {
-				requestLocation := ""
-				if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
-					requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs)...)
-				}
-				callTarget := &CallTarget{
-					packageName:     calledFunctionPackage,
-					MethodName:      qualifiedFunctionNameOfTarget,
-					requestLocation: requestLocation,
-				}
-
-				// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
-
-				*targetsClient = append(*targetsClient, callTarget)
-				return
-			} else if interestingStuffClient.action == Substitute {
-				// TODO: implement substitution of env calls
-			}
+			handleInterestingClientCall(call, interestingStuffClient, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsClient)
+			return
 		}
 
 		interestingStuffServer, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
-		//TODO: refactor to simplify nested ifs
-		//nolint:nestif
 		if isInterestingServer {
 			// TODO: Resolve the arguments of the function call
-			if interestingStuffServer.action == Output {
-				requestLocation := ""
-				if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
-					if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
-						requestLocation = path.Join(resolveGinAddrSlice(call.Call.Args[1])...)
-					} else {
-						requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs)...)
-					}
-				}
-				callTarget := &CallTarget{
-					packageName:     calledFunctionPackage,
-					MethodName:      qualifiedFunctionNameOfTarget,
-					requestLocation: requestLocation,
-				}
-
-				// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
-
-				*targetsServer = append(*targetsServer, callTarget)
-				return
-			} else if interestingStuffServer.action == Substitute {
-				// TODO: implement substitution of env calls
-			}
+			handleInterestingServerCall(call, interestingStuffServer, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsServer)
+			return
 		}
 
 		_, isIgnored := config.ignoreList[calledFunctionPackage]
@@ -134,6 +95,52 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 	default:
 		// Unsupported call type
 		return
+	}
+}
+
+func handleInterestingServerCall(call *ssa.Call, interestingStuffServer InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsServer *[]*CallTarget) {
+	if interestingStuffServer.action == Output {
+		requestLocation := ""
+		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
+			if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
+				requestLocation = path.Join(resolveGinAddrSlice(call.Call.Args[1])...)
+			} else {
+				requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs)...)
+			}
+		}
+		callTarget := &CallTarget{
+			packageName:     calledFunctionPackage,
+			MethodName:      qualifiedFunctionNameOfTarget,
+			requestLocation: requestLocation,
+		}
+
+		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
+
+		*targetsServer = append(*targetsServer, callTarget)
+		return
+	} else if interestingStuffServer.action == Substitute {
+		// TODO: implement substitution of env calls
+	}
+}
+
+func handleInterestingClientCall(call *ssa.Call, interestingStuffClient InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsClient *[]*CallTarget) {
+	if interestingStuffClient.action == Output {
+		requestLocation := ""
+		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
+			requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs)...)
+		}
+		callTarget := &CallTarget{
+			packageName:     calledFunctionPackage,
+			MethodName:      qualifiedFunctionNameOfTarget,
+			requestLocation: requestLocation,
+		}
+
+		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
+
+		*targetsClient = append(*targetsClient, callTarget)
+		return
+	} else if interestingStuffClient.action == Substitute {
+		// TODO: implement substitution of env calls
 	}
 }
 
