@@ -5,6 +5,7 @@ package stages
 import (
 	"encoding/json"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
+	"sort"
 )
 
 /*
@@ -101,6 +102,14 @@ func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) map[s
 				Connections: len(connectionList),
 			})
 		}
+
+		// sort the list based on service name, to make sure the order is always the same (for testing)
+		sort.Slice(adjacencyList[node.ServiceName], func(i, j int) bool {
+			x := adjacencyList[node.ServiceName][i]
+			y := adjacencyList[node.ServiceName][j]
+
+			return x.Service.ServiceName < y.Service.ServiceName
+		})
 	}
 
 	return adjacencyList
