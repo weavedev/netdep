@@ -53,6 +53,7 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
+//nolint:gocognit
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
@@ -89,6 +90,8 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		}
 
 		interestingStuffServer, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+		//TODO: refactor to simplify nested ifs
+		//nolint:nestif
 		if isInterestingServer {
 			// TODO: Resolve the arguments of the function call
 			if interestingStuffServer.action == Output {
