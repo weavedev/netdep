@@ -1,11 +1,12 @@
-// Package stages defines different stages of analysis
+// Package output defines the different ways of output in the tool
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-package stages
+package output
 
 import (
 	"encoding/json"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"sort"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 )
 
 /*
@@ -15,38 +16,40 @@ The Building stages should handle
 Refer to the Project plan, chapter 5.4 for more information.
 */
 
-// Conn represents a connection tuple which consists of a service name
-// and the amount of times a connection with / by that service was made.
-type Conn struct {
-	Service string `json:"service"`
-	Amount  int    `json:"amount"`
-}
-
-type ServiceNode struct {
-	ServiceName string
-}
-
-type Connection struct {
+// NetworkCall represents a call that can be made in the network
+type NetworkCall struct {
 	Protocol  string             `json:"protocol"`
-	Url       string             `json:"url"`
+	URL       string             `json:"url"`
 	Arguments []string           `json:"arguments"`
 	Location  discovery.CallData `json:"location"`
 }
 
-type ServiceConnection struct {
-	Service     ServiceNode  `json:"service"`
-	Connection  []Connection `json:"connections"`
-	Connections int          `json:"count"`
+// ServiceNode represents a node in the output graph, which is a Service
+type ServiceNode struct {
+	ServiceName string `json:"serviceName"`
 }
 
+// ConnectionEdge represents a directed edge in the output graph
 type ConnectionEdge struct {
-	Connection Connection
-	Source     *ServiceNode
-	Target     *ServiceNode
+	Call   NetworkCall
+	Source *ServiceNode
+	Target *ServiceNode
 }
+
+// ServiceCallList holds the NetworkCall's related to a Service, used in the AdjacencyList
+type ServiceCallList struct {
+	Service       ServiceNode   `json:"service"`
+	Calls         []NetworkCall `json:"calls"`
+	NumberOfCalls int           `json:"count"`
+}
+
+type (
+	AdjacencyList  map[string][]ServiceCallList
+	GroupedEdgeMap map[*ServiceNode]map[*ServiceNode][]*ConnectionEdge
+)
 
 // groupEdgesByServiceTargetAndSource creates a structure which you can use to query the edges using x[source][target] => array of edges
-func groupEdgesByServiceTargetAndSource(edges []*ConnectionEdge) map[*ServiceNode]map[*ServiceNode][]*ConnectionEdge {
+func groupEdgesByServiceTargetAndSource(edges []*ConnectionEdge) GroupedEdgeMap {
 	outputMap := make(map[*ServiceNode]map[*ServiceNode][]*ConnectionEdge)
 
 	for _, edge := range edges {
@@ -74,12 +77,12 @@ func groupEdgesByServiceTargetAndSource(edges []*ConnectionEdge) map[*ServiceNod
 
 // ConstructAdjacencyList constructs an adjacency list of service dependencies.
 // Format of entries in the list is `"serviceName": [] Conn`
-func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) map[string][]ServiceConnection {
-	adjacencyList := make(map[string][]ServiceConnection)
+func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) AdjacencyList {
+	adjacencyList := make(map[string][]ServiceCallList)
 	groupedEdges := groupEdgesByServiceTargetAndSource(edges)
 
 	for _, node := range nodes {
-		adjacencyList[node.ServiceName] = make([]ServiceConnection, 0)
+		adjacencyList[node.ServiceName] = make([]ServiceCallList, 0)
 
 		// find the related edges in groupedEdges
 		edgeSourceGroup, found := groupedEdges[node]
@@ -89,17 +92,17 @@ func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) map[s
 		}
 
 		for targetServiceName, edgeGroup := range edgeSourceGroup {
-			connectionList := make([]Connection, 0)
+			callList := make([]NetworkCall, 0)
 
 			for _, edge := range edgeGroup {
-				connectionList = append(connectionList, edge.Connection)
+				callList = append(callList, edge.Call)
 			}
 
 			// add the connection to the adjacencyList
-			adjacencyList[node.ServiceName] = append(adjacencyList[node.ServiceName], ServiceConnection{
-				Service:     *targetServiceName,
-				Connection:  connectionList,
-				Connections: len(connectionList),
+			adjacencyList[node.ServiceName] = append(adjacencyList[node.ServiceName], ServiceCallList{
+				Service:       *targetServiceName,
+				Calls:         callList,
+				NumberOfCalls: len(callList),
 			})
 		}
 
@@ -116,7 +119,7 @@ func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) map[s
 }
 
 // SerializeAdjacencyList serialises a given adjacencyList in JSON format
-func SerializeAdjacencyList(adjacencyList map[string][]ServiceConnection, pretty bool) (string, error) {
+func SerializeAdjacencyList(adjacencyList AdjacencyList, pretty bool) (string, error) {
 	var output []byte
 	var err error
 
