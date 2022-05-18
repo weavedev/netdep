@@ -76,7 +76,7 @@ func groupEdgesByServiceTargetAndSource(edges []*ConnectionEdge) GroupedEdgeMap 
 }
 
 // ConstructAdjacencyList constructs an adjacency list of service dependencies.
-// Format of entries in the list is `"serviceName": [] Conn`
+// In its current representation this is a map to a list of adjacent nodes.
 func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) AdjacencyList {
 	adjacencyList := make(map[string][]ServiceCallList)
 	groupedEdges := groupEdgesByServiceTargetAndSource(edges)
