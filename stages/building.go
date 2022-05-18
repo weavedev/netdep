@@ -4,8 +4,6 @@ package stages
 
 import (
 	"encoding/json"
-	"fmt"
-
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 )
 
@@ -23,45 +21,105 @@ type Conn struct {
 	Amount  int    `json:"amount"`
 }
 
-// ConstructOutput constructs and returns the output of the tool as a string in JSON format.
-func ConstructOutput(discoveredData *discovery.DiscoveredData) (string, string) {
-	adjList := ConstructAdjacencyList(discoveredData)
-	servCalls := discoveredData.ServCalls
-	return SerialiseOutput(adjList, servCalls)
+type ServiceNode struct {
+	ServiceName string
+}
+
+type Connection struct {
+	Protocol  string             `json:"protocol"`
+	Url       string             `json:"url"`
+	Arguments []string           `json:"arguments"`
+	Location  discovery.CallData `json:"location"`
+}
+
+type ServiceConnection struct {
+	Service     ServiceNode  `json:"service"`
+	Connection  []Connection `json:"connections"`
+	Connections int          `json:"count"`
+}
+
+type ConnectionEdge struct {
+	Connection Connection
+	Source     *ServiceNode
+	Target     *ServiceNode
+}
+
+// groupEdgesByServiceTargetAndSource creates a structure which you can use to query the edges using x[source][target] => array of edges
+func groupEdgesByServiceTargetAndSource(edges []*ConnectionEdge) map[*ServiceNode]map[*ServiceNode][]*ConnectionEdge {
+	outputMap := make(map[*ServiceNode]map[*ServiceNode][]*ConnectionEdge)
+
+	for _, edge := range edges {
+		sourceMap, hasSourceMap := outputMap[edge.Source]
+
+		// create the target structure
+		if !hasSourceMap {
+			outputMap[edge.Source] = make(map[*ServiceNode][]*ConnectionEdge)
+			sourceMap = outputMap[edge.Source]
+		}
+
+		targetList, hasTargetList := sourceMap[edge.Target]
+
+		// create the connection list
+		if !hasTargetList {
+			sourceMap[edge.Target] = make([]*ConnectionEdge, 0)
+		}
+
+		// add the edge to the right group
+		sourceMap[edge.Target] = append(targetList, edge)
+	}
+
+	return outputMap
 }
 
 // ConstructAdjacencyList constructs an adjacency list of service dependencies.
 // Format of entries in the list is `"serviceName": [] Conn`
-func ConstructAdjacencyList(data *discovery.DiscoveredData) map[string][]Conn {
-	m := make(map[string][]Conn)
+func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) map[string][]ServiceConnection {
+	adjacencyList := make(map[string][]ServiceConnection)
+	groupedEdges := groupEdgesByServiceTargetAndSource(edges)
 
-	// Assuming DiscoveredData is something like currently defined in stages/discovery.go
-	for _, servCall := range data.ServCalls {
-		for k, callDataList := range servCall.Calls {
-			if targetServ, ok := data.Handled[k]; ok {
-				m[servCall.Service] = append(m[servCall.Service], Conn{targetServ, len(callDataList)})
-			} else {
-				m[servCall.Service] = append(m[servCall.Service], Conn{"Unknown Service", len(callDataList)})
+	for _, node := range nodes {
+		adjacencyList[node.ServiceName] = make([]ServiceConnection, 0)
+
+		// find the related edges in groupedEdges
+		edgeSourceGroup, found := groupedEdges[node]
+
+		if !found {
+			continue
+		}
+
+		for targetServiceName, edgeGroup := range edgeSourceGroup {
+			connectionList := make([]Connection, 0)
+
+			for _, edge := range edgeGroup {
+				connectionList = append(connectionList, edge.Connection)
 			}
+
+			// add the connection to the adjacencyList
+			adjacencyList[node.ServiceName] = append(adjacencyList[node.ServiceName], ServiceConnection{
+				Service:     *targetServiceName,
+				Connection:  connectionList,
+				Connections: len(connectionList),
+			})
 		}
 	}
 
-	return m
+	return adjacencyList
 }
 
-// SerialiseOutput serialises the given adjacency list and returns the output as a string in JSON format.
-func SerialiseOutput(adjList map[string][]Conn, servCalls []discovery.ServiceCalls) (string, string) {
-	outAdj, err := json.MarshalIndent(adjList, "", "\t")
-	if err != nil {
-		fmt.Println("JSON encode error")
-		return "", ""
+// SerializeAdjacencyList serialises a given adjacencyList in JSON format
+func SerializeAdjacencyList(adjacencyList map[string][]ServiceConnection, pretty bool) (string, error) {
+	var output []byte
+	var err error
+
+	if pretty {
+		output, err = json.MarshalIndent(adjacencyList, "", "\t")
+	} else {
+		output, err = json.Marshal(adjacencyList)
 	}
 
-	outCalls, err := json.MarshalIndent(servCalls, "", "\t")
 	if err != nil {
-		fmt.Println("JSON encode error")
-		return string(outAdj), ""
+		return "null", err
 	}
 
-	return string(outAdj), string(outCalls)
+	return string(output), err
 }

@@ -13,110 +13,81 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
-// Tests adjacency list construction based on data found in discovery stage
-func TestConstructAdjacencyList(t *testing.T) {
-	servCalls := []discovery.ServiceCalls{
-		{
-			Service: "servA",
-			Calls: map[string][]discovery.CallData{
-				"URL_2": {
-					{Filepath: "./path/to/some/file.go", Line: 24},
-					{Filepath: "/path/to/some/otherfile.go", Line: 36},
-				},
-			},
-		},
-		{
-			Service: "servB",
-			Calls: map[string][]discovery.CallData{
-				"URL_1": {
-					{Filepath: "./path/to/some/cool/file.go", Line: 632},
-				},
-				"URL_3": {
-					{Filepath: "./path1/to/some/file.go", Line: 245},
-					{Filepath: "/path1/to/some/file.go", Line: 436},
-					{Filepath: "/path1/to/some/file.go", Line: 623},
-				},
-			},
-		},
-		{
-			Service: "servC",
-			Calls: map[string][]discovery.CallData{
-				"URL_5": {
-					{Filepath: "./path5/to/some/file.go", Line: 215},
-				},
-			},
-		},
+func createSmallTestGraph() ([]*stages.ServiceNode, []*stages.ConnectionEdge) {
+
+	node1 := stages.ServiceNode{
+		ServiceName: "Node1",
 	}
-	data := &discovery.DiscoveredData{
-		ServCalls: servCalls,
-		Handled:   map[string]string{"URL_1": "servA", "URL_2": "servB", "URL_3": "servC"},
+	node2 := stages.ServiceNode{
+		ServiceName: "Node2",
+	}
+	node3 := stages.ServiceNode{
+		ServiceName: "Node3",
 	}
 
-	res := stages.ConstructAdjacencyList(data)
-	expected := map[string][]stages.Conn{
-		"servA": {
-			{Service: "servB", Amount: 2},
+	edge12 := stages.ConnectionEdge{
+		Connection: stages.Connection{
+			Protocol:  "HTTP",
+			Url:       "",
+			Arguments: nil,
+			Location:  discovery.CallData{},
 		},
-		"servB": {
-			{Service: "servA", Amount: 1},
-			{Service: "servC", Amount: 3},
+		Source: &node1,
+		Target: &node2,
+	}
+
+	edge13 := stages.ConnectionEdge{
+		Connection: stages.Connection{
+			Protocol:  "HTTP",
+			Url:       "",
+			Arguments: nil,
+			Location:  discovery.CallData{},
 		},
-		"servC": {
-			{Service: "Unknown Service", Amount: 1},
+		Source: &node1,
+		Target: &node3,
+	}
+
+	nodes := []*stages.ServiceNode{&node1, &node2, &node3}
+	edges := []*stages.ConnectionEdge{&edge12, &edge13}
+	return nodes, edges
+}
+
+// Tests adjacency list construction based on data found in discovery stage
+func TestConstructAdjacencyList(t *testing.T) {
+	nodes, edges := createSmallTestGraph()
+	res := stages.ConstructAdjacencyList(nodes, edges)
+
+	expected := map[string][]stages.ServiceConnection{
+		"Node1": {
+			{
+				Service:     *nodes[1],
+				Connection:  []stages.Connection{edges[0].Connection},
+				Connections: 1,
+			},
+			{
+				Service:     *nodes[2],
+				Connection:  []stages.Connection{edges[1].Connection},
+				Connections: 1,
+			},
 		},
+		"Node2": {},
+		"Node3": {},
 	}
 
 	assert.Equal(t, expected, res)
 }
 
-/*
-	json package and its serialisation are already sufficiently tested by its developers.
-	This unit test is essentially a sanity check to ensure the output is in the format we expect.
-*/
+// TestSerialiseOutputNull performs a sanity check for nil case
+func TestSerialiseOutputNull(t *testing.T) {
+	str, _ := stages.SerializeAdjacencyList(nil, false)
+	assert.Equal(t, "null", str)
+}
+
+// TestSerialiseOutput test a realistic output of a serialisation. More of a sanity check.
 func TestSerialiseOutput(t *testing.T) {
-	m := make(map[string][]stages.Conn)
-	m["servA"] = append(m["servA"], stages.Conn{Service: "servB", Amount: 2})
-	m["servB"] = append(m["servB"], stages.Conn{Service: "servA", Amount: 1})
-	m["servB"] = append(m["servB"], stages.Conn{Service: "servC", Amount: 3})
-	m["servC"] = append(m["servC"], stages.Conn{Service: "Unknown Service", Amount: 1})
-
-	servCalls := []discovery.ServiceCalls{
-		{
-			Service: "servA",
-			Calls: map[string][]discovery.CallData{
-				"URL_2": {
-					{Filepath: "./path/to/some/file.go", Line: 24},
-					{Filepath: "/path/to/some/otherfile.go", Line: 36},
-				},
-			},
-		},
-		{
-			Service: "servB",
-			Calls: map[string][]discovery.CallData{
-				"URL_1": {
-					{Filepath: "./path/to/some/cool/file.go", Line: 632},
-				},
-				"URL_3": {
-					{Filepath: "./path1/to/some/file.go", Line: 245},
-					{Filepath: "/path1/to/some/file.go", Line: 436},
-					{Filepath: "/path1/to/some/file.go", Line: 623},
-				},
-			},
-		},
-		{
-			Service: "servC",
-			Calls: map[string][]discovery.CallData{
-				"URL_5": {
-					{Filepath: "./path5/to/some/file.go", Line: 215},
-				},
-			},
-		},
-	}
-
-	adjList, callData := stages.SerialiseOutput(m, servCalls)
-
-	expectedAdjList := "{\n\t\"servA\": [\n\t\t{\n\t\t\t\"service\": \"servB\",\n\t\t\t\"amount\": 2\n\t\t}\n\t],\n\t\"servB\": [\n\t\t{\n\t\t\t\"service\": \"servA\",\n\t\t\t\"amount\": 1\n\t\t},\n\t\t{\n\t\t\t\"service\": \"servC\",\n\t\t\t\"amount\": 3\n\t\t}\n\t],\n\t\"servC\": [\n\t\t{\n\t\t\t\"service\": \"Unknown Service\",\n\t\t\t\"amount\": 1\n\t\t}\n\t]\n}"
-	expectedCallData := "[\n\t{\n\t\t\"service\": \"servA\",\n\t\t\"calls\": {\n\t\t\t\"URL_2\": [\n\t\t\t\t{\n\t\t\t\t\t\"filepath\": \"./path/to/some/file.go\",\n\t\t\t\t\t\"line\": 24\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"filepath\": \"/path/to/some/otherfile.go\",\n\t\t\t\t\t\"line\": 36\n\t\t\t\t}\n\t\t\t]\n\t\t}\n\t},\n\t{\n\t\t\"service\": \"servB\",\n\t\t\"calls\": {\n\t\t\t\"URL_1\": [\n\t\t\t\t{\n\t\t\t\t\t\"filepath\": \"./path/to/some/cool/file.go\",\n\t\t\t\t\t\"line\": 632\n\t\t\t\t}\n\t\t\t],\n\t\t\t\"URL_3\": [\n\t\t\t\t{\n\t\t\t\t\t\"filepath\": \"./path1/to/some/file.go\",\n\t\t\t\t\t\"line\": 245\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"filepath\": \"/path1/to/some/file.go\",\n\t\t\t\t\t\"line\": 436\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"filepath\": \"/path1/to/some/file.go\",\n\t\t\t\t\t\"line\": 623\n\t\t\t\t}\n\t\t\t]\n\t\t}\n\t},\n\t{\n\t\t\"service\": \"servC\",\n\t\t\"calls\": {\n\t\t\t\"URL_5\": [\n\t\t\t\t{\n\t\t\t\t\t\"filepath\": \"./path5/to/some/file.go\",\n\t\t\t\t\t\"line\": 215\n\t\t\t\t}\n\t\t\t]\n\t\t}\n\t}\n]"
-	assert.Equal(t, expectedAdjList, adjList)
-	assert.Equal(t, expectedCallData, callData)
+	nodes, edges := createSmallTestGraph()
+	list := stages.ConstructAdjacencyList(nodes, edges)
+	str, _ := stages.SerializeAdjacencyList(list, false)
+	expected := "{\"Node1\":[{\"service\":{\"ServiceName\":\"Node2\"},\"connections\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":{\"filepath\":\"\",\"line\":0}}],\"count\":1},{\"service\":{\"ServiceName\":\"Node3\"},\"connections\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":{\"filepath\":\"\",\"line\":0}}],\"count\":1}],\"Node2\":[],\"Node3\":[]}"
+	assert.Equal(t, expected, str)
 }
