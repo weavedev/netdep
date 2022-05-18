@@ -22,8 +22,9 @@ func CreateSSA(ssaConf SSAConfig) (*ssa.Program, []*ssa.Package, error) {
 		// Mode:  packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedDeps,
 		// Unfortunately, it seems that the LoadAllSyntax flag is the one we need, and it is equivalent to the disjunction of the above types ^
 		// whose iota is 991 in the current library version
-		//nolint
-		Mode: packages.LoadAllSyntax,
+		Mode: packages.LoadAllSyntax, //nolint
+		// (Note, if you put the no linting command on a new line, the entire file is ignored)
+		// TODO: use interestingArgs for evaluation of certain function argument values
 		// Do not analyse test files
 		Tests: false,
 	}

@@ -14,10 +14,7 @@ const defaultMaxTraversalDepth = 16
 
 type InterestingCall struct {
 	action          DiscoveryAction
-	interestingArgs []int //nolint
-	// No linting for interesting args, as it is currently not in use.
-	// (Note, if you put the no linting command on a new line, the entire file is ignored)
-	// TODO: use interestingArgs for evaluation of certain function argument values
+	interestingArgs []int
 }
 
 // AnalyserConfig holds the properties to adjust the analyser's behaviour for different use cases

@@ -6,8 +6,9 @@ package callanalyzer
 
 import (
 	"fmt"
-	"golang.org/x/tools/go/ssa"
 	"path"
+
+	"golang.org/x/tools/go/ssa"
 )
 
 // CallTarget holds information about a certain call made by the analysed package.
@@ -23,7 +24,6 @@ type CallTarget struct {
 	// TODO: Add support for the following:
 	// fileName			string
 	// positionInFile	string
-
 }
 
 // findFunctionInPackage finds the method by its name within the specified package.
