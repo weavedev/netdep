@@ -77,7 +77,8 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		parts := strings.Split(filePath, string(os.PathSeparator))
 		file := parts[len(parts)-1]
 
-		position := strconv.FormatInt(int64(prog.Fset.Position(call.Pos()).Line), 10)
+		base := 10
+		position := strconv.FormatInt(int64(prog.Fset.Position(call.Pos()).Line), base)
 
 		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionNameOfTarget]
 		if isInteresting {
