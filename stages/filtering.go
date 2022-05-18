@@ -6,6 +6,8 @@ package stages
 import (
 	"fmt"
 	"go/ast"
+	"os"
+	"path"
 
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
@@ -21,7 +23,7 @@ func LoadPackages(svcDir string, projectDir string) ([]*ssa.Package, error) {
 	}
 	mode := ssa.BuilderMode(0)
 
-	initial, err := packages.Load(config, svcDir)
+	initial, err := packages.Load(config, projectDir)
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +39,33 @@ func LoadPackages(svcDir string, projectDir string) ([]*ssa.Package, error) {
 	prog, pkgs := ssautil.AllPackages(initial, mode)
 	prog.Build()
 	return pkgs, nil
+}
+
+func LoadServices(svcDir string, projectDir string) ([]*ssa.Package, error) {
+	packages := make([]*ssa.Package, 0)
+
+	files, err := os.ReadDir(path.Join(projectDir, svcDir))
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(projectDir)
+
+	for _, file := range files {
+		if file.IsDir() {
+			servicePath := path.Join(svcDir, file.Name())
+
+			fmt.Println(servicePath)
+			pkgs, err := LoadPackages(servicePath, projectDir)
+
+			if err != nil {
+				return nil, err
+			}
+
+			packages = append(packages, pkgs...)
+		}
+	}
+
+	return packages, nil
 }
 
 /*
