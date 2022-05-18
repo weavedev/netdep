@@ -5,12 +5,9 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
-
-	"golang.org/x/tools/go/ssa"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -49,6 +46,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			if err != nil {
 				return err
 			}
+			fmt.Println("Successfully analyzed, here is a list of dependencies:")
 			for _, dependency := range dependencies {
 				fmt.Println(dependency)
 			}
@@ -83,7 +81,7 @@ func pathExists(path string) (bool, error) {
 // of the program.
 func buildDependencies(svcDir string, projectDir string) ([]string, error) {
 	// Filtering
-	initial, err := stages.LoadPackages(svcDir, projectDir)
+	initial, err := stages.LoadServices(svcDir, projectDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
 	if err != nil {
 		return nil, err
@@ -91,7 +89,7 @@ func buildDependencies(svcDir string, projectDir string) ([]string, error) {
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, err := clientCallDiscovery(initial)
+	clientCalls, err := callanalyzer.ClientCallDiscovery(initial)
 	if err != nil {
 		return nil, err
 	}
@@ -100,24 +98,5 @@ func buildDependencies(svcDir string, projectDir string) ([]string, error) {
 
 	// For now this returns client calls,
 	// as we don't have any other functionality in place.
-	return clientCalls, nil
-}
-
-func clientCallDiscovery(initial []*ssa.Package) ([]string, error) {
-	clientCalls := make([]string, 0)
-
-	for _, pkg := range initial {
-		if caller, err := callanalyzer.AnalyzePackageCalls(pkg); err == nil {
-			out, jErr := json.Marshal(caller)
-			if jErr != nil {
-				panic(err)
-			}
-			clientCalls = append(clientCalls, string(out))
-		} else {
-			fmt.Println("Unable to analyse package calls")
-			return nil, err
-		}
-	}
-
 	return clientCalls, nil
 }

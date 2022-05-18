@@ -5,6 +5,7 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package callanalyzer
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -114,7 +115,7 @@ func discoverBlocks(blocks []*ssa.BasicBlock) []*Caller {
 	return calls
 }
 
-func AnalyzePackageCalls(pkg *ssa.Package) ([]*Caller, error) {
+func analyzePackageCalls(pkg *ssa.Package) ([]*Caller, error) {
 	mainFunction := getMainFunction(pkg)
 	// TODO: Expand with endpoint searching
 
@@ -123,4 +124,23 @@ func AnalyzePackageCalls(pkg *ssa.Package) ([]*Caller, error) {
 	}
 
 	return discoverBlocks(mainFunction.Blocks), nil
+}
+
+func ClientCallDiscovery(initial []*ssa.Package) ([]string, error) {
+	clientCalls := make([]string, 0)
+
+	for _, pkg := range initial {
+		if caller, err := analyzePackageCalls(pkg); err == nil {
+			out, jErr := json.Marshal(caller)
+			if jErr != nil {
+				panic(err)
+			}
+			clientCalls = append(clientCalls, string(out))
+		} else {
+			fmt.Println("Unable to analyse package calls")
+			return nil, err
+		}
+	}
+
+	return clientCalls, nil
 }
