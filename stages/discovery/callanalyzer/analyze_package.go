@@ -71,6 +71,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
+		// Additional information about the call
 		service := pkg.String()[strings.LastIndex(pkg.String(), "/")+1:]
 
 		filePath := prog.Fset.Position(call.Pos()).Filename
