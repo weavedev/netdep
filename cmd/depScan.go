@@ -7,11 +7,9 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path"
-
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -36,7 +34,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			if ex, err := pathExists(projectDir); !ex || err != nil {
 				return fmt.Errorf("invalid project directory specified: %s", projectDir)
 			}
-			if ex, err := pathExists(path.Join(projectDir, serviceDir)); !ex || err != nil {
+			if ex, err := pathExists(serviceDir); !ex || err != nil {
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
@@ -85,6 +83,7 @@ func pathExists(path string) (bool, error) {
 // of the program.
 // TODO: the output should be changed to a list of string once the integration is done
 func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, error) {
+
 	// Filtering
 	initial, err := stages.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)

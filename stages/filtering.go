@@ -42,34 +42,34 @@ func loadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error)
 }
 
 func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
-	packages := make([]*ssa.Package, 0)
-
-	fmt.Println(path.Join(projectDir, svcDir))
-	fmt.Println(os.Environ())
-	files, err := os.ReadDir(path.Join(projectDir, svcDir))
+	// Collect all files within the services directory
+	files, err := os.ReadDir(svcDir)
 	if err != nil {
+		//Services directory invalid or could not access
 		return nil, err
 	}
+
+	packagesToAnalyze := make([]*ssa.Package, 0)
 
 	for _, file := range files {
 		if file.IsDir() {
 			servicePath := path.Join(svcDir, file.Name())
 			fmt.Println(servicePath)
 
-			pkgs, err := loadPackages(projectDir, "./"+servicePath)
+			pkgs, err := loadPackages(projectDir, servicePath)
 			if err != nil {
 				return nil, err
 			}
 
-			packages = append(packages, pkgs...)
+			packagesToAnalyze = append(packagesToAnalyze, pkgs...)
 		}
 	}
 
-	if len(packages) == 0 {
-		return nil, fmt.Errorf("no service packages were found")
+	if len(packagesToAnalyze) == 0 {
+		return nil, fmt.Errorf("no service packagesToAnalyze were found")
 	}
 
-	return packages, nil
+	return packagesToAnalyze, nil
 }
 
 /*
