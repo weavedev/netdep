@@ -14,6 +14,8 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
+// loadPackages takes in project root directory path and the path
+// of one service and returns an ssa representation of the service.
 func loadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error) {
 	config := &packages.Config{
 		Dir: projectRootDir,
@@ -37,15 +39,19 @@ func loadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error)
 	}
 
 	prog, pkgs := ssautil.AllPackages(initial, mode)
+	// prog has a reference to pkgs internally,
+	// and prog.Build() populates pkgs with necessary
+	// information
 	prog.Build()
 	return pkgs, nil
 }
 
+// LoadServices takes a project directory and a service
+// directory and for each directory of that service builds
+// an ssa representation for each service in svcDir.
 func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 	packages := make([]*ssa.Package, 0)
 
-	fmt.Println(path.Join(projectDir, svcDir))
-	fmt.Println(os.Environ())
 	files, err := os.ReadDir(path.Join(projectDir, svcDir))
 	if err != nil {
 		return nil, err
