@@ -5,14 +5,17 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
 var (
@@ -49,7 +52,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 			fmt.Println("Successfully analysed, here is a list of dependencies:")
 			for _, dependency := range dependencies {
-				fmt.Println(dependency)
+				fmt.Println(json.Marshal(dependency))
 			}
 
 			return nil
@@ -80,7 +83,8 @@ func pathExists(path string) (bool, error) {
 
 // buildDependencies is responsible for integrating different stages
 // of the program.
-func buildDependencies(svcDir string, projectDir string) ([]string, error) {
+// TODO: the output should be changed to a list of string once the integration is done
+func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, error) {
 	// Filtering
 	initial, err := stages.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
@@ -90,7 +94,7 @@ func buildDependencies(svcDir string, projectDir string) ([]string, error) {
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, err := callanalyzer.ClientCallDiscovery(initial)
+	clientCalls, err := discovery.Discover(initial)
 	if err != nil {
 		return nil, err
 	}

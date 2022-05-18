@@ -18,7 +18,7 @@ Refer to the Project plan, chapter 5 for more information.
 
 // CreateCallGraph is a placeholder Call Graph creation method
 // TODO: Remove the following line when implementing this method
-//goland:noinspection GoUnusedParameter
+// goland:noinspection GoUnusedParameter
 func CreateCallGraph(astInst []*ast.File) callgraph.Graph {
 	return callgraph.Graph{}
 }

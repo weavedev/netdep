@@ -70,38 +70,38 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 // TODO: Good weather tests currently stackoverflow,
 // as there is no base case implemented. Uncomment these
 // tests after merging with dev.
-//func TestExecuteDepScanExampleServices(t *testing.T) {
-//	runDepScanCmd := depScanCmd()
-//	runDepScanCmd.SetArgs([]string{
-//		"-p", "../test/example",
-//		"-s", "/svc",
-//	})
-//
-//	if err := runDepScanCmd.Execute(); err != nil {
-//		t.Error("The error was not thrown, when testing for erroneous behaviour")
-//	}
-//}
+func TestExecuteDepScanExampleServices(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+	runDepScanCmd.SetArgs([]string{
+		"-p", "../test/example",
+		"-s", "/svc",
+	})
 
-//func TestExecuteDepScanFull(t *testing.T) {
-//	runDepScanCmd := depScanCmd()
-//	runDepScanCmd.SetArgs([]string{
-//		"--project-directory", "../",
-//		"--service-directory", "./test/sample/http",
-//	})
-//
-//	if err := runDepScanCmd.Execute(); err != nil {
-//		t.Error(err)
-//	}
-//}
-//
-//func TestExecuteDepScanShortHand(t *testing.T) {
-//	runDepScanCmd := depScanCmd()
-//	runDepScanCmd.SetArgs([]string{
-//		"-p", "../",
-//		"-s", "./test/sample/http",
-//	})
-//
-//	if err := runDepScanCmd.Execute(); err != nil {
-//		t.Error(err)
-//	}
-//}
+	if err := runDepScanCmd.Execute(); err != nil {
+		t.Error("The error was not thrown, when testing for erroneous behaviour")
+	}
+}
+
+func TestExecuteDepScanFull(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+	runDepScanCmd.SetArgs([]string{
+		"--project-directory", "../",
+		"--service-directory", "./test/sample/http",
+	})
+
+	if err := runDepScanCmd.Execute(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestExecuteDepScanShortHand(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+	runDepScanCmd.SetArgs([]string{
+		"-p", "../",
+		"-s", "./test/sample/http",
+	})
+
+	if err := runDepScanCmd.Execute(); err != nil {
+		t.Error(err)
+	}
+}

@@ -5,142 +5,184 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package callanalyzer
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
+	"path"
 
 	"golang.org/x/tools/go/ssa"
 )
 
-// locationIdx Stores Relevant Libraries
-// their Relevant Methods and for each method
-// a position of location in the Args of ssa.Call
-
-//nolint
-var locationIdx = map[string]map[string][]int{
-	"net/http": {
-		"Get":      []int{0, 1},
-		"Post":     []int{0, 1},
-		"Put":      []int{0, 1},
-		"PostForm": []int{0, 1},
-		"Head":     []int{0, 1},
-		// "Do":                    []int{0},
-		"NewRequest":            []int{1},
-		"NewRequestWithContext": []int{2},
-		// this is a bit different, as it uses http.Request
-		// as an argument. This will be completed in the future.
-	},
+// CallTarget holds information about a certain call made by the analysed package.
+// This used to be named "Caller" (which was slightly misleading, as it is in fact the target,
+// thus rather a 'callee' than a 'caller'.
+type CallTarget struct {
+	// The name of the package the method belongs to
+	packageName string
+	// The name of the call (i.e. name of function or some other target)
+	MethodName string
+	// The URL of the entity
+	requestLocation string
+	// TODO: Add support for the following:
+	// fileName			string
+	// positionInFile	string
 }
 
-type Caller struct {
-	RequestLocation string
-	Library         string
-	MethodName      string
-	// TODO: Add package name, filename, code line
-}
-
-func getMainFunction(pkg *ssa.Package) *ssa.Function {
-	mainMember, hasMain := pkg.Members["main"]
-	if !hasMain {
+// findFunctionInPackage finds the method by its name within the specified package.
+// Important: it only looks for Exported functions
+func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
+	// Find member
+	member, hasSpecifiedMember := pkg.Members[name]
+	if !hasSpecifiedMember {
 		return nil
 	}
-	mainFunction, ok := mainMember.(*ssa.Function)
+	// Check that member is a Function
+	foundFunction, ok := member.(*ssa.Function)
 	if !ok {
+		// Not a function
 		return nil
 	}
-
-	return mainFunction
+	return foundFunction
 }
 
-func discoverCall(call *ssa.Call) *Caller {
-	var caller *Caller
-
-	//nolint
-	switch call.Call.Value.(type) {
+// analyseCall recursively traverses the SSA, with call being the starting point,
+// and using the environment specified in the frame
+// Variables are only resolved if the call is 'interesting'
+// Recursion is only continued if the call is not in the 'ignoreList'
+//
+// Arguments:
+// call is the call to analyse,
+// frame is a structure for keeping track of the recursion,
+// config specifies how the analyser should behave, and
+// targets is a reference to the ultimate data structure that is to be completed and returned.
+func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
+	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
+	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
+	switch fnCallType := call.Call.Value.(type) {
+	// TODO: handle other cases
 	case *ssa.Function:
-		calledFunction, _ := call.Call.Value.(*ssa.Function)
-		calledFunctionPackage := calledFunction.Pkg.Pkg.Path()
+		// Qualified function name is: package + interface + function
+		qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
+		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
+		// This is therefore not the grandparent package, but the *type.Package of the fnCall
+		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
-		relevantPackage, isRelevantPackage := locationIdx[calledFunctionPackage]
-		if isRelevantPackage {
-			indices, isRelevantFunction := relevantPackage[calledFunction.Name()]
-			if call.Call.Args != nil && isRelevantFunction {
-				arguments := resolveVariables(call.Call.Args, indices)
-				caller = &Caller{
-					RequestLocation: strings.Join(arguments, ""),
-					Library:         calledFunctionPackage,
-					MethodName:      calledFunction.Name(),
+		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionNameOfTarget]
+		if isInteresting {
+			// TODO: Resolve the arguments of the function call
+			if interestingStuff.action == Output {
+				requestLocation := ""
+				if call.Call.Args != nil && len(interestingStuff.interestingArgs) > 0 {
+					requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuff.interestingArgs)...)
 				}
+				callTarget := &CallTarget{
+					packageName:     calledFunctionPackage,
+					MethodName:      qualifiedFunctionNameOfTarget,
+					requestLocation: requestLocation,
+				}
+
+				// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
+
+				*targets = append(*targets, callTarget)
+				return
+			} else if interestingStuff.action == Substitute {
+				// TODO: implement substitution of env calls
 			}
 		}
 
-		if calledFunction.Blocks != nil && caller == nil {
-			discoverBlocks(calledFunction.Blocks)
+		_, isIgnored := config.ignoreList[calledFunctionPackage]
+
+		if isIgnored {
+			// Do not recurse into the packageName if it is ignored
+			return
 		}
-		return caller
+		// The following creates a copy of 'frame'.
+		// This is the correct place for this because we are going to visit child blocks next.
+		newFrame := *frame
+
+		if fnCallType.Blocks != nil {
+			visitBlocks(fnCallType.Blocks, &newFrame, config, targets)
+		}
 	default:
-		return nil
+		// Unsupported call type
+		return
 	}
 }
 
-func discoverBlock(block *ssa.BasicBlock) []*Caller {
+// analyseInstructionsOfBlock checks the type of each iteration in a block.
+// If it finds a call, it analysed it to check if it is interesting.
+//
+// Arguments:
+// blocks is the array of blocks to analyse,
+// fr keeps track of the traversal,
+// config specifies the behaviour of the analyser,
+// targets is a reference to the ultimate data structure that is to be completed and returned.
+func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
 	if block.Instrs == nil {
-		return nil
+		return
 	}
-
-	var calls []*Caller
 
 	for _, instr := range block.Instrs {
-		//nolint // can't rewrite switch with 1 case into if,
-		// because .(type) is not allowed outside switch.
 		switch instruction := instr.(type) {
-		// Every complex Instruction is split into several instructions
-		// so even if the call is part of variable assignment
-		// or a loop it will be stored as a separate ssa.Call instruction
 		case *ssa.Call:
-			calls = append(calls, discoverCall(instruction))
+			analyseCall(instruction, fr, config, targets)
+		default:
+			continue
 		}
 	}
-
-	return calls
 }
 
-func discoverBlocks(blocks []*ssa.BasicBlock) []*Caller {
-	var calls []*Caller
+// visitBlocks visits each of the blocks in the specified 'blocks' list and analyses each of the block's instructions.
+//
+// Arguments:
+// blocks is the array of blocks to analyse,
+// fr keeps track of the traversal,
+// config specifies the behaviour of the analyser,
+// targets is a reference to the ultimate data structure that is to be completed and returned.
+func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
+	if len(fr.visited) > config.maxTraversalDepth {
+		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
+		return
+	}
 
 	for _, block := range blocks {
-		calls = append(calls, discoverBlock(block)...)
-	}
-
-	return calls
-}
-
-func analyzePackageCalls(pkg *ssa.Package) ([]*Caller, error) {
-	mainFunction := getMainFunction(pkg)
-	// TODO: Expand with endpoint searching
-
-	if mainFunction == nil {
-		return nil, fmt.Errorf("no main function found")
-	}
-
-	return discoverBlocks(mainFunction.Blocks), nil
-}
-
-func ClientCallDiscovery(initial []*ssa.Package) ([]string, error) {
-	clientCalls := make([]string, 0)
-
-	for _, pkg := range initial {
-		if caller, err := analyzePackageCalls(pkg); err == nil {
-			out, jErr := json.Marshal(caller)
-			if jErr != nil {
-				panic(err)
-			}
-			clientCalls = append(clientCalls, string(out))
-		} else {
-			fmt.Println("Unable to analyse package calls")
-			return nil, err
+		if fr.hasVisited(block) || block == nil {
+			continue
 		}
+		newFr := fr
+		// Mark the block as visited
+		newFr.visited[block] = true
+		analyseInstructionsOfBlock(block, newFr, config, targets)
+	}
+}
+
+// AnalysePackageCalls takes a main package and finds all 'interesting' methods that are called
+//
+// Arguments:
+// pkg is the package to analyse
+// config specifies the behaviour of the analyser,
+//
+// Returns:
+// List of pointers to callTargets, or an error if something went wrong.
+func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, error) {
+	mainFunction := findFunctionInPackage(pkg, "main")
+
+	// TODO: look for the init function will be useful if we want to know
+	// the values of global file-scoped variables
+	// initFunction := findFunctionInPackage(pkg, "init")
+
+	// Find the main function
+	if mainFunction == nil {
+		return nil, fmt.Errorf("no main function found in package %v", pkg)
 	}
 
-	return clientCalls, nil
+	baseFrame := Frame{
+		visited: make(map[*ssa.BasicBlock]bool, 0),
+		// Reference to the final list of all _targets of the entire package
+	}
+
+	targets := make([]*CallTarget, 0)
+
+	// Visit each of the block of the main function
+	visitBlocks(mainFunction.Blocks, &baseFrame, config, &targets)
+
+	return targets, nil
 }
