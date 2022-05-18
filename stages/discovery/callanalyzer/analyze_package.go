@@ -50,14 +50,24 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 	return foundFunction
 }
 
-func getCallInformation(pkg *ssa.Package, pos token.Pos) (string, string, string) {
-	service := pkg.String()[strings.LastIndex(pkg.String(), "/")+1:]
+// getCallInformation returns the service, file and line number
+// of a discovered call
+//
+// Arguments:
+// pos is the position of the call
+// frame is a structure for keeping track of the recursion and package
+func getCallInformation(pos token.Pos, frame *Frame) (string, string, string) {
+	// split package name and take the last item to get the service name
+	service := frame.pkg.String()[strings.LastIndex(frame.pkg.String(), "/")+1:]
 
-	filePath := pkg.Prog.Fset.File(pos).Name()
+	// absolute file path
+	filePath := frame.pkg.Prog.Fset.File(pos).Name()
+	// split absolute path to get the relative file path from the service directory
 	parts := filePath[strings.LastIndex(filePath, string(os.PathSeparator)+service+string(os.PathSeparator))+1:]
 
 	base := 10
-	position := strconv.FormatInt(int64(pkg.Prog.Fset.Position(pos).Line), base)
+	// take the position of the call within the file and convert to string
+	position := strconv.FormatInt(int64(frame.pkg.Prog.Fset.Position(pos).Line), base)
 
 	return service, parts, position
 }
@@ -72,7 +82,7 @@ func getCallInformation(pkg *ssa.Package, pos token.Pos) (string, string, string
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *[]*CallTarget, pkg *ssa.Package) {
+func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	switch fnCallType := call.Call.Value.(type) {
@@ -85,7 +95,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
 		// Additional information about the call
-		service, file, position := getCallInformation(pkg, call.Pos())
+		service, file, position := getCallInformation(call.Pos(), frame)
 
 		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionNameOfTarget]
 		if isInteresting {
@@ -122,7 +132,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		newFrame := *frame
 
 		if fnCallType.Blocks != nil {
-			visitBlocks(fnCallType.Blocks, &newFrame, config, targets, pkg)
+			visitBlocks(fnCallType.Blocks, &newFrame, config, targets)
 		}
 	default:
 		// Unsupported call type
@@ -138,7 +148,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget, pkg *ssa.Package) {
+func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
 	if block.Instrs == nil {
 		return
 	}
@@ -146,7 +156,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case *ssa.Call:
-			analyseCall(instruction, fr, config, targets, pkg)
+			analyseCall(instruction, fr, config, targets)
 		default:
 			continue
 		}
@@ -160,7 +170,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget, pkg *ssa.Package) {
+func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
 	if len(fr.visited) > config.maxTraversalDepth {
 		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
 		return
@@ -173,7 +183,7 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, ta
 		newFr := fr
 		// Mark the block as visited
 		newFr.visited[block] = true
-		analyseInstructionsOfBlock(block, newFr, config, targets, pkg)
+		analyseInstructionsOfBlock(block, newFr, config, targets)
 	}
 }
 
@@ -200,12 +210,13 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	baseFrame := Frame{
 		visited: make(map[*ssa.BasicBlock]bool, 0),
 		// Reference to the final list of all _targets of the entire package
+		pkg: pkg,
 	}
 
 	targets := make([]*CallTarget, 0)
 
 	// Visit each of the block of the main function
-	visitBlocks(mainFunction.Blocks, &baseFrame, config, &targets, pkg)
+	visitBlocks(mainFunction.Blocks, &baseFrame, config, &targets)
 
 	return targets, nil
 }
