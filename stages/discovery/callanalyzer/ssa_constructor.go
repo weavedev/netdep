@@ -24,7 +24,7 @@ func CreateSSA(ssaConf SSAConfig) (*ssa.Program, []*ssa.Package, error) {
 		// whose iota is 991 in the current library version
 		//nolint
 		Mode: packages.LoadAllSyntax,
-		// Do not analyze test files
+		// Do not analyse test files
 		Tests: false,
 	}
 

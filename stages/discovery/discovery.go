@@ -54,11 +54,11 @@ func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, error) {
 
 	// The current output data structure. TODO: add additional fields
 	allTargets := make([]*callanalyzer.CallTarget, 0)
-	// TODO: change the following line to adapt the analyzer for server-side endpoint detection
+	// TODO: change the following line to adapt the analyser for server-side endpoint detection
 	config := callanalyzer.DefaultConfigForFindingHTTPClientCalls()
 	for _, pkg := range mainPackages {
-		// Analyze each package
-		targetsOfCurrPkg, err := callanalyzer.AnalyzePackageCalls(pkg, &config)
+		// Analyse each package
+		targetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
 		if err != nil {
 			fmt.Printf("Non-fatal error while searching for interesting calls: %v\n", err)
 		}

@@ -10,7 +10,7 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-// CallTarget holds information about a certain call made by the analyzed package.
+// CallTarget holds information about a certain call made by the analysed package.
 // This used to be named "Caller" (which was slightly misleading, as it is in fact the target,
 // thus rather a 'callee' than a 'caller'.
 type CallTarget struct {
@@ -40,17 +40,17 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 	return foundFunction
 }
 
-// analyzeCall recursively traverses the SSA, with call being the starting point,
+// analyseCall recursively traverses the SSA, with call being the starting point,
 // and using the environment specified in the frame
 // Variables are only resolved if the call is 'interesting'
 // Recursion is only continued if the call is not in the 'ignoreList'
 //
 // Arguments:
-// call is the call to analyze,
+// call is the call to analyse,
 // frame is a structure for keeping track of the recursion,
-// config specifies how the analyzer should behave, and
+// config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
+func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	switch fnCallType := call.Call.Value.(type) {
@@ -60,18 +60,22 @@ func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *
 		qualifiedFunctionName := fnCallType.RelString(nil)
 		rootPackage := fnCallType.Pkg.Pkg.Path()
 
-		_, isInteresting := config.interestingCalls[qualifiedFunctionName]
+		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionName]
 		if isInteresting {
 			// TODO: Resolve the arguments of the function call
-			callTarget := &CallTarget{
-				packageName: rootPackage,
-				MethodName:  qualifiedFunctionName,
+			if interestingStuff.action == Output {
+				callTarget := &CallTarget{
+					packageName: rootPackage,
+					MethodName:  qualifiedFunctionName,
+				}
+
+				// fmt.Println("Found call to function " + qualifiedFunctionName)
+
+				*targets = append(*targets, callTarget)
+				return
+			} else if interestingStuff.action == Substitute {
+				// TODO: implement substitution of env calls
 			}
-
-			// fmt.Println("Found call to function " + qualifiedFunctionName)
-
-			*targets = append(*targets, callTarget)
-			return
 		}
 
 		_, isIgnored := config.ignoreList[rootPackage]
@@ -93,15 +97,15 @@ func analyzeCall(call *ssa.Call, frame *Frame, config *AnalyzerConfig, targets *
 	}
 }
 
-// analyzeInstructionsOfBlock checks the type of each iteration in a block.
-// If it finds a call, it analyzed it to check if it is interesting.
+// analyseInstructionsOfBlock checks the type of each iteration in a block.
+// If it finds a call, it analysed it to check if it is interesting.
 //
 // Arguments:
-// blocks is the array of blocks to analyze,
+// blocks is the array of blocks to analyse,
 // fr keeps track of the traversal,
-// config specifies the behavior of the analyzer,
+// config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyzeInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
+func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
 	if block.Instrs == nil {
 		return
 	}
@@ -109,21 +113,21 @@ func analyzeInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analyz
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case *ssa.Call:
-			analyzeCall(instruction, fr, config, targets)
+			analyseCall(instruction, fr, config, targets)
 		default:
 			continue
 		}
 	}
 }
 
-// visitBlocks visits each of the blocks in the specified 'blocks' list and analyzes each of the block's instructions.
+// visitBlocks visits each of the blocks in the specified 'blocks' list and analyses each of the block's instructions.
 //
 // Arguments:
-// blocks is the array of blocks to analyze,
+// blocks is the array of blocks to analyse,
 // fr keeps track of the traversal,
-// config specifies the behavior of the analyzer,
+// config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, targets *[]*CallTarget) {
+func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targets *[]*CallTarget) {
 	if len(fr.visited) > config.maxTraversalDepth {
 		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
 		return
@@ -136,19 +140,19 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyzerConfig, ta
 		newFr := fr
 		// Mark the block as visited
 		newFr.visited[block] = true
-		analyzeInstructionsOfBlock(block, newFr, config, targets)
+		analyseInstructionsOfBlock(block, newFr, config, targets)
 	}
 }
 
-// AnalyzePackageCalls takes a main package and finds all 'interesting' methods that are called
+// AnalysePackageCalls takes a main package and finds all 'interesting' methods that are called
 //
 // Arguments:
-// pkg is the package to analyze
-// config specifies the behavior of the analyzer,
+// pkg is the package to analyse
+// config specifies the behaviour of the analyser,
 //
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
-func AnalyzePackageCalls(pkg *ssa.Package, config *AnalyzerConfig) ([]*CallTarget, error) {
+func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, error) {
 	mainFunction := findFunctionInPackage(pkg, "main")
 
 	// TODO: look for the init function will be useful if we want to know
