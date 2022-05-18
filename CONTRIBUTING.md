@@ -32,7 +32,7 @@ orientation.
 We agree that in terms of behaviour:
 
 * We will treat everyone with respect. 
-* We will not tolerate discrimanation, exclusion or other antisocial behavior.
+* We will not tolerate discrimanation, exclusion or other antisocial behaviour.
 
 
 ### Attribution
