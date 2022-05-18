@@ -6,8 +6,8 @@ package callanalyzer
 
 import (
 	"fmt"
-
 	"golang.org/x/tools/go/ssa"
+	"path"
 )
 
 // CallTarget holds information about a certain call made by the analysed package.
@@ -18,9 +18,12 @@ type CallTarget struct {
 	packageName string
 	// The name of the call (i.e. name of function or some other target)
 	MethodName string
+	// The URL of the entity
+	requestLocation string
 	// TODO: Add support for the following:
 	// fileName			string
 	// positionInFile	string
+
 }
 
 // findFunctionInPackage finds the method by its name within the specified package.
@@ -66,9 +69,14 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		if isInteresting {
 			// TODO: Resolve the arguments of the function call
 			if interestingStuff.action == Output {
+				requestLocation := ""
+				if call.Call.Args != nil && len(interestingStuff.interestingArgs) > 0 {
+					requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuff.interestingArgs)...)
+				}
 				callTarget := &CallTarget{
-					packageName: calledFunctionPackage,
-					MethodName:  qualifiedFunctionNameOfTarget,
+					packageName:     calledFunctionPackage,
+					MethodName:      qualifiedFunctionNameOfTarget,
+					requestLocation: requestLocation,
 				}
 
 				// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
