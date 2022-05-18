@@ -45,7 +45,7 @@ func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, error) {
 		ProjDir: projDir,
 	}
 
-	prog, ssaPkg, err := callanalyzer.CreateSSA(conf)
+	_, ssaPkg, err := callanalyzer.CreateSSA(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +58,11 @@ func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, error) {
 	config := callanalyzer.DefaultConfigForFindingHTTPClientCalls()
 	for _, pkg := range mainPackages {
 		// Analyse each package
-		targetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config, prog)
+		targetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
 		if err != nil {
 			fmt.Printf("Non-fatal error while searching for interesting calls: %v\n", err)
 		}
 		allTargets = append(allTargets, targetsOfCurrPkg...)
 	}
-
 	return allTargets, nil
 }
