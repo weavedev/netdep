@@ -57,19 +57,21 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 	// TODO: handle other cases
 	case *ssa.Function:
 		// Qualified function name is: package + interface + function
-		qualifiedFunctionName := fnCallType.RelString(nil)
-		rootPackage := fnCallType.Pkg.Pkg.Path()
+		qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
+		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
+		// This is therefore not the grandparent package, but the *type.Package of the fnCall
+		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
-		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionName]
+		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionNameOfTarget]
 		if isInteresting {
 			// TODO: Resolve the arguments of the function call
 			if interestingStuff.action == Output {
 				callTarget := &CallTarget{
-					packageName: rootPackage,
-					MethodName:  qualifiedFunctionName,
+					packageName: calledFunctionPackage,
+					MethodName:  qualifiedFunctionNameOfTarget,
 				}
 
-				// fmt.Println("Found call to function " + qualifiedFunctionName)
+				// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
 
 				*targets = append(*targets, callTarget)
 				return
@@ -78,7 +80,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 			}
 		}
 
-		_, isIgnored := config.ignoreList[rootPackage]
+		_, isIgnored := config.ignoreList[calledFunctionPackage]
 
 		if isIgnored {
 			// Do not recurse into the packageName if it is ignored
