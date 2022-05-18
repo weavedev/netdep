@@ -54,17 +54,19 @@ func resolveVariables(parameters []ssa.Value, positions []int) []string {
 func resolveGinAddrSlice(value ssa.Value) []string {
 	switch val := value.(type) {
 	case *ssa.Slice:
-		switch val1 := val.X.(type) {
+		switch val1Type := val.X.(type) {
 		case *ssa.Alloc:
-			block := val1.Block()
+			block := val1Type.Block()
 			for i := range block.Instrs {
+				// Iterate through instruction of the block in reverse order
+				// In the case of the Gin library, the last Store instruction in the block contains the address value we're looking for
 				switch instruction := block.Instrs[len(block.Instrs)-1-i].(type) {
 				case *ssa.Store:
-					switch storeVal := instruction.Val.(type) {
+					switch storeValType := instruction.Val.(type) {
 					case *ssa.Const:
-						switch storeVal.Value.Kind() {
+						switch storeValType.Value.Kind() {
 						case constant.String:
-							return []string{constant.StringVal(storeVal.Value)}
+							return []string{constant.StringVal(storeValType.Value)}
 						}
 					}
 				}

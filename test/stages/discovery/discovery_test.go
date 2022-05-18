@@ -53,5 +53,5 @@ func TestDiscoveryGinHandle(t *testing.T) {
 	projDir := path.Join(path.Dir(path.Dir(thisFileParent)), path.Join("sample", path.Join("http", "gin_handle")))
 	_, resS, _ := discovery.Discover(projDir, projDir)
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
-	assert.Equal(t, "github.com/gin-gonic/gin.GET", resS[0].MethodName, "Expect github.com/gin-gonic/gin.GET to be called")
+	assert.Equal(t, "(*github.com/gin-gonic/gin.RouterGroup).GET", resS[0].MethodName, "Expect (*github.com/gin-gonic/gin.RouterGroup).GET to be called")
 }
