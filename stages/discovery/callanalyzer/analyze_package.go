@@ -26,11 +26,11 @@ type CallTarget struct {
 	// The URL of the entity
 	requestLocation string
 	// The name of the service in which the call is made
-	serviceName string
+	ServiceName string
 	// The name of the file in which the call is made
-	fileName string
+	FileName string
 	// The line number in the file where the call is made
-	positionInFile string
+	PositionInFile string
 }
 
 // findFunctionInPackage finds the method by its name within the specified package.
@@ -109,9 +109,9 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 					packageName:     calledFunctionPackage,
 					MethodName:      qualifiedFunctionNameOfTarget,
 					requestLocation: requestLocation,
-					serviceName:     service,
-					fileName:        file,
-					positionInFile:  position,
+					ServiceName:     service,
+					FileName:        file,
+					PositionInFile:  position,
 				}
 
 				*targets = append(*targets, callTarget)
