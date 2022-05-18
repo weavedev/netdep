@@ -99,6 +99,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 }
 
 func handleInterestingServerCall(call *ssa.Call, interestingStuffServer InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsServer *[]*CallTarget) {
+	//nolint:nestif
 	if interestingStuffServer.action == Output {
 		requestLocation := ""
 		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
