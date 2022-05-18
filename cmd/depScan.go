@@ -46,7 +46,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			if err != nil {
 				return err
 			}
-			fmt.Println("Successfully analyzed, here is a list of dependencies:")
+
+			fmt.Println("Successfully analysed, here is a list of dependencies:")
 			for _, dependency := range dependencies {
 				fmt.Println(dependency)
 			}
@@ -81,7 +82,7 @@ func pathExists(path string) (bool, error) {
 // of the program.
 func buildDependencies(svcDir string, projectDir string) ([]string, error) {
 	// Filtering
-	initial, err := stages.LoadServices(svcDir, projectDir)
+	initial, err := stages.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
 	if err != nil {
 		return nil, err

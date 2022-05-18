@@ -6,22 +6,24 @@ package stages
 import (
 	"fmt"
 	"go/ast"
+	"os"
+	"path"
 
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-func LoadPackages(svcDir string, projectDir string) ([]*ssa.Package, error) {
+func loadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error) {
 	config := &packages.Config{
-		Dir: projectDir,
+		Dir: projectRootDir,
 		//nolint // We are using this, as cmd/callgraph is using it.
 		Mode:  packages.LoadAllSyntax,
 		Tests: false,
 	}
 	mode := ssa.BuilderMode(0)
 
-	initial, err := packages.Load(config, svcDir)
+	initial, err := packages.Load(config, svcPath)
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +39,35 @@ func LoadPackages(svcDir string, projectDir string) ([]*ssa.Package, error) {
 	prog, pkgs := ssautil.AllPackages(initial, mode)
 	prog.Build()
 	return pkgs, nil
+}
+
+func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
+	packages := make([]*ssa.Package, 0)
+
+	files, err := os.ReadDir(path.Join(projectDir, svcDir))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			servicePath := path.Join(svcDir, file.Name())
+			fmt.Println(servicePath)
+
+			pkgs, err := loadPackages(projectDir, "./"+servicePath)
+			if err != nil {
+				return nil, err
+			}
+
+			packages = append(packages, pkgs...)
+		}
+	}
+
+	if len(packages) == 0 {
+		return nil, fmt.Errorf("no service packages were found")
+	}
+
+	return packages, nil
 }
 
 /*
