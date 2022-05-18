@@ -3,8 +3,6 @@
 package discovery
 
 import (
-	"fmt"
-
 	"golang.org/x/tools/go/ssa"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -45,7 +43,7 @@ func Discover(pkgsToAnalyse []*ssa.Package) ([]*callanalyzer.CallTarget, error) 
 		// Analyse each package
 		targetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
 		if err != nil {
-			return nil, fmt.Errorf("non-fatal error while searching for interesting calls: %w", err)
+			return nil, err
 		}
 
 		allTargets = append(allTargets, targetsOfCurrPkg...)

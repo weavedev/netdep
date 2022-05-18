@@ -7,9 +7,10 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -39,10 +40,6 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-
-			fmt.Println("Starting call scanning...")
-			fmt.Println("Project directory: " + projectDir)
-			fmt.Println("Service directory: " + serviceDir)
 			dependencies, err := buildDependencies(serviceDir, projectDir)
 			if err != nil {
 				return err
@@ -83,7 +80,6 @@ func pathExists(path string) (bool, error) {
 // of the program.
 // TODO: the output should be changed to a list of string once the integration is done
 func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, error) {
-
 	// Filtering
 	initial, err := stages.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)

@@ -53,7 +53,6 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 	// Collect all files within the services directory
 	files, err := os.ReadDir(svcDir)
 	if err != nil {
-		//Services directory invalid or could not access
 		return nil, err
 	}
 
@@ -74,7 +73,7 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 	}
 
 	if len(packagesToAnalyze) == 0 {
-		return nil, fmt.Errorf("no service packagesToAnalyze were found")
+		return nil, fmt.Errorf("no service to analyse were found")
 	}
 
 	return packagesToAnalyze, nil
