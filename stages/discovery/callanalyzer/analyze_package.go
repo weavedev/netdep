@@ -56,18 +56,18 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 // Arguments:
 // pos is the position of the call
 // frame is a structure for keeping track of the recursion and package
-func getCallInformation(pos token.Pos, frame *Frame) (string, string, string) {
+func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string) {
 	// split package name and take the last item to get the service name
-	service := frame.pkg.String()[strings.LastIndex(frame.pkg.String(), "/")+1:]
+	service := pkg.String()[strings.LastIndex(pkg.String(), "/")+1:]
 
 	// absolute file path
-	filePath := frame.pkg.Prog.Fset.File(pos).Name()
+	filePath := pkg.Prog.Fset.File(pos).Name()
 	// split absolute path to get the relative file path from the service directory
 	parts := filePath[strings.LastIndex(filePath, string(os.PathSeparator)+service+string(os.PathSeparator))+1:]
 
 	base := 10
 	// take the position of the call within the file and convert to string
-	position := strconv.FormatInt(int64(frame.pkg.Prog.Fset.Position(pos).Line), base)
+	position := strconv.FormatInt(int64(pkg.Prog.Fset.Position(pos).Line), base)
 
 	return service, parts, position
 }
@@ -95,7 +95,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targets *
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
 		// Additional information about the call
-		service, file, position := getCallInformation(call.Pos(), frame)
+		service, file, position := getCallInformation(call.Pos(), frame.pkg)
 
 		interestingStuff, isInteresting := config.interestingCalls[qualifiedFunctionNameOfTarget]
 		if isInteresting {
