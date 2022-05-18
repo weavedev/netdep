@@ -5,10 +5,16 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+
 	"github.com/spf13/cobra"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
 var (
@@ -34,9 +40,18 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			fmt.Println("depScan called")
-			fmt.Println("Project directory: " + projectDir)
-			fmt.Println("Service directory: " + serviceDir)
+			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Successfully analysed, here is a list of dependencies:")
+			for _, client := range clientCalls {
+				fmt.Println(json.Marshal(client))
+			}
+			for _, server := range serverCalls {
+				fmt.Println(json.Marshal(server))
+			}
 
 			return nil
 		},
@@ -62,4 +77,29 @@ func pathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// buildDependencies is responsible for integrating different stages
+// of the program.
+// TODO: the output should be changed to a list of string once the integration is done
+func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+	// Filtering
+	initial, err := stages.LoadServices(projectDir, svcDir)
+	fmt.Printf("Starting to analyse %s\n", initial)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: Endpoint discovery
+	// Client Call Discovery
+	clientCalls, serverCalls, err := discovery.Discover(initial)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: Matching
+
+	// For now this returns client calls,
+	// as we don't have any other functionality in place.
+	return clientCalls, serverCalls, nil
 }

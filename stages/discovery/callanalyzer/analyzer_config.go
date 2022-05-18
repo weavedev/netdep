@@ -30,9 +30,9 @@ type AnalyserConfig struct {
 	maxTraversalDepth int
 }
 
-// DefaultConfigForFindingHTTPClientCalls returns the default config
-// for locating client calls
-func DefaultConfigForFindingHTTPClientCalls() AnalyserConfig {
+// DefaultConfigForFindingHTTPCalls returns the default config
+// for locating calls
+func DefaultConfigForFindingHTTPCalls() AnalyserConfig {
 	return AnalyserConfig{
 		interestingCallsClient: map[string]InterestingCall{
 			"(*net/http.Client).Do":          {action: Output, interestingArgs: []int{0}},

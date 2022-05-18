@@ -3,10 +3,7 @@
 package discovery
 
 import (
-	"fmt"
-
 	"golang.org/x/tools/go/ssa"
-	"golang.org/x/tools/go/ssa/ssautil"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 )
@@ -37,32 +34,18 @@ type DiscoveredData struct {
 }
 
 // Discover finds client calls in the specified project directory
-func Discover(projDir, svcDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
-	// Config for the SSA building function
-	conf := callanalyzer.SSAConfig{
-		Mode:    ssa.BuilderMode(0),
-		SvcDir:  svcDir,
-		ProjDir: projDir,
-	}
-
-	_, ssaPkg, err := callanalyzer.CreateSSA(conf)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mainPackages := ssautil.MainPackages(ssaPkg)
-
+func Discover(pkgsToAnalyse []*ssa.Package) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// The current output data structure. TODO: add additional fields
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
-	// TODO: change the following line to adapt the analyser for server-side endpoint detection
-	config := callanalyzer.DefaultConfigForFindingHTTPClientCalls()
-	for _, pkg := range mainPackages {
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
+	for _, pkg := range pkgsToAnalyse {
 		// Analyse each package
 		clientTargetsOfCurrPkg, serverTargetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
 		if err != nil {
-			fmt.Printf("Non-fatal error while searching for interesting calls: %v\n", err)
+			return nil, nil, err
 		}
+
 		allClientTargets = append(allClientTargets, clientTargetsOfCurrPkg...)
 		allServerTargets = append(allServerTargets, serverTargetsOfCurrPkg...)
 	}
