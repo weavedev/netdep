@@ -8,8 +8,14 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 )
 
+type (
+	TargetList []*callanalyzer.CallTarget
+	GraphNodes []*output.ServiceNode
+	GraphEdges []*output.ConnectionEdge
+)
+
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
-func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) ([]*output.ServiceNode, []*output.ConnectionEdge) {
+func CreateDependencyGraph(calls TargetList, endpoints TargetList) (GraphNodes, GraphEdges) {
 	endpointMap := make(map[string]string)
 	portMap := make(map[string]string)
 	serviceMap := make(map[string]*output.ServiceNode)
