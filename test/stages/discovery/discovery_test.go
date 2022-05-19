@@ -84,8 +84,8 @@ func TestCallInfo(t *testing.T) {
 	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "sample", "http")
 
 	initial, _ := stages.LoadServices(projDir, svcDir)
-	res, _ := discovery.Discover(initial)
+	res, _, _ := discovery.Discover(initial)
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "27", res[8].PositionInFile, "Expected line number 27")
-	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[5].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 27")
+	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }

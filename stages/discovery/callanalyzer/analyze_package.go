@@ -97,14 +97,14 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		interestingStuffClient, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
-			handleInterestingClientCall(call, interestingStuffClient, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsClient)
+			handleInterestingClientCall(call, interestingStuffClient, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsClient, frame)
 			return
 		}
 
 		interestingStuffServer, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 		if isInterestingServer {
 			// TODO: Resolve the arguments of the function call
-			handleInterestingServerCall(call, interestingStuffServer, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsServer)
+			handleInterestingServerCall(call, interestingStuffServer, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsServer, frame)
 			return
 		}
 
@@ -127,7 +127,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 	}
 }
 
-func handleInterestingServerCall(call *ssa.Call, interestingStuffServer InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsServer *[]*CallTarget) {
+func handleInterestingServerCall(call *ssa.Call, interestingStuffServer InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsServer *[]*CallTarget, frame *Frame) {
 	//nolint:nestif
 	if interestingStuffServer.action == Output {
 		requestLocation := ""
@@ -138,10 +138,16 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 				requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs)...)
 			}
 		}
+		// Additional information about the call
+		service, file, position := getCallInformation(call.Pos(), frame.pkg)
+
 		callTarget := &CallTarget{
 			packageName:     calledFunctionPackage,
 			MethodName:      qualifiedFunctionNameOfTarget,
 			requestLocation: requestLocation,
+			ServiceName:     service,
+			FileName:        file,
+			PositionInFile:  position,
 		}
 
 		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
@@ -153,16 +159,22 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 	}
 }
 
-func handleInterestingClientCall(call *ssa.Call, interestingStuffClient InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsClient *[]*CallTarget) {
+func handleInterestingClientCall(call *ssa.Call, interestingStuffClient InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsClient *[]*CallTarget, frame *Frame) {
 	if interestingStuffClient.action == Output {
 		requestLocation := ""
 		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
 			requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs)...)
 		}
+		// Additional information about the call
+		service, file, position := getCallInformation(call.Pos(), frame.pkg)
+
 		callTarget := &CallTarget{
 			packageName:     calledFunctionPackage,
 			MethodName:      qualifiedFunctionNameOfTarget,
 			requestLocation: requestLocation,
+			ServiceName:     service,
+			FileName:        file,
+			PositionInFile:  position,
 		}
 
 		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
