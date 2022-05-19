@@ -7,8 +7,9 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 	"os"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -99,11 +100,11 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 	}
 
 	nodes, edges := stages.CreateDependencyGraph(clientCalls, serverCalls)
-	adjecencyList := output.ConstructAdjacencyList(nodes, edges)
-	JSON, err := output.SerializeAdjacencyList(adjecencyList, true)
+	adjacencyList := output.ConstructAdjacencyList(nodes, edges)
+	JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
 	// TODO: Matching
 	fmt.Println(JSON)
 	// For now this returns client calls,
 	// as we don't have any other functionality in place.
-	return clientCalls, serverCalls, nil
+	return clientCalls, serverCalls, err
 }

@@ -2,6 +2,7 @@ package stages
 
 import (
 	"fmt"
+
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
@@ -54,7 +55,7 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 	}
 
 	// Populate nodes
-	for serviceName, _ := range serviceMap {
+	for serviceName := range serviceMap {
 		serviceNode := &output.ServiceNode{
 			ServiceName: serviceName,
 			IsUnknown:   false,

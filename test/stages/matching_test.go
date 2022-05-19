@@ -1,8 +1,9 @@
 package stages
 
 import (
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"testing"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
@@ -68,12 +69,12 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 	nodes, edges := stages.CreateDependencyGraph(calls, endpoints)
 
 	assert.Equal(t, len(expectedNodes), len(nodes))
-	for i, _ := range expectedNodes {
+	for i := range expectedNodes {
 		assert.Equal(t, expectedNodes[i], nodes[i])
 	}
 
 	assert.Equal(t, len(expectedEdges), len(edges))
-	for i, _ := range expectedEdges {
+	for i := range expectedEdges {
 		assert.Equal(t, expectedEdges[i], edges[i])
 	}
 }
@@ -164,12 +165,12 @@ func TestWithUnknownService(t *testing.T) {
 	nodes, edges := stages.CreateDependencyGraph(calls, endpoints)
 
 	assert.Equal(t, len(expectedNodes), len(nodes))
-	for i, _ := range expectedNodes {
+	for i := range expectedNodes {
 		assert.Equal(t, expectedNodes[i], nodes[i])
 	}
 
 	assert.Equal(t, len(expectedEdges), len(edges))
-	for i, _ := range expectedEdges {
+	for i := range expectedEdges {
 		assert.Equal(t, expectedEdges[i], edges[i])
 	}
 }
