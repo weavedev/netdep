@@ -6,6 +6,7 @@ import "golang.org/x/tools/go/ssa"
 type Frame struct {
 	// visited is a set of blocks that have been visited.
 	visited map[*ssa.BasicBlock]bool
+	pkg     *ssa.Package
 }
 
 // hasVisited returns whether the block has already been visited.

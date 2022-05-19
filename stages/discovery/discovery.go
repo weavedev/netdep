@@ -49,6 +49,5 @@ func Discover(pkgsToAnalyse []*ssa.Package) ([]*callanalyzer.CallTarget, []*call
 		allClientTargets = append(allClientTargets, clientTargetsOfCurrPkg...)
 		allServerTargets = append(allServerTargets, serverTargetsOfCurrPkg...)
 	}
-
 	return allClientTargets, allServerTargets, nil
 }

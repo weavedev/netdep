@@ -6,7 +6,11 @@ package callanalyzer
 
 import (
 	"fmt"
+	"go/token"
+	"os"
 	"path"
+	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/ssa"
 )
@@ -21,9 +25,12 @@ type CallTarget struct {
 	MethodName string
 	// The URL of the entity
 	requestLocation string
-	// TODO: Add support for the following:
-	// fileName			string
-	// positionInFile	string
+	// The name of the service in which the call is made
+	ServiceName string
+	// The name of the file in which the call is made
+	FileName string
+	// The line number in the file where the call is made
+	PositionInFile string
 }
 
 // findFunctionInPackage finds the method by its name within the specified package.
@@ -41,6 +48,28 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 		return nil
 	}
 	return foundFunction
+}
+
+// getCallInformation returns the service, file and line number
+// of a discovered call
+//
+// Arguments:
+// pos is the position of the call
+// frame is a structure for keeping track of the recursion and package
+func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string) {
+	// split package name and take the last item to get the service name
+	service := pkg.String()[strings.LastIndex(pkg.String(), "/")+1:]
+
+	// absolute file path
+	filePath := pkg.Prog.Fset.File(pos).Name()
+	// split absolute path to get the relative file path from the service directory
+	parts := filePath[strings.LastIndex(filePath, string(os.PathSeparator)+service+string(os.PathSeparator))+1:]
+
+	base := 10
+	// take the position of the call within the file and convert to string
+	position := strconv.FormatInt(int64(pkg.Prog.Fset.Position(pos).Line), base)
+
+	return service, parts, position
 }
 
 // analyseCall recursively traverses the SSA, with call being the starting point,
@@ -64,7 +93,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
-
+		
 		interestingStuffClient, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
@@ -215,6 +244,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	baseFrame := Frame{
 		visited: make(map[*ssa.BasicBlock]bool, 0),
 		// Reference to the final list of all _targets of the entire package
+		pkg: pkg,
 	}
 
 	targetsClient := make([]*CallTarget, 0)

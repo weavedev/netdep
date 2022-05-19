@@ -4,6 +4,7 @@
 package discovery
 
 import (
+	"os"
 	"path"
 	"runtime"
 	"testing"
@@ -73,4 +74,18 @@ func TestDiscoveryGinHandle(t *testing.T) {
 	_, resS, _ := discovery.Discover(initial)
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
 	assert.Equal(t, "(*github.com/gin-gonic/gin.RouterGroup).GET", resS[0].MethodName, "Expect (*github.com/gin-gonic/gin.RouterGroup).GET to be called")
+}
+
+func TestCallInfo(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+
+	projDir := path.Dir(path.Dir(path.Dir(thisFileParent)))
+	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "sample", "http")
+
+	initial, _ := stages.LoadServices(projDir, svcDir)
+	res, _ := discovery.Discover(initial)
+	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
+	assert.Equal(t, "27", res[8].PositionInFile, "Expected line number 27")
+	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[5].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
