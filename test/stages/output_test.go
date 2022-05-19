@@ -8,8 +8,6 @@ import (
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,20 +15,23 @@ import (
 func CreateSmallTestGraph() ([]*output.ServiceNode, []*output.ConnectionEdge) {
 	node1 := output.ServiceNode{
 		ServiceName: "Node1",
+		IsUnknown:   false,
 	}
 	node2 := output.ServiceNode{
 		ServiceName: "Node2",
+		IsUnknown:   false,
 	}
 	node3 := output.ServiceNode{
 		ServiceName: "Node3",
+		IsUnknown:   false,
 	}
 
 	edge12 := output.ConnectionEdge{
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "URL_2",
+			URL:       "http://Node2:80/URL_2",
 			Arguments: nil,
-			Location:  discovery.CallData{Filepath: "./node1/path/to/some/file.go", Line: 24},
+			Location:  "./node1/path/to/some/file.go:24",
 		},
 		Source: &node1,
 		Target: &node2,
@@ -39,9 +40,9 @@ func CreateSmallTestGraph() ([]*output.ServiceNode, []*output.ConnectionEdge) {
 	edge13 := output.ConnectionEdge{
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "URL_3",
+			URL:       "http://Node3:80/URL_3",
 			Arguments: nil,
-			Location:  discovery.CallData{Filepath: "./node1/path/to/some/other/file.go", Line: 36},
+			Location:  "./node1/path/to/some/other/file.go:36",
 		},
 		Source: &node1,
 		Target: &node3,
@@ -50,9 +51,9 @@ func CreateSmallTestGraph() ([]*output.ServiceNode, []*output.ConnectionEdge) {
 	edge23a := output.ConnectionEdge{
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "URL_3",
+			URL:       "http://Node3:80/URL_3",
 			Arguments: nil,
-			Location:  discovery.CallData{Filepath: "./node1/path/to/some/file.go", Line: 245},
+			Location:  "./node1/path/to/some/file.go:245",
 		},
 		Source: &node2,
 		Target: &node3,
@@ -61,9 +62,9 @@ func CreateSmallTestGraph() ([]*output.ServiceNode, []*output.ConnectionEdge) {
 	edge23b := output.ConnectionEdge{
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "URL_3",
+			URL:       "http://Node3:80/URL_3",
 			Arguments: nil,
-			Location:  discovery.CallData{Filepath: "./node2/path/to/some/other/file.go", Line: 436},
+			Location:  "./node2/path/to/some/other/file.go:436",
 		},
 		Source: &node2,
 		Target: &node3,
@@ -83,13 +84,13 @@ func TestConstructAdjacencyList(t *testing.T) {
 		"Node1": {
 			{
 				// node 2
-				Service:       *nodes[1],
+				Service:       nodes[1].ServiceName,
 				Calls:         []output.NetworkCall{edges[0].Call},
 				NumberOfCalls: 1,
 			},
 			{
 				// node 3
-				Service:       *nodes[2],
+				Service:       nodes[2].ServiceName,
 				Calls:         []output.NetworkCall{edges[1].Call},
 				NumberOfCalls: 1,
 			},
@@ -97,7 +98,7 @@ func TestConstructAdjacencyList(t *testing.T) {
 		"Node2": {
 			{
 				// node 3
-				Service:       *nodes[2],
+				Service:       nodes[2].ServiceName,
 				Calls:         []output.NetworkCall{edges[2].Call, edges[3].Call},
 				NumberOfCalls: 2,
 			},
@@ -119,7 +120,7 @@ func TestSerialiseOutput(t *testing.T) {
 	nodes, edges := CreateSmallTestGraph()
 	list := output.ConstructAdjacencyList(nodes, edges)
 	str, _ := output.SerializeAdjacencyList(list, false)
-	expected := "{\"Node1\":[{\"service\":{\"serviceName\":\"Node2\"},\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"URL_2\",\"arguments\":null,\"location\":{\"filepath\":\"./node1/path/to/some/file.go\",\"line\":24}}],\"count\":1},{\"service\":{\"serviceName\":\"Node3\"},\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"URL_3\",\"arguments\":null,\"location\":{\"filepath\":\"./node1/path/to/some/other/file.go\",\"line\":36}}],\"count\":1}],\"Node2\":[{\"service\":{\"serviceName\":\"Node3\"},\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"URL_3\",\"arguments\":null,\"location\":{\"filepath\":\"./node1/path/to/some/file.go\",\"line\":245}},{\"protocol\":\"HTTP\",\"url\":\"URL_3\",\"arguments\":null,\"location\":{\"filepath\":\"./node2/path/to/some/other/file.go\",\"line\":436}}],\"count\":2}],\"Node3\":[]}"
+	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node2:80/URL_2\",\"arguments\":null,\"location\":\"./node1/path/to/some/file.go:24\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node1/path/to/some/other/file.go:36\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node1/path/to/some/file.go:245\"},{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node2/path/to/some/other/file.go:436\"}],\"count\":2}],\"Node3\":[]}"
 
 	assert.Equal(t, expected, str)
 }

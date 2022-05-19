@@ -24,7 +24,7 @@ type CallTarget struct {
 	// The name of the call (i.e. name of function or some other target)
 	MethodName string
 	// The URL of the entity
-	requestLocation string
+	RequestLocation string
 	// The name of the service in which the call is made
 	ServiceName string
 	// The name of the file in which the call is made
@@ -144,7 +144,7 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 		callTarget := &CallTarget{
 			packageName:     calledFunctionPackage,
 			MethodName:      qualifiedFunctionNameOfTarget,
-			requestLocation: requestLocation,
+			RequestLocation: requestLocation,
 			ServiceName:     service,
 			FileName:        file,
 			PositionInFile:  position,
@@ -171,7 +171,7 @@ func handleInterestingClientCall(call *ssa.Call, interestingStuffClient Interest
 		callTarget := &CallTarget{
 			packageName:     calledFunctionPackage,
 			MethodName:      qualifiedFunctionNameOfTarget,
-			requestLocation: requestLocation,
+			RequestLocation: requestLocation,
 			ServiceName:     service,
 			FileName:        file,
 			PositionInFile:  position,

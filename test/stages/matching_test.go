@@ -1,10 +1,10 @@
 package stages
 
 import (
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"testing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 
 	"github.com/stretchr/testify/assert"
@@ -12,12 +12,7 @@ import (
 
 // test basic functionality of the matching functionality
 func TestEmptyCaseCreateDependencyGraph(t *testing.T) {
-	discoveredData := &discovery.DiscoveredData{
-		ServCalls: nil,
-		Handled:   nil,
-	}
-
-	nodes, edges := stages.CreateDependencyGraph(discoveredData)
+	nodes, edges := stages.CreateDependencyGraph(nil, nil)
 
 	assert.Equal(t, make([]*output.ServiceNode, 0), nodes)
 	assert.Equal(t, make([]*output.ConnectionEdge, 0), edges)
@@ -25,85 +20,117 @@ func TestEmptyCaseCreateDependencyGraph(t *testing.T) {
 
 // test basic functionality of the matching functionality
 func TestBasicCreateDependencyGraph(t *testing.T) {
-	discoveredData := &discovery.DiscoveredData{
-		ServCalls: []discovery.ServiceCalls{
-			{
-				Service: "Node1",
-				Calls: map[string][]discovery.CallData{
-					"URL_2": {
-						{Filepath: "./node1/path/to/some/file.go", Line: 24},
-					},
-					"URL_3": {
-						{Filepath: "./node1/path/to/some/other/file.go", Line: 36},
-					},
-				},
-			},
-			{
-				Service: "Node2",
-				Calls: map[string][]discovery.CallData{
-					"URL_3": {
-						{Filepath: "./node1/path/to/some/file.go", Line: 245},
-						{Filepath: "./node2/path/to/some/other/file.go", Line: 436},
-					},
-				},
-			},
-			{
-				Service: "Node3",
-				Calls:   map[string][]discovery.CallData{},
-			},
+	calls := []*callanalyzer.CallTarget{
+		{
+			RequestLocation: "http://Node2:80/URL_2",
+			ServiceName:     "Node1",
+			FileName:        "./node1/path/to/some/file.go",
+			PositionInFile:  "24",
 		},
-		Handled: map[string]string{"URL_1": "Node1", "URL_2": "Node2", "URL_3": "Node3"},
+		{
+			RequestLocation: "http://Node3:80/URL_3",
+			ServiceName:     "Node1",
+			FileName:        "./node1/path/to/some/other/file.go",
+			PositionInFile:  "36",
+		},
+		{
+			RequestLocation: "http://Node3:80/URL_3",
+			ServiceName:     "Node2",
+			FileName:        "./node1/path/to/some/file.go",
+			PositionInFile:  "245",
+		},
+		{
+			RequestLocation: "http://Node3:80/URL_3",
+			ServiceName:     "Node2",
+			FileName:        "./node2/path/to/some/other/file.go",
+			PositionInFile:  "436",
+		},
+	}
+
+	endpoints := []*callanalyzer.CallTarget{
+		{
+			RequestLocation: "/URL_1",
+			ServiceName:     "Node1",
+		},
+		{
+			RequestLocation: "/URL_2",
+			ServiceName:     "Node2",
+		},
+		{
+			RequestLocation: "/URL_3",
+			ServiceName:     "Node3",
+		},
 	}
 
 	// reuse graph from output stage tests
 	expectedNodes, expectedEdges := CreateSmallTestGraph()
 
-	nodes, edges := stages.CreateDependencyGraph(discoveredData)
+	nodes, edges := stages.CreateDependencyGraph(calls, endpoints)
 
-	assert.Equal(t, expectedNodes, nodes)
-	assert.Equal(t, expectedEdges, edges)
+	assert.Equal(t, len(expectedNodes), len(nodes))
+	for i, _ := range expectedNodes {
+		assert.Equal(t, expectedNodes[i], nodes[i])
+	}
+
+	assert.Equal(t, len(expectedEdges), len(edges))
+	for i, _ := range expectedEdges {
+		assert.Equal(t, expectedEdges[i], edges[i])
+	}
 }
 
 // test functionality with unknown service
 func TestWithUnknownService(t *testing.T) {
 	// input data
-	discoveredData := &discovery.DiscoveredData{
-		ServCalls: []discovery.ServiceCalls{
-			{
-				Service: "Node1",
-				Calls: map[string][]discovery.CallData{
-					"URL_1": {
-						{Filepath: "./node1/path/to/some/file.go", Line: 24},
-						{Filepath: "./node1/path/to/some/other/file.go", Line: 436},
-					},
-					"URL_2": {
-						{Filepath: "./node1/path/to/some/other_file.go", Line: 24},
-					},
-				},
-			},
+	calls := []*callanalyzer.CallTarget{
+		{
+			RequestLocation: "http://Node2:80/URL_2",
+			ServiceName:     "Node1",
+			FileName:        "./node1/path/to/some/file.go",
+			PositionInFile:  "24",
 		},
-		Handled: map[string]string{},
+		{
+			RequestLocation: "http://Node2:80/URL_2",
+			ServiceName:     "Node1",
+			FileName:        "./node1/path/to/some/other/file.go",
+			PositionInFile:  "436",
+		},
+		{
+			RequestLocation: "http://Node3:80/URL_3",
+			ServiceName:     "Node1",
+			FileName:        "./node1/path/to/some/other_file.go",
+			PositionInFile:  "24",
+		},
+	}
+
+	endpoints := []*callanalyzer.CallTarget{
+		{
+			RequestLocation: "/URL_1",
+			ServiceName:     "Node1",
+		},
 	}
 
 	// output data
 	node1 := output.ServiceNode{
 		ServiceName: "Node1",
+		IsUnknown:   false,
 	}
 
 	node2 := output.ServiceNode{
 		ServiceName: "Unknown Service #1",
+		IsUnknown:   true,
 	}
 
 	node3 := output.ServiceNode{
 		ServiceName: "Unknown Service #2",
+		IsUnknown:   true,
 	}
 
 	edge12a := output.ConnectionEdge{
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "URL_1",
+			URL:       "http://Node2:80/URL_2",
 			Arguments: nil,
-			Location:  discovery.CallData{Filepath: "./node1/path/to/some/file.go", Line: 24},
+			Location:  "./node1/path/to/some/file.go:24",
 		},
 		Source: &node1,
 		Target: &node2,
@@ -112,9 +139,9 @@ func TestWithUnknownService(t *testing.T) {
 	edge12b := output.ConnectionEdge{
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "URL_1",
+			URL:       "http://Node2:80/URL_2",
 			Arguments: nil,
-			Location:  discovery.CallData{Filepath: "./node1/path/to/some/other/file.go", Line: 436},
+			Location:  "./node1/path/to/some/other/file.go:436",
 		},
 		Source: &node1,
 		Target: &node2,
@@ -123,9 +150,9 @@ func TestWithUnknownService(t *testing.T) {
 	edge13 := output.ConnectionEdge{
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "URL_2",
+			URL:       "http://Node3:80/URL_3",
 			Arguments: nil,
-			Location:  discovery.CallData{Filepath: "./node1/path/to/some/other_file.go", Line: 24},
+			Location:  "./node1/path/to/some/other_file.go:24",
 		},
 		Source: &node1,
 		Target: &node3,
@@ -134,8 +161,15 @@ func TestWithUnknownService(t *testing.T) {
 	expectedNodes := []*output.ServiceNode{&node1, &node2, &node3}
 	expectedEdges := []*output.ConnectionEdge{&edge12a, &edge12b, &edge13}
 
-	nodes, edges := stages.CreateDependencyGraph(discoveredData)
+	nodes, edges := stages.CreateDependencyGraph(calls, endpoints)
 
-	assert.Equal(t, expectedNodes, nodes)
-	assert.Equal(t, expectedEdges, edges)
+	assert.Equal(t, len(expectedNodes), len(nodes))
+	for i, _ := range expectedNodes {
+		assert.Equal(t, expectedNodes[i], nodes[i])
+	}
+
+	assert.Equal(t, len(expectedEdges), len(edges))
+	for i, _ := range expectedEdges {
+		assert.Equal(t, expectedEdges[i], edges[i])
+	}
 }
