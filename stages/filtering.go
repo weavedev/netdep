@@ -13,9 +13,9 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-// loadPackages takes in project root directory path and the path
+// LoadPackages takes in project root directory path and the path
 // of one service and returns an ssa representation of the service.
-func loadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error) {
+func LoadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error) {
 	config := &packages.Config{
 		Dir: projectRootDir,
 		//nolint // We are using this, as cmd/callgraph is using it.
@@ -62,7 +62,7 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 			servicePath := path.Join(svcDir, file.Name())
 			fmt.Println(servicePath)
 
-			pkgs, err := loadPackages(projectDir, servicePath)
+			pkgs, err := LoadPackages(projectDir, servicePath)
 			if err != nil {
 				return nil, err
 			}
