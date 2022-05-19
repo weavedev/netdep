@@ -19,8 +19,8 @@ func TestResolving(t *testing.T) {
 
 	expected := make(map[string]map[string]interface{})
 
-	expected["node-basic-http"] = make(map[string]interface{})
-	expected["node-basic-http"]["scopes"] = map[string]interface{}{
+	expected["service-1"] = make(map[string]interface{})
+	expected["service-1"]["scopes"] = map[string]interface{}{
 		"public": []interface{}{
 			map[string]interface{}{
 				"endpoint": "/services/ServiceB",
@@ -40,7 +40,7 @@ func TestResolving(t *testing.T) {
 }
 
 func TestResolvingInvalid(t *testing.T) {
-	res := stages.ResolveEnvVars("../example/svc/node-gin-http")
+	res := stages.ResolveEnvVars("../example/svc/service-gin-server")
 	expected := make(map[string]map[string]interface{})
 	assert.Equal(t, expected, res, "Expected the resolution method to return an empty map")
 }

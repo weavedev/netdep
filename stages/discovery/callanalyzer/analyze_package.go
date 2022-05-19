@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go/token"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
@@ -133,9 +132,9 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 		requestLocation := ""
 		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 			if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
-				requestLocation = path.Join(resolveGinAddrSlice(call.Call.Args[1])...)
+				requestLocation = strings.Join(resolveGinAddrSlice(call.Call.Args[1]), "")
 			} else {
-				requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs)...)
+				requestLocation = strings.Join(resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs), "")
 			}
 		}
 		// Additional information about the call
@@ -163,7 +162,7 @@ func handleInterestingClientCall(call *ssa.Call, interestingStuffClient Interest
 	if interestingStuffClient.action == Output {
 		requestLocation := ""
 		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
-			requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs)...)
+			requestLocation = strings.Join(resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs), "")
 		}
 		// Additional information about the call
 		service, file, position := getCallInformation(call.Pos(), frame.pkg)

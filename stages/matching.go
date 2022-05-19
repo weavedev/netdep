@@ -81,6 +81,7 @@ func CreateDependencyGraph(calls TargetList, endpoints TargetList) (GraphNodes, 
 		targetServiceName, hasTarget := endpointMap[call.RequestLocation]
 		var targetNode *output.ServiceNode
 
+		fmt.Println(call.RequestLocation, targetServiceName, hasTarget)
 		// find target service
 		if hasTarget {
 			targetService, exists := serviceMap[targetServiceName]

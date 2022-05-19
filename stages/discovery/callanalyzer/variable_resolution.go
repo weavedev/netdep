@@ -32,7 +32,8 @@ func resolveVariable(value ssa.Value) string {
 		return "[[CONST]]"
 	}
 
-	return "var(" + value.Name() + ") = ??"
+	//return "var(" + value.Name() + ") = ??"
+	return "[[Unknown]]"
 }
 
 func resolveVariables(parameters []ssa.Value, positions []int) []string {
@@ -73,7 +74,7 @@ func resolveGinAddrSlice(value ssa.Value) []string {
 			}
 		}
 	case *ssa.Const:
-		return []string{":8080"}
+		return []string{":80"}
 	}
 	return []string{"var(" + value.Name() + ") = ??"}
 }

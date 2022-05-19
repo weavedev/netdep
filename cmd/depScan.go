@@ -5,11 +5,10 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
+	"os"
+	"path"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -33,26 +32,33 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			dir, err := os.Getwd()
+			relativeProjectDir := path.Clean(path.Join(dir, projectDir))
 			// Path validation
-			if ex, err := pathExists(projectDir); !ex || err != nil {
+			if ex, err := pathExists(relativeProjectDir); !ex || err != nil {
 				return fmt.Errorf("invalid project directory specified: %s", projectDir)
 			}
-			if ex, err := pathExists(serviceDir); !ex || err != nil {
+
+			relativeServiceDir := path.Clean(path.Join(relativeProjectDir, serviceDir))
+			if ex, err := pathExists(relativeServiceDir); !ex || err != nil {
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir)
+			clientCalls, serverCalls, err := buildDependencies(relativeServiceDir, relativeServiceDir)
 			if err != nil {
 				return err
 			}
 
+			nodes, edges := stages.CreateDependencyGraph(clientCalls, serverCalls)
+			adjacencyList := output.ConstructAdjacencyList(nodes, edges)
+			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
+
 			fmt.Println("Successfully analysed, here is a list of dependencies:")
-			for _, client := range clientCalls {
-				fmt.Println(json.Marshal(client))
-			}
-			for _, server := range serverCalls {
-				fmt.Println(json.Marshal(server))
+			if err == nil {
+				fmt.Println(JSON)
+			} else {
+				fmt.Println("Could not output JSON")
 			}
 
 			return nil
@@ -99,11 +105,6 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 		return nil, nil, err
 	}
 
-	nodes, edges := stages.CreateDependencyGraph(clientCalls, serverCalls)
-	adjacencyList := output.ConstructAdjacencyList(nodes, edges)
-	JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
-	// TODO: Matching
-	fmt.Println(JSON)
 	// For now this returns client calls,
 	// as we don't have any other functionality in place.
 	return clientCalls, serverCalls, err

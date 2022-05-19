@@ -60,7 +60,7 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 	for _, file := range files {
 		if file.IsDir() {
 			servicePath := path.Join(svcDir, file.Name())
-			fmt.Println(servicePath)
+			fmt.Printf("Found service \"%s\" in %s.\n", file.Name(), servicePath)
 
 			pkgs, err := LoadPackages(projectDir, servicePath)
 			if err != nil {
