@@ -34,19 +34,20 @@ type DiscoveredData struct {
 }
 
 // Discover finds client calls in the specified project directory
-func Discover(pkgsToAnalyse []*ssa.Package) ([]*callanalyzer.CallTarget, error) {
+func Discover(pkgsToAnalyse []*ssa.Package) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// The current output data structure. TODO: add additional fields
-	allTargets := make([]*callanalyzer.CallTarget, 0)
-	// TODO: change the following line to adapt the analyser for server-side endpoint detection
-	config := callanalyzer.DefaultConfigForFindingHTTPClientCalls()
+	allClientTargets := make([]*callanalyzer.CallTarget, 0)
+	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
 	for _, pkg := range pkgsToAnalyse {
 		// Analyse each package
-		targetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
+		clientTargetsOfCurrPkg, serverTargetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		allTargets = append(allTargets, targetsOfCurrPkg...)
+		allClientTargets = append(allClientTargets, clientTargetsOfCurrPkg...)
+		allServerTargets = append(allServerTargets, serverTargetsOfCurrPkg...)
 	}
-	return allTargets, nil
+	return allClientTargets, allServerTargets, nil
 }
