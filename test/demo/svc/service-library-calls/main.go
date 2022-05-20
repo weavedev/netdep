@@ -1,7 +1,7 @@
 package main
 
 /*
-This "Service" does calls to http endpoints using different libraries.
+This "Service" performs calls to http endpoints using different libraries.
 */
 
 import (
@@ -34,15 +34,21 @@ func NewCallbackHandler(retryMax int) *http.Client {
 	return httpClient
 }
 
+var url = "http://service-gin-server:80/endpoint/get"
+
 func main() {
 	// resty client get request
 	client := resty.New()
+
+	// perform resty post request
 	_, err := client.R().Post("http://service-gin-server:80/endpoint/post")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 
 		return
 	}
+
+	// perform resty post request again
 	_, err = client.R().Post("http://service-gin-server:80/endpoint/post")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -50,11 +56,15 @@ func main() {
 		return
 	}
 
-	// retryablehttp
+	// initialise retryablehttp client
 	retryClient := NewCallbackHandler(2)
-	// @mark HTTP request to https://httpbin.org/get
+
+	// create a new request object and perform request using client.Do
 	req, err := http.NewRequestWithContext(context.Background(), "GET", "http://service-gin-server:80/endpoint/get", nil)
 	retryClient.Do(req)
+
+	// perform get request using a global url
+	http.Get(url)
 
 	log.Fatal(http.ListenAndServe(":80", nil))
 }

@@ -17,23 +17,31 @@ import (
 func resolveVariable(value ssa.Value) string {
 	switch val := value.(type) {
 	case *ssa.Parameter:
-		return "[[Unknown]]"
+		return "[[Unknown Parameter]]"
 	case *ssa.BinOp:
 		switch val.Op {
 		case token.ADD:
 			return resolveVariable(val.X) + resolveVariable(val.Y)
 		}
-		return "[[OP]]"
+		return "[[BinOp]]"
+	case *ssa.UnOp:
+		return resolveVariable(val.X)
 	case *ssa.Const:
 		switch val.Value.Kind() {
 		case constant.String:
 			return constant.StringVal(val.Value)
 		}
-		return "[[CONST]]"
-	}
+		return "[[Non-String Constant]]"
+	case *ssa.Global:
+		return "[[Unknown Global]]"
+	case *ssa.Extract:
+		return "[[Unknown Extract]]"
+	case *ssa.Call:
+		return "[[Unresolved Call]]"
 
-	//return "var(" + value.Name() + ") = ??"
-	return "[[Unknown]]"
+	default:
+		return "[[Unknown Value]]"
+	}
 }
 
 func resolveVariables(parameters []ssa.Value, positions []int) []string {

@@ -7,18 +7,20 @@ func main() {
 	// Used by a number of services
 	app := gin.Default()
 
-	// @mark HTTP endpoint "/ping"
+	// define GET endpoint
 	app.GET("/endpoint/get", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"message": "Hello world",
 		})
 	})
 
+	// define POST endpoint
 	app.POST("/endpoint/post", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"message": "Hello world",
 		})
 	})
 
+	// run the app
 	app.Run()
 }
