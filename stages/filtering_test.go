@@ -7,8 +7,6 @@ import (
 	"go/ast"
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,6 +14,6 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestFiltering(t *testing.T) {
-	res := stages.ScanAndFilter("test")
+	res := ScanAndFilter("test")
 	assert.Equal(t, map[string][]*ast.File(nil), res, "Expect nil as the output of the ScanAndFilter method")
 }
