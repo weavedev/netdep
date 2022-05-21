@@ -1,8 +1,9 @@
-image: golang:1.18
+image: golang:1.17
 
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
+  - deploy
 
 compile-job:
   stage: build
@@ -21,9 +22,32 @@ lint-job:
     # ./lint.sh
     - golangci-lint run
   allow_failure: true
+
 test-job:
   stage: test
   script:
-  - go test ./... # Could be extended with -cover for test coverage
+  - go test ./... -coverprofile=cov.out
+  - go tool cover -html=cov.out -o cov.html
+  - go tool cover -func=cov.out
+  artifacts:
+    paths:
+      - cov.html
+    expire_in: 30 days
+  coverage: "/\\(statements\\)\\s+\\d+.?\\d+%/"
+
+pages:
+  stage: deploy
+  script:
+    - rm -rf public
+    - ls -la
+    - mkdir -p public && cp cov.html public/
+    - ls -la ./public
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  only:
+    - main
+    - dev
 
 
