@@ -185,7 +185,7 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 		service, file, position := getCallInformation(call.Pos(), frame.pkg)
 
 		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
-			variables, isResolved = resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs, config)
+			variables, isResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, config)
 			requestLocation = path.Join(variables...)
 		}
 

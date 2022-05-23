@@ -3,7 +3,6 @@ Package callanalyzer defines call scanning methods
 Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 */
 
-//nolint:gocritic,exhaustive
 package callanalyzer
 
 import (
@@ -13,18 +12,24 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-// resolveVariable returns a string value of ssa.Value
-// if the value can be resolved. It also returns a bool
-// which indicates whether the variable was resolved.
-func resolveVariable(value ssa.Value) (string, bool) {
+// resolveVariable Resolves a supplied variable value, only in the cases that are supported by the tool:
+//
+// - string concatenation (see BinOp),
+//
+// - string literal
+//
+// - call to os.GetEnv
+//
+// - other InterestingCalls with the action Substitute
+func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 	switch val := value.(type) {
 	case *ssa.Parameter:
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op {
 		case token.ADD:
-			left, isLeftResolved := resolveVariable(val.X)
-			right, isRightResolved := resolveVariable(val.Y)
+			left, isLeftResolved := resolveVariable(val.X, config)
+			right, isRightResolved := resolveVariable(val.Y, config)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -38,18 +43,25 @@ func resolveVariable(value ssa.Value) (string, bool) {
 			return constant.StringVal(val.Value), true
 		}
 		return "unknown: constant is not a string", false
+
+	case *ssa.Call:
+		// TODO: here shall the substitution happen
+		if config.interestingCallsCommon["To be call value"].action == Substitute {
+			return "unknown: interesting call that could be substituted (currently not implemented)", true
+		}
+		return "unknown: interesting call that is not supported", false
 	}
 
 	return "unknown: var(" + value.Name() + ") = ??", false
 }
 
-func resolveVariables(parameters []ssa.Value, positions []int) ([]string, bool) {
+func resolveParameters(parameters []ssa.Value, positions []int, config *AnalyserConfig) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveVariable(parameters[idx])
+			variable, isResolved := resolveVariable(parameters[idx], config)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
