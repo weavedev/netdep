@@ -93,7 +93,7 @@ func pathExists(path string) (bool, error) {
 func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
 	initial, err := stages.LoadServices(projectDir, svcDir)
-	fmt.Printf("Starting to analyse %s\n", initial)
+	fmt.Printf("Starting to analyse (%d) packages...\n", len(initial))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,8 +101,15 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 	// TODO: Endpoint discovery
 	// Client Call Discovery
 	clientCalls, serverCalls, err := discovery.Discover(initial)
-	if err != nil {
-		return nil, nil, err
+	//if err != nil {
+	//	return nil, nil, err
+	//}
+
+	for _, c := range clientCalls {
+		fmt.Println(c)
+	}
+	for _, c := range serverCalls {
+		fmt.Println(c)
 	}
 
 	// For now this returns client calls,

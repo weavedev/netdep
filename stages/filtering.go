@@ -20,7 +20,7 @@ func LoadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error)
 		Dir: projectRootDir,
 		//nolint // We are using this, as cmd/callgraph is using it.
 		Mode:  packages.LoadAllSyntax,
-		Tests: false,
+		Tests: true,
 	}
 	mode := ssa.BuilderMode(0)
 
@@ -64,10 +64,11 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 
 			pkgs, err := LoadPackages(projectDir, servicePath)
 			if err != nil {
-				return nil, err
+				//return nil, err
+			} else {
+				packagesToAnalyze = append(packagesToAnalyze, pkgs...)
 			}
 
-			packagesToAnalyze = append(packagesToAnalyze, pkgs...)
 		}
 	}
 

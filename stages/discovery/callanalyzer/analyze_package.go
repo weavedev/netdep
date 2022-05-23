@@ -93,6 +93,10 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
+		if strings.Contains(qualifiedFunctionNameOfTarget, "Client") || strings.Contains(qualifiedFunctionNameOfTarget, ".Do") {
+			fmt.Println("Client.Do: " + qualifiedFunctionNameOfTarget)
+		}
+
 		interestingStuffClient, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
@@ -116,6 +120,15 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		// The following creates a copy of 'frame'.
 		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
+
+		for _, arg := range call.Call.Args {
+			if fn, ok := arg.(*ssa.Call); ok {
+				analyseCall(fn, frame, config, targetsClient, targetsServer)
+			}
+			if fn, ok := arg.(*ssa.Function); ok {
+				visitBlocks(fn.Blocks, &newFrame, config, targetsClient, targetsServer)
+			}
+		}
 
 		if fnCallType.Blocks != nil {
 			visitBlocks(fnCallType.Blocks, &newFrame, config, targetsClient, targetsServer)
