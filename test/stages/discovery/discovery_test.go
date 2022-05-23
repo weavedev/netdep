@@ -4,7 +4,6 @@
 package discovery
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"runtime"
@@ -29,7 +28,7 @@ func TestDiscovery(t *testing.T) {
 
 	initial, _ := stages.LoadServices(projDir, svcDir)
 	resC, _, _ := discovery.Discover(initial)
-	assert.Equal(t, 13, len(resC), "Expect 12 interesting call")
+	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
@@ -100,8 +99,8 @@ func TestWrappedClientCall(t *testing.T) {
 
 	initial, _ := stages.LoadPackages(projDir, svcDir)
 	res, _, _ := discovery.Discover(initial)
-	fmt.Println(res)
-	//assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
-	//assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 27")
-	//assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
+	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.
+	assert.Equal(t, "18", res[0].PositionInFile, "Expected line number 18")
+	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }

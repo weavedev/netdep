@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go/token"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
@@ -24,8 +23,8 @@ type CallTarget struct {
 	// The name of the call (i.e. name of function or some other target)
 	MethodName string
 	// The URL of the entity
-	requestLocation string
-	// A flag describing whether the requestLocation was resolved
+	RequestLocation string
+	// A flag describing whether the RequestLocation was resolved
 	IsResolved bool
 	// The name of the service in which the call is made
 	ServiceName string
@@ -160,10 +159,12 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 			if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
 				variables, isResolved = resolveGinAddrSlice(call.Call.Args[1])
-				requestLocation = path.Join(variables...)
+				// TODO: parse the url
+				requestLocation = strings.Join(variables, "")
 			} else {
 				variables, isResolved = resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs, frame)
-				requestLocation = path.Join(variables...)
+				// TODO: parse the url
+				requestLocation = strings.Join(variables, "")
 			}
 		}
 		// Additional information about the call
@@ -172,7 +173,7 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 		callTarget := &CallTarget{
 			packageName:     calledFunctionPackage,
 			MethodName:      qualifiedFunctionNameOfTarget,
-			requestLocation: requestLocation,
+			RequestLocation: requestLocation,
 			IsResolved:      isResolved,
 			ServiceName:     service,
 			FileName:        file,
@@ -199,13 +200,14 @@ func handleInterestingClientCall(call *ssa.Call, interestingStuffClient Interest
 
 		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
 			variables, isResolved = resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs, frame)
-			requestLocation = path.Join(variables...)
+			// TODO: parse the url
+			requestLocation = strings.Join(variables, "")
 		}
 
 		callTarget := &CallTarget{
 			packageName:     calledFunctionPackage,
 			MethodName:      qualifiedFunctionNameOfTarget,
-			requestLocation: requestLocation,
+			RequestLocation: requestLocation,
 			IsResolved:      isResolved,
 			ServiceName:     service,
 			FileName:        file,
