@@ -9,8 +9,9 @@ package callanalyzer
 import (
 	"go/constant"
 	"go/token"
-	"golang.org/x/tools/go/ssa"
 	"strings"
+
+	"golang.org/x/tools/go/ssa"
 )
 
 // resolveVariable Resolves a supplied variable value, only in the cases that are supported by the tool:

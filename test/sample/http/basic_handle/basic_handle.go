@@ -17,7 +17,6 @@ func (ct *CounterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
 	th := &CounterHandler{counter: 0}
 	http.Handle("/count", th)
 	http.ListenAndServe(":8080", nil)
