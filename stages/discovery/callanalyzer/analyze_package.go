@@ -136,6 +136,9 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCo
 	}
 }
 
+// handleInterestingServerCall collects the information about a supplied endpoint declaration
+// and adds this information to the targetsServer data structure. If possible, also calls the function to resolve
+// the parameters of the function call.
 func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, targetsServer *[]*CallTarget, frame *Frame) {
 	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if interestingStuffServer.action == Output {
@@ -172,7 +175,9 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 	}
 }
 
-// handleInterestingClientCall handles the
+// handleInterestingServerCall collects the information about a supplied http client call
+// and adds this information to the targetClient data structure. If possible, also calls the function to resolve
+// the parameters of the function call.
 func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, targetsClient *[]*CallTarget, frame *Frame) {
 	interestingStuffClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 

@@ -26,7 +26,7 @@ func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 	case *ssa.Parameter:
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
-		switch val.Op {
+		switch val.Op { //nolint:exhaustive
 		case token.ADD:
 			left, isLeftResolved := resolveVariable(val.X, config)
 			right, isRightResolved := resolveVariable(val.Y, config)
@@ -35,13 +35,17 @@ func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 			}
 
 			return left + right, false
+		default:
+			return "Only ADD binary operation is supported", false
 		}
-		return "unknown: only string concatenation can be resolved", false
 	case *ssa.Const:
-		switch val.Value.Kind() {
+		switch val.Value.Kind() { //nolint:exhaustive
 		case constant.String:
 			return constant.StringVal(val.Value), true
+		default:
+			return "unknown: not a string constant", false
 		}
+	default:
 		return "unknown: constant is not a string", false
 
 	case *ssa.Call:
@@ -51,10 +55,10 @@ func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 		}
 		return "unknown: interesting call that is not supported", false
 	}
-
-	return "unknown: var(" + value.Name() + ") = ??", false
 }
 
+// resolveParameters iterates over the parameters, resolving those where possible.
+// It also keeps track of whether all variables could be resolved or not.
 func resolveParameters(parameters []ssa.Value, positions []int, config *AnalyserConfig) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
@@ -77,6 +81,7 @@ func resolveParameters(parameters []ssa.Value, positions []int, config *Analyser
 // Returns list of strings that represent the slice, and bool value indicating whether the variable was resolved.
 // TODO: implement a general way for resolving variables in slices
 func resolveGinAddrSlice(value ssa.Value) ([]string, bool) {
+	unresolvedType := []string{"unknown: var(" + value.Name() + ") = ??"}
 	switch val := value.(type) {
 	case *ssa.Slice:
 		switch val1Type := val.X.(type) {
@@ -89,16 +94,24 @@ func resolveGinAddrSlice(value ssa.Value) ([]string, bool) {
 				case *ssa.Store:
 					switch storeValType := instruction.Val.(type) {
 					case *ssa.Const:
-						switch storeValType.Value.Kind() {
+						switch storeValType.Value.Kind() { //nolint:exhaustive
 						case constant.String:
 							return []string{constant.StringVal(storeValType.Value)}, true
+						default:
+							return unresolvedType, false
 						}
+					default:
+						return unresolvedType, false
 					}
+				default:
+					return unresolvedType, false
 				}
 			}
+		default:
+			return unresolvedType, false
 		}
 	case *ssa.Const:
 		return []string{":8080"}, true
 	}
-	return []string{"unknown: var(" + value.Name() + ") = ??"}, false
+	return unresolvedType, false
 }
