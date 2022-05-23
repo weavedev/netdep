@@ -135,14 +135,14 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCo
 }
 
 func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, targetsServer *[]*CallTarget, frame *Frame) {
-	interestingStuffServer, _ := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if interestingStuffServer.action == Output {
 		requestLocation := ""
 		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 			if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
 				requestLocation = path.Join(resolveGinAddrSlice(call.Call.Args[1])...)
 			} else {
-				requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs)...)
+				requestLocation = path.Join(resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, config)...)
 			}
 		}
 		// Additional information about the call
@@ -161,19 +161,17 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 
 		*targetsServer = append(*targetsServer, callTarget)
 		return
-	} else if interestingStuffServer.action == Substitute {
-		// TODO: implement substitution of env calls
 	}
 }
 
 // handleInterestingClientCall handles the
 func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, targetsClient *[]*CallTarget, frame *Frame) {
-	interestingStuffClient, _ := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+	interestingStuffClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 
 	if interestingStuffClient.action == Output {
 		requestLocation := ""
 		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
-			requestLocation = path.Join(resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs)...)
+			requestLocation = path.Join(resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, config)...)
 		}
 		// Additional information about the call
 		service, file, position := getCallInformation(call.Pos(), frame.pkg)
@@ -191,8 +189,6 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 
 		*targetsClient = append(*targetsClient, callTarget)
 		return
-	} else if interestingStuffClient.action == Substitute {
-		// TODO: implement substitution of env calls
 	}
 }
 

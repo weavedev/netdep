@@ -25,6 +25,7 @@ type AnalyserConfig struct {
 	// outputted as a party in a dependency (0) or substituted with a constant (1)
 	interestingCallsClient map[string]InterestingCall
 	interestingCallsServer map[string]InterestingCall
+	interestingCallsCommon map[string]InterestingCall
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
 	maxTraversalDepth int
@@ -42,7 +43,6 @@ func DefaultConfigForFindingHTTPCalls() AnalyserConfig {
 			"net/http.Get":                   {action: Output, interestingArgs: []int{0, 1}},
 			"net/http.Post":                  {action: Output, interestingArgs: []int{0, 1}},
 			"net/http.NewRequestWithContext": {action: Output, interestingArgs: []int{2}},
-			"os.Getenv":                      {action: Substitute, interestingArgs: []int{0}}, // TODO: implement env var substitution
 			// "net/http.NewRequest":  ...
 			// "(*net/http.Client).PostForm": ...
 		},
@@ -58,6 +58,9 @@ func DefaultConfigForFindingHTTPCalls() AnalyserConfig {
 			"(*github.com/gin-gonic/gin.RouterGroup).HEAD":    {action: Output, interestingArgs: []int{1}},
 			"(*github.com/gin-gonic/gin.RouterGroup).OPTIONS": {action: Output, interestingArgs: []int{1}},
 			"(*github.com/gin-gonic/gin.Engine).Run":          {action: Output, interestingArgs: []int{1}},
+		},
+		interestingCallsCommon: map[string]InterestingCall{
+			"os.Getenv": {action: Substitute, interestingArgs: []int{0}}, // TODO: implement env var substitution
 		},
 		maxTraversalDepth: defaultMaxTraversalDepth,
 		ignoreList: map[string]bool{
