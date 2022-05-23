@@ -93,7 +93,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
-		
+
 		interestingStuffClient, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
