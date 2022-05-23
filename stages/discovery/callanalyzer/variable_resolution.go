@@ -9,65 +9,62 @@ package callanalyzer
 import (
 	"go/constant"
 	"go/token"
-	"strings"
 
 	"golang.org/x/tools/go/ssa"
 )
 
-// resolveVariable Resolves a supplied variable value, only in the cases that are supported by the tool:
-//
-// - string concatenation (see BinOp),
-//
-// - string literal
-//
-// - call to os.GetEnv
-//
-// - other InterestingCalls with the action Substitute
-func resolveVariable(value ssa.Value, config *AnalyserConfig) string {
+// resolveVariable returns a string value of ssa.Value
+// if the value can be resolved. It also returns a bool
+// which indicates whether the variable was resolved.
+func resolveVariable(value ssa.Value) (string, bool) {
 	switch val := value.(type) {
 	case *ssa.Parameter:
-		return "[[Unknown]]"
+		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op {
 		case token.ADD:
-			return resolveVariable(val.X, config) + resolveVariable(val.Y, config)
+			left, isLeftResolved := resolveVariable(val.X)
+			right, isRightResolved := resolveVariable(val.Y)
+			if isRightResolved && isLeftResolved {
+				return left + right, true
+			}
+
+			return left + right, false
 		}
-		return "[[OP]]"
+		return "unknown: only string concatenation can be resolved", false
 	case *ssa.Const:
 		switch val.Value.Kind() {
 		case constant.String:
-			return constant.StringVal(val.Value)
+			return constant.StringVal(val.Value), true
 		}
-		return "[[CONST]]"
-	case *ssa.Call:
-		// TODO: here shall the substitution happen
-		if config.interestingCallsCommon["To be call value"].action == Substitute {
-			return "[[Interesting Call]]"
-		}
-		return "[[CALL]]"
+		return "unknown: constant is not a string", false
 	}
-	return "var(" + value.Name() + ") = ??"
+
+	return "unknown: var(" + value.Name() + ") = ??", false
 }
 
-// resolveParameters resolves each of the parameters supplied to a function.
-func resolveParameters(parameters []ssa.Value, positions []int, config *AnalyserConfig) []string {
+func resolveVariables(parameters []ssa.Value, positions []int) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
+	wasResolved := true
+
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable := resolveVariable(parameters[idx], config)
-			if !strings.HasPrefix(variable, "not a constant") {
+			variable, isResolved := resolveVariable(parameters[idx])
+			if isResolved {
 				stringParameters[i] = variable
+			} else {
+				wasResolved = false
 			}
 		}
 	}
 
-	return stringParameters
+	return stringParameters, wasResolved
 }
 
-// resolveGinAddrSlice is a hardcoded solution to resolve the port
-// address of a Run command from the "github.com/gin-gonic/gin" library.
+// resolveGinAddrSlice is a hardcoded solution to resolve the port address of a Run command from the "github.com/gin-gonic/gin" library.
+// Returns list of strings that represent the slice, and bool value indicating whether the variable was resolved.
 // TODO: implement a general way for resolving variables in slices
-func resolveGinAddrSlice(value ssa.Value) []string {
+func resolveGinAddrSlice(value ssa.Value) ([]string, bool) {
 	switch val := value.(type) {
 	case *ssa.Slice:
 		switch val1Type := val.X.(type) {
@@ -75,22 +72,21 @@ func resolveGinAddrSlice(value ssa.Value) []string {
 			block := val1Type.Block()
 			for i := range block.Instrs {
 				// Iterate through instruction of the block in reverse order
-				// In the case of the Gin library, the last Store instruction
-				// in the block contains the address value we're looking for
+				// In the case of the Gin library, the last Store instruction in the block contains the address value we're looking for
 				switch instruction := block.Instrs[len(block.Instrs)-1-i].(type) {
 				case *ssa.Store:
 					switch storeValType := instruction.Val.(type) {
 					case *ssa.Const:
 						switch storeValType.Value.Kind() {
 						case constant.String:
-							return []string{constant.StringVal(storeValType.Value)}
+							return []string{constant.StringVal(storeValType.Value)}, true
 						}
 					}
 				}
 			}
 		}
 	case *ssa.Const:
-		return []string{":8080"}
+		return []string{":8080"}, true
 	}
-	return []string{"var(" + value.Name() + ") = ??"}
+	return []string{"unknown: var(" + value.Name() + ") = ??"}, false
 }

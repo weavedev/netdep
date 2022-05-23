@@ -25,6 +25,8 @@ type CallTarget struct {
 	MethodName string
 	// The URL of the entity
 	requestLocation string
+	// A flag describing whether the requestLocation was resolved
+	IsResolved bool
 	// The name of the service in which the call is made
 	ServiceName string
 	// The name of the file in which the call is made
@@ -138,11 +140,16 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if interestingStuffServer.action == Output {
 		requestLocation := ""
+		var isResolved bool
+		var variables []string
+
 		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 			if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
-				requestLocation = path.Join(resolveGinAddrSlice(call.Call.Args[1])...)
+				variables, isResolved = resolveGinAddrSlice(call.Call.Args[1])
+				requestLocation = path.Join(variables...)
 			} else {
-				requestLocation = path.Join(resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, config)...)
+				variables, isResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, config)
+				requestLocation = path.Join(variables...)
 			}
 		}
 		// Additional information about the call
@@ -152,6 +159,7 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 			packageName:     packageName,
 			MethodName:      qualifiedFunctionNameOfTarget,
 			requestLocation: requestLocation,
+			IsResolved:      isResolved,
 			ServiceName:     service,
 			FileName:        file,
 			PositionInFile:  position,
@@ -170,16 +178,22 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 
 	if interestingStuffClient.action == Output {
 		requestLocation := ""
-		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
-			requestLocation = path.Join(resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, config)...)
-		}
+		var isResolved bool
+		var variables []string
+
 		// Additional information about the call
 		service, file, position := getCallInformation(call.Pos(), frame.pkg)
+
+		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
+			variables, isResolved = resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs, config)
+			requestLocation = path.Join(variables...)
+		}
 
 		callTarget := &CallTarget{
 			packageName:     packageName,
 			MethodName:      qualifiedFunctionNameOfTarget,
 			requestLocation: requestLocation,
+			IsResolved:      isResolved,
 			ServiceName:     service,
 			FileName:        file,
 			PositionInFile:  position,
