@@ -9,49 +9,62 @@ package callanalyzer
 import (
 	"go/constant"
 	"go/token"
-	"strings"
 
 	"golang.org/x/tools/go/ssa"
 )
 
-func resolveVariable(value ssa.Value) string {
+// resolveVariable returns a string value of ssa.Value
+// if the value can be resolved. It also returns a bool
+// which indicates whether the variable was resolved.
+func resolveVariable(value ssa.Value) (string, bool) {
 	switch val := value.(type) {
 	case *ssa.Parameter:
-		return "[[Unknown]]"
+		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op {
 		case token.ADD:
-			return resolveVariable(val.X) + resolveVariable(val.Y)
+			left, isLeftResolved := resolveVariable(val.X)
+			right, isRightResolved := resolveVariable(val.Y)
+			if isRightResolved && isLeftResolved {
+				return left + right, true
+			}
+
+			return left + right, false
 		}
-		return "[[OP]]"
+		return "unknown: only string concatenation can be resolved", false
 	case *ssa.Const:
 		switch val.Value.Kind() {
 		case constant.String:
-			return constant.StringVal(val.Value)
+			return constant.StringVal(val.Value), true
 		}
-		return "[[CONST]]"
+		return "unknown: constant is not a string", false
 	}
 
-	return "var(" + value.Name() + ") = ??"
+	return "unknown: var(" + value.Name() + ") = ??", false
 }
 
-func resolveVariables(parameters []ssa.Value, positions []int) []string {
+func resolveVariables(parameters []ssa.Value, positions []int) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
+	wasResolved := true
+
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable := resolveVariable(parameters[idx])
-			if !strings.HasPrefix(variable, "not a constant") {
+			variable, isResolved := resolveVariable(parameters[idx])
+			if isResolved {
 				stringParameters[i] = variable
+			} else {
+				wasResolved = false
 			}
 		}
 	}
 
-	return stringParameters
+	return stringParameters, wasResolved
 }
 
-// resolveGinAddrSlice is a hardcoded solution to resolve the port address of a Run command from the "github.com/gin-gonic/gin" library
+// resolveGinAddrSlice is a hardcoded solution to resolve the port address of a Run command from the "github.com/gin-gonic/gin" library.
+// Returns list of strings that represent the slice, and bool value indicating whether the variable was resolved.
 // TODO: implement a general way for resolving variables in slices
-func resolveGinAddrSlice(value ssa.Value) []string {
+func resolveGinAddrSlice(value ssa.Value) ([]string, bool) {
 	switch val := value.(type) {
 	case *ssa.Slice:
 		switch val1Type := val.X.(type) {
@@ -66,14 +79,14 @@ func resolveGinAddrSlice(value ssa.Value) []string {
 					case *ssa.Const:
 						switch storeValType.Value.Kind() {
 						case constant.String:
-							return []string{constant.StringVal(storeValType.Value)}
+							return []string{constant.StringVal(storeValType.Value)}, true
 						}
 					}
 				}
 			}
 		}
 	case *ssa.Const:
-		return []string{":8080"}
+		return []string{":8080"}, true
 	}
-	return []string{"var(" + value.Name() + ") = ??"}
+	return []string{"unknown: var(" + value.Name() + ") = ??"}, false
 }
