@@ -86,7 +86,7 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
 	if call.Call.Method != nil {
 		// TODO: resolve a call to a method
-		//fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
+		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
 	}
 
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
@@ -97,9 +97,9 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		parValue, _ := resolveParameter(fnCallType, frame)
 		if parValue != nil {
 			// TODO: refactor analyseCall to accept an adjusted call
-			//return analyseCall(parValue, parFrame, config, targetsClient, targetsServer)
+			// return analyseCall(parValue, parFrame, config, targetsClient, targetsServer)
 		}
-		break
+		return
 	case *ssa.Function:
 		// Qualified function name is: package + interface + function
 		// TODO: handle parameter equivalence to other interface
