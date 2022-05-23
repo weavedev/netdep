@@ -13,18 +13,43 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
+// resolveParameter resolves a parameter in a frame, recursively
+func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
+	if fr != nil {
+		parameterValue, hasParam := fr.params[par]
+		if hasParam {
+			recPar, isParam := (*parameterValue).(*ssa.Parameter)
+
+			if isParam {
+				return resolveParameter(recPar, fr.parent)
+			} else {
+				return parameterValue, fr
+			}
+		}
+	}
+
+	return nil, fr
+}
+
 // resolveVariable returns a string value of ssa.Value
 // if the value can be resolved. It also returns a bool
 // which indicates whether the variable was resolved.
-func resolveVariable(value ssa.Value) (string, bool) {
-	switch val := value.(type) {
+func resolveVariable(value *ssa.Value, fr *Frame) (string, bool) {
+	switch val := (*value).(type) {
 	case *ssa.Parameter:
+		// (recursively) resolve a parameter to a value and return that value, if it is defined
+		parValue, resFrame := resolveParameter(val, fr)
+
+		if parValue != nil {
+			return resolveVariable(parValue, resFrame)
+		}
+
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op {
 		case token.ADD:
-			left, isLeftResolved := resolveVariable(val.X)
-			right, isRightResolved := resolveVariable(val.Y)
+			left, isLeftResolved := resolveVariable(&val.X, fr)
+			right, isRightResolved := resolveVariable(&val.Y, fr)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -40,16 +65,16 @@ func resolveVariable(value ssa.Value) (string, bool) {
 		return "unknown: constant is not a string", false
 	}
 
-	return "unknown: var(" + value.Name() + ") = ??", false
+	return "unknown: var(" + (*value).Name() + ") = ??", false
 }
 
-func resolveVariables(parameters []ssa.Value, positions []int) ([]string, bool) {
+func resolveVariables(parameters []ssa.Value, positions []int, fr *Frame) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveVariable(parameters[idx])
+			variable, isResolved := resolveVariable(&parameters[idx], fr)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {

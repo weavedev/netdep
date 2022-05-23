@@ -4,6 +4,7 @@
 package discovery
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"runtime"
@@ -88,4 +89,19 @@ func TestCallInfo(t *testing.T) {
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
 	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 27")
 	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
+}
+
+func TestWrappedClientCall(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+
+	projDir := path.Dir(path.Dir(path.Dir(thisFileParent)))
+	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "sample", "http", "wrapped_client")
+
+	initial, _ := stages.LoadPackages(projDir, svcDir)
+	res, _, _ := discovery.Discover(initial)
+	fmt.Println(res)
+	//assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
+	//assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 27")
+	//assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }

@@ -6,7 +6,11 @@ import "golang.org/x/tools/go/ssa"
 type Frame struct {
 	// visited is a set of blocks that have been visited.
 	visited map[*ssa.BasicBlock]bool
-	pkg     *ssa.Package
+	// params maps a parameter inside a function to a argument value given in another frame
+	params map[*ssa.Parameter]*ssa.Value
+	pkg    *ssa.Package
+	// parent is necessary to recursively resolve variables (in different scopes)
+	parent *Frame
 }
 
 // hasVisited returns whether the block has already been visited.
