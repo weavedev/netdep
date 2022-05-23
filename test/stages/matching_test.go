@@ -13,10 +13,10 @@ import (
 
 // test basic functionality of the matching functionality
 func TestEmptyCaseCreateDependencyGraph(t *testing.T) {
-	nodes, edges := stages.CreateDependencyGraph(nil, nil)
+	graph := stages.CreateDependencyGraph(nil, nil)
 
-	assert.Equal(t, make([]*output.ServiceNode, 0), nodes)
-	assert.Equal(t, make([]*output.ConnectionEdge, 0), edges)
+	assert.Equal(t, make([]*output.ServiceNode, 0), graph.Nodes)
+	assert.Equal(t, make([]*output.ConnectionEdge, 0), graph.Edges)
 }
 
 // test basic functionality of the matching functionality
@@ -64,18 +64,18 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 	}
 
 	// reuse graph from output stage tests
-	expectedNodes, expectedEdges := CreateSmallTestGraph()
+	expectedGraph := CreateSmallTestGraph()
 
-	nodes, edges := stages.CreateDependencyGraph(calls, endpoints)
+	graph := stages.CreateDependencyGraph(calls, endpoints)
 
-	assert.Equal(t, len(expectedNodes), len(nodes))
-	for i := range expectedNodes {
-		assert.Equal(t, expectedNodes[i], nodes[i])
+	assert.Equal(t, len(expectedGraph.Nodes), len(graph.Nodes))
+	for i := range expectedGraph.Nodes {
+		assert.Equal(t, expectedGraph.Nodes[i], graph.Nodes[i])
 	}
 
-	assert.Equal(t, len(expectedEdges), len(edges))
-	for i := range expectedEdges {
-		assert.Equal(t, expectedEdges[i], edges[i])
+	assert.Equal(t, len(expectedGraph.Edges), len(graph.Edges))
+	for i := range expectedGraph.Edges {
+		assert.Equal(t, expectedGraph.Edges[i], graph.Edges[i])
 	}
 }
 
@@ -162,15 +162,15 @@ func TestWithUnknownService(t *testing.T) {
 	expectedNodes := []*output.ServiceNode{&node1, &node2, &node3}
 	expectedEdges := []*output.ConnectionEdge{&edge12a, &edge12b, &edge13}
 
-	nodes, edges := stages.CreateDependencyGraph(calls, endpoints)
+	graph := stages.CreateDependencyGraph(calls, endpoints)
 
-	assert.Equal(t, len(expectedNodes), len(nodes))
+	assert.Equal(t, len(expectedNodes), len(graph.Nodes))
 	for i := range expectedNodes {
-		assert.Equal(t, expectedNodes[i], nodes[i])
+		assert.Equal(t, expectedNodes[i], graph.Nodes[i])
 	}
 
-	assert.Equal(t, len(expectedEdges), len(edges))
+	assert.Equal(t, len(expectedEdges), len(graph.Edges))
 	for i := range expectedEdges {
-		assert.Equal(t, expectedEdges[i], edges[i])
+		assert.Equal(t, expectedEdges[i], graph.Edges[i])
 	}
 }

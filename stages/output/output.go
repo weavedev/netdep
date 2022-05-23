@@ -42,6 +42,11 @@ type ServiceCallList struct {
 	NumberOfCalls int           `json:"count"`
 }
 
+type NodeGraph struct {
+	Nodes []*ServiceNode
+	Edges []*ConnectionEdge
+}
+
 type (
 	AdjacencyList  map[string][]ServiceCallList
 	GroupedEdgeMap map[*ServiceNode]map[*ServiceNode][]*ConnectionEdge
@@ -76,11 +81,11 @@ func groupEdgesByServiceTargetAndSource(edges []*ConnectionEdge) GroupedEdgeMap 
 
 // ConstructAdjacencyList constructs an adjacency list of service dependencies.
 // In its current representation this is a map to a list of adjacent nodes.
-func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) AdjacencyList {
+func ConstructAdjacencyList(graph NodeGraph) AdjacencyList {
 	adjacencyList := make(map[string][]ServiceCallList)
-	groupedEdges := groupEdgesByServiceTargetAndSource(edges)
+	groupedEdges := groupEdgesByServiceTargetAndSource(graph.Edges)
 
-	for _, node := range nodes {
+	for _, node := range graph.Nodes {
 		adjacencyList[node.ServiceName] = make([]ServiceCallList, 0)
 
 		// find the related edges in groupedEdges

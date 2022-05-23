@@ -99,8 +99,8 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 		return nil, nil, err
 	}
 
-	nodes, edges := stages.CreateDependencyGraph(clientCalls, serverCalls)
-	adjacencyList := output.ConstructAdjacencyList(nodes, edges)
+	graph := stages.CreateDependencyGraph(clientCalls, serverCalls)
+	adjacencyList := output.ConstructAdjacencyList(graph)
 	JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
 	// TODO: Matching
 	fmt.Println(JSON)

@@ -2,6 +2,7 @@ package stages
 
 import (
 	"fmt"
+	"sort"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
@@ -10,28 +11,36 @@ import (
 
 type (
 	TargetList []*callanalyzer.CallTarget
-	GraphNodes []*output.ServiceNode
-	GraphEdges []*output.ConnectionEdge
 )
 
-// CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
-func CreateDependencyGraph(calls TargetList, endpoints TargetList) (GraphNodes, GraphEdges) {
-	endpointMap := make(map[string]string)
-	portMap := make(map[string]string)
-	serviceMap := make(map[string]*output.ServiceNode)
-	unknownServiceMap := make(map[string]*output.ServiceNode)
-
+// createEmptyNodes create a set of services, but populates them to nil
+func createEmptyNodes(calls TargetList, endpoints TargetList) (map[string]*output.ServiceNode, []*output.ServiceNode) {
 	nodes := make([]*output.ServiceNode, 0)
-	edges := make([]*output.ConnectionEdge, 0)
+	serviceMap := make(map[string]*output.ServiceNode)
 
-	unknownCount := 0
+	combinedList := calls
+	combinedList = append(combinedList, endpoints...)
 
 	// create nodes
-	for _, call := range calls {
+	for _, call := range combinedList {
 		if _, ok := serviceMap[call.ServiceName]; !ok {
-			serviceMap[call.ServiceName] = nil
+			serviceNode := &output.ServiceNode{
+				ServiceName: call.ServiceName,
+				IsUnknown:   false,
+			}
+
+			nodes = append(nodes, serviceNode)
+			// save service name in a map for efficiency
+			serviceMap[call.ServiceName] = serviceNode
 		}
 	}
+
+	return serviceMap, nodes
+}
+
+// createBasicPortMap finds all port definition and sets them for the corresponding service
+func createBasicPortMap(endpoints TargetList) map[string]string {
+	portMap := make(map[string]string)
 
 	// find port definitions
 	for _, call := range endpoints {
@@ -40,12 +49,16 @@ func CreateDependencyGraph(calls TargetList, endpoints TargetList) (GraphNodes, 
 		}
 	}
 
-	for _, call := range endpoints {
-		// register node
-		if _, ok := serviceMap[call.ServiceName]; !ok {
-			serviceMap[call.ServiceName] = nil
-		}
+	return portMap
+}
 
+// createEndpointMap create a map of an endpoint to a service name
+// TODO: this URL is very rudimentary currently
+func createEndpointMap(endpoints TargetList) map[string]string {
+	endpointMap := make(map[string]string)
+	portMap := createBasicPortMap(endpoints)
+
+	for _, call := range endpoints {
 		// set default port
 		if _, ok := portMap[call.ServiceName]; !ok {
 			portMap[call.ServiceName] = ":80"
@@ -60,19 +73,20 @@ func CreateDependencyGraph(calls TargetList, endpoints TargetList) (GraphNodes, 
 		}
 	}
 
-	// Populate nodes
-	for serviceName := range serviceMap {
-		serviceNode := &output.ServiceNode{
-			ServiceName: serviceName,
-			IsUnknown:   false,
-		}
+	return endpointMap
+}
 
-		nodes = append(nodes, serviceNode)
-		// save service name in a map for efficiency
-		serviceMap[serviceName] = serviceNode
-	}
+// CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
+func CreateDependencyGraph(calls TargetList, endpoints TargetList) output.NodeGraph {
+	unknownServiceMap := make(map[string]*output.ServiceNode)
+	edges := make([]*output.ConnectionEdge, 0)
+	serviceMap, nodes := createEmptyNodes(calls, endpoints)
+	endpointMap := createEndpointMap(endpoints)
 
-	// Add edges
+	unknownCount := 0
+
+	// Add edges (eg. matching)
+	// This order is guaranteed because calls is an array
 	for _, call := range calls {
 		sourceNode := serviceMap[call.ServiceName]
 
@@ -126,5 +140,16 @@ func CreateDependencyGraph(calls TargetList, endpoints TargetList) (GraphNodes, 
 		edges = append(edges, connectionEdge)
 	}
 
-	return nodes, edges
+	// ensure alphabetical order for nodes (to prevent flaky tests)
+	sort.Slice(nodes, func(i, j int) bool {
+		x := nodes[i]
+		y := nodes[j]
+
+		return x.ServiceName < y.ServiceName
+	})
+
+	return output.NodeGraph{
+		Nodes: nodes,
+		Edges: edges,
+	}
 }

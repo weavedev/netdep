@@ -12,7 +12,7 @@ import (
 )
 
 // createSmallTestGraph creates a graph with three nodes, where node 1 had edges to node 2 and 3, and node 2 to node 3
-func CreateSmallTestGraph() ([]*output.ServiceNode, []*output.ConnectionEdge) {
+func CreateSmallTestGraph() output.NodeGraph {
 	node1 := output.ServiceNode{
 		ServiceName: "Node1",
 		IsUnknown:   false,
@@ -72,34 +72,38 @@ func CreateSmallTestGraph() ([]*output.ServiceNode, []*output.ConnectionEdge) {
 
 	nodes := []*output.ServiceNode{&node1, &node2, &node3}
 	edges := []*output.ConnectionEdge{&edge12, &edge13, &edge23a, &edge23b}
-	return nodes, edges
+
+	return output.NodeGraph{
+		Nodes: nodes,
+		Edges: edges,
+	}
 }
 
 // Tests adjacency list construction based on data found in discovery stage
 func TestConstructAdjacencyList(t *testing.T) {
-	nodes, edges := CreateSmallTestGraph()
-	res := output.ConstructAdjacencyList(nodes, edges)
+	graph := CreateSmallTestGraph()
+	res := output.ConstructAdjacencyList(graph)
 
 	expected := output.AdjacencyList{
 		"Node1": {
 			{
 				// node 2
-				Service:       nodes[1].ServiceName,
-				Calls:         []output.NetworkCall{edges[0].Call},
+				Service:       graph.Nodes[1].ServiceName,
+				Calls:         []output.NetworkCall{graph.Edges[0].Call},
 				NumberOfCalls: 1,
 			},
 			{
 				// node 3
-				Service:       nodes[2].ServiceName,
-				Calls:         []output.NetworkCall{edges[1].Call},
+				Service:       graph.Nodes[2].ServiceName,
+				Calls:         []output.NetworkCall{graph.Edges[1].Call},
 				NumberOfCalls: 1,
 			},
 		},
 		"Node2": {
 			{
 				// node 3
-				Service:       nodes[2].ServiceName,
-				Calls:         []output.NetworkCall{edges[2].Call, edges[3].Call},
+				Service:       graph.Nodes[2].ServiceName,
+				Calls:         []output.NetworkCall{graph.Edges[2].Call, graph.Edges[3].Call},
 				NumberOfCalls: 2,
 			},
 		},
@@ -117,8 +121,8 @@ func TestSerialiseOutputNull(t *testing.T) {
 
 // TestSerialiseOutput test a realistic output of a serialisation. More of a sanity check.
 func TestSerialiseOutput(t *testing.T) {
-	nodes, edges := CreateSmallTestGraph()
-	list := output.ConstructAdjacencyList(nodes, edges)
+	graph := CreateSmallTestGraph()
+	list := output.ConstructAdjacencyList(graph)
 	str, _ := output.SerializeAdjacencyList(list, false)
 	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node2:80/URL_2\",\"arguments\":null,\"location\":\"./node1/path/to/some/file.go:24\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node1/path/to/some/other/file.go:36\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node1/path/to/some/file.go:245\"},{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node2/path/to/some/other/file.go:436\"}],\"count\":2}],\"Node3\":[]}"
 
