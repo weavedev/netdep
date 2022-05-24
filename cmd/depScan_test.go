@@ -115,3 +115,57 @@ func TestExecuteDepScanShortHand(t *testing.T) {
 	err := runDepScanCmd.Execute()
 	assert.Nil(t, err)
 }
+
+func TestExecuteDepScanInvalidEnvVarFile(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example", "svc")
+
+	runDepScanCmd.SetArgs([]string{
+		"-s", svcDir,
+		"-e", "invalid",
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "invalid environment variable file specified: invalid", err.Error())
+}
+
+func TestExecuteDepScanEnvFile(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+
+	// thisFilePath is ./cmd/depScan_test.go
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	projDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example") // root of the project
+	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example", "svc")
+	envVars := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example", "svc", "node-basic-http", "env")
+
+	runDepScanCmd.SetArgs([]string{
+		"-p", projDir,
+		"-s", svcDir,
+		"-e", envVars,
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.Nil(t, err)
+}
+
+func TestExecuteDepScanEnvFileWrongFormat(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+
+	// thisFilePath is ./cmd/depScan_test.go
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	projDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example") // root of the project
+	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example", "svc")
+	envVars := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example", "svc", "node-basic-http", "values.yaml")
+
+	runDepScanCmd.SetArgs([]string{
+		"-p", projDir,
+		"-s", svcDir,
+		"-e", envVars,
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "the file cannot be parsed", err.Error())
+}

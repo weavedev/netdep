@@ -42,3 +42,11 @@ func TestResolvingInvalid(t *testing.T) {
 	expected := make(map[string]map[string]interface{})
 	assert.Equal(t, expected, res, "Expected the resolution method to return an empty map")
 }
+
+func TestMapEnvVarFile(t *testing.T) {
+	res, _ := MapEnvVarFile("../test/example/svc/node-basic-http/env")
+	expected := make(map[string]string)
+	expected["var1"] = "value1"
+	expected["var2"] = "value2"
+	assert.Equal(t, expected, res, "Expected to return a map of env vars")
+}
