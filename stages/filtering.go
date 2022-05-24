@@ -58,17 +58,15 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 	packagesToAnalyze := make([]*ssa.Package, 0)
 
 	for _, file := range files {
-		if file.IsDir() {
-			servicePath := path.Join(svcDir, file.Name())
-			fmt.Println(servicePath)
+		servicePath := path.Join(svcDir, file.Name())
+		fmt.Println(servicePath)
 
-			pkgs, err := LoadPackages(projectDir, servicePath)
-			if err != nil {
-				return nil, err
-			}
-
-			packagesToAnalyze = append(packagesToAnalyze, pkgs...)
+		pkgs, err := LoadPackages(projectDir, servicePath)
+		if err != nil {
+			return nil, err
 		}
+
+		packagesToAnalyze = append(packagesToAnalyze, pkgs...)
 	}
 
 	if len(packagesToAnalyze) == 0 {

@@ -45,16 +45,25 @@ func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 		default:
 			return "unknown: not a string constant", false
 		}
-	default:
-		return "unknown: constant is not a string", false
-
 	case *ssa.Call:
-		// TODO: here shall the substitution happen
-		if config.interestingCallsCommon["To be call value"].action == Substitute {
-			return "unknown: interesting call that could be substituted (currently not implemented)", true
-		}
-		return "unknown: interesting call that is not supported", false
+		return handleSubstitutableCall(val, config)
+	default:
+		return "unknown: the parameter was not resolved", false
 	}
+}
+
+func handleSubstitutableCall(val *ssa.Call, config *AnalyserConfig) (string, bool) {
+	switch fnCallType := val.Call.Value.(type) {
+	case *ssa.Function:
+		{
+			qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
+			if config.interestingCallsCommon[qualifiedFunctionNameOfTarget].action == Substitute {
+				//TODO do the actual substitution here
+			}
+			break
+		}
+	}
+	return "unknown: interesting call that is not supported", false
 }
 
 // resolveParameters iterates over the parameters, resolving those where possible.
