@@ -10,6 +10,7 @@ func wrappedGetCall(url string) {
 	http.Get(location)
 }
 
+// This recursion should NOT be fully resolved, only 1 pass!
 func recurse(url string, depth int) {
 	if depth > 0 {
 		recurse(url, depth-1)
@@ -20,7 +21,6 @@ func recurse(url string, depth int) {
 
 const unresolved = "UNKNOWN"
 
-// target: GET example.com
 func main() {
 	recurse(unresolved, 25)
 }
