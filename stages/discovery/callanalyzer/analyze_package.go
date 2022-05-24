@@ -34,6 +34,13 @@ type CallTarget struct {
 	PositionInFile string
 }
 
+// TargetsCollection holds the output structures that are to be returned by the
+// discovery stage
+type TargetsCollection struct {
+	clientTargets []*CallTarget
+	serverTargets []*CallTarget
+}
+
 // findFunctionInPackage finds the method by its name within the specified package.
 // Important: it only looks for Exported functions
 func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
@@ -83,7 +90,7 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
+func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	if call.Call.Method != nil {
 		// TODO: resolve a call to a method
 		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
@@ -108,17 +115,17 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
 		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
-		interestingStuffClient, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+		_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
-			handleInterestingClientCall(call, interestingStuffClient, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsClient, frame)
+			handleInterestingClientCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
 			return
 		}
 
-		interestingStuffServer, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+		_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 		if isInterestingServer {
 			// TODO: Resolve the arguments of the function call
-			handleInterestingServerCall(call, interestingStuffServer, calledFunctionPackage, qualifiedFunctionNameOfTarget, targetsServer, frame)
+			handleInterestingServerCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
 			return
 		}
 
@@ -141,7 +148,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 		newFrame.parent = frame
 
 		if fnCallType.Blocks != nil {
-			visitBlocks(fnCallType.Blocks, &newFrame, config, targetsClient, targetsServer)
+			visitBlocks(fnCallType.Blocks, &newFrame, config)
 		}
 	default:
 		// Unsupported call type
@@ -149,8 +156,11 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig, targetsCl
 	}
 }
 
-func handleInterestingServerCall(call *ssa.Call, interestingStuffServer InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsServer *[]*CallTarget, frame *Frame) {
-	//nolint:nestif
+// handleInterestingServerCall collects the information about a supplied endpoint declaration
+// and adds this information to the targetsServer data structure. If possible, also calls the function to resolve
+// the parameters of the function call.
+func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, frame *Frame) {
+	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if interestingStuffServer.action == Output {
 		requestLocation := ""
 		var isResolved bool
@@ -162,16 +172,17 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 				// TODO: parse the url
 				requestLocation = strings.Join(variables, "")
 			} else {
-				variables, isResolved = resolveVariables(call.Call.Args, interestingStuffServer.interestingArgs, frame)
+				variables, isResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, config)
 				// TODO: parse the url
 				requestLocation = strings.Join(variables, "")
 			}
 		}
+
 		// Additional information about the call
 		service, file, position := getCallInformation(call.Pos(), frame.pkg)
 
 		callTarget := &CallTarget{
-			packageName:     calledFunctionPackage,
+			packageName:     packageName,
 			MethodName:      qualifiedFunctionNameOfTarget,
 			RequestLocation: requestLocation,
 			IsResolved:      isResolved,
@@ -182,14 +193,17 @@ func handleInterestingServerCall(call *ssa.Call, interestingStuffServer Interest
 
 		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
 
-		*targetsServer = append(*targetsServer, callTarget)
+		frame.targetsCollection.serverTargets = append(frame.targetsCollection.serverTargets, callTarget)
 		return
-	} else if interestingStuffServer.action == Substitute {
-		// TODO: implement substitution of env calls
 	}
 }
 
-func handleInterestingClientCall(call *ssa.Call, interestingStuffClient InterestingCall, calledFunctionPackage string, qualifiedFunctionNameOfTarget string, targetsClient *[]*CallTarget, frame *Frame) {
+// handleInterestingServerCall collects the information about a supplied http client call
+// and adds this information to the targetClient data structure. If possible, also calls the function to resolve
+// the parameters of the function call.
+func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, frame *Frame) {
+	interestingStuffClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+
 	if interestingStuffClient.action == Output {
 		requestLocation := ""
 		var isResolved bool
@@ -199,13 +213,13 @@ func handleInterestingClientCall(call *ssa.Call, interestingStuffClient Interest
 		service, file, position := getCallInformation(call.Pos(), frame.pkg)
 
 		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
-			variables, isResolved = resolveVariables(call.Call.Args, interestingStuffClient.interestingArgs, frame)
+			variables, isResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, config)
 			// TODO: parse the url
 			requestLocation = strings.Join(variables, "")
 		}
 
 		callTarget := &CallTarget{
-			packageName:     calledFunctionPackage,
+			packageName:     packageName,
 			MethodName:      qualifiedFunctionNameOfTarget,
 			RequestLocation: requestLocation,
 			IsResolved:      isResolved,
@@ -216,10 +230,8 @@ func handleInterestingClientCall(call *ssa.Call, interestingStuffClient Interest
 
 		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
 
-		*targetsClient = append(*targetsClient, callTarget)
+		frame.targetsCollection.clientTargets = append(frame.targetsCollection.clientTargets, callTarget)
 		return
-	} else if interestingStuffClient.action == Substitute {
-		// TODO: implement substitution of env calls
 	}
 }
 
@@ -231,7 +243,7 @@ func handleInterestingClientCall(call *ssa.Call, interestingStuffClient Interest
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
+func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 	if block.Instrs == nil {
 		return
 	}
@@ -239,7 +251,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case *ssa.Call:
-			analyseCall(instruction, fr, config, targetsClient, targetsServer)
+			analyseCall(instruction, fr, config)
 		default:
 			continue
 		}
@@ -253,7 +265,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, targetsClient *[]*CallTarget, targetsServer *[]*CallTarget) {
+func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 	if len(fr.visited) > config.maxTraversalDepth {
 		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
 		return
@@ -266,7 +278,7 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, ta
 		newFr := fr
 		// Mark the block as visited
 		newFr.visited[block] = true
-		analyseInstructionsOfBlock(block, newFr, config, targetsClient, targetsServer)
+		analyseInstructionsOfBlock(block, newFr, config)
 	}
 }
 
@@ -295,13 +307,17 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 		// Reference to the final list of all _targets of the entire package
 		pkg:    pkg,
 		params: make(map[*ssa.Parameter]*ssa.Value),
+		// targetsCollection is a pointer to the global target collection.
+		targetsCollection: &TargetsCollection{
+			make([]*CallTarget, 0),
+			make([]*CallTarget, 0),
+		},
 	}
 
-	targetsClient := make([]*CallTarget, 0)
-	targetsServer := make([]*CallTarget, 0)
-
 	// Visit each of the block of the main function
-	visitBlocks(mainFunction.Blocks, &baseFrame, config, &targetsClient, &targetsServer)
+	visitBlocks(mainFunction.Blocks, &baseFrame, config)
 
-	return targetsClient, targetsServer, nil
+	// Here we can return the targets of the base frame: it is just a reference. All frames hold the same reference
+	// to the targets collection.
+	return baseFrame.targetsCollection.clientTargets, baseFrame.targetsCollection.serverTargets, nil
 }

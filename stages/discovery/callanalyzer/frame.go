@@ -10,7 +10,8 @@ type Frame struct {
 	params map[*ssa.Parameter]*ssa.Value
 	pkg    *ssa.Package
 	// parent is necessary to recursively resolve variables (in different scopes)
-	parent *Frame
+	parent            *Frame
+	targetsCollection *TargetsCollection
 }
 
 // hasVisited returns whether the block has already been visited.
