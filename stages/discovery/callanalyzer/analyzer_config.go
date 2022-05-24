@@ -11,7 +11,7 @@ const (
 
 // defaultMaxTraversalDepth is the default max traversal depth for the analyser
 const defaultMaxTraversalDepth = 16
-const defaultMaxTraceDepth = 2
+const defaultMaxTraceDepth = 8
 
 // InterestingCall holds information about a call that is to be outputted,
 // substituted or otherwise inspected (by the analyzer).

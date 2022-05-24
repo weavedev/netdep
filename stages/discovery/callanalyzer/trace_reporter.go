@@ -15,7 +15,11 @@ func PrintTraceToCall(trace []*ssa.Call, frame *Frame, config *AnalyserConfig) {
 		}
 
 		_, file, position := getCallInformation(call.Pos(), frame.pkg)
-		signature := call.Call.Signature().String()
+		var signature = ""
+		switch callee := call.Call.Value.(type) {
+		case *ssa.Function:
+			signature = callee.RelString(nil)
+		}
 		fmt.Printf("%d: %s:%s\t%s\n", traces-i, file, position, signature)
 	}
 }
