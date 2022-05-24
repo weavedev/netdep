@@ -38,9 +38,9 @@ func DefaultConfigForFindingHTTPCalls() AnalyserConfig {
 	return AnalyserConfig{
 		interestingCallsClient: map[string]InterestingCall{
 			"(*net/http.Client).Do":          {action: Output, interestingArgs: []int{0}},
-			"(*net/http.Client).Get":         {action: Output, interestingArgs: []int{0, 1}},
-			"(*net/http.Client).Post":        {action: Output, interestingArgs: []int{0, 1}},
-			"(*net/http.Client).Head":        {action: Output, interestingArgs: []int{0, 1}},
+			"(*net/http.Client).Get":         {action: Output, interestingArgs: []int{1}},
+			"(*net/http.Client).Post":        {action: Output, interestingArgs: []int{1}},
+			"(*net/http.Client).Head":        {action: Output, interestingArgs: []int{1}},
 			"net/http.Get":                   {action: Output, interestingArgs: []int{0, 1}},
 			"net/http.Post":                  {action: Output, interestingArgs: []int{0, 1}},
 			"net/http.NewRequestWithContext": {action: Output, interestingArgs: []int{2}},
