@@ -107,7 +107,7 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 			// re-use if url is already used before
 			oldUnknownService, exists := unknownServiceMap[call.RequestLocation]
 
-			if exists {
+			if exists && call.IsResolved {
 				targetNode = oldUnknownService
 			} else {
 				// create new unknown node (new one, otherwise the graph becomes distorted)
