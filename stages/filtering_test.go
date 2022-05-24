@@ -42,7 +42,8 @@ func TestLoadServices(t *testing.T) {
 	services, _ := LoadServices(projDir, svcDir)
 
 	assert.Equal(t, "discovery", services[0].Pkg.Name())
-	assert.Equal(t, "output", services[1].Pkg.Name())
+	assert.Equal(t, "matching", services[1].Pkg.Name())
+	assert.Equal(t, "output", services[2].Pkg.Name())
 }
 
 func TestLoadServicesError(t *testing.T) {

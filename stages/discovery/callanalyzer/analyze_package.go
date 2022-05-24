@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go/token"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
@@ -92,12 +91,25 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
+	if call.Call.Method != nil {
+		// TODO: resolve a call to a method
+		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
+	}
+
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	switch fnCallType := call.Call.Value.(type) {
 	// TODO: handle other cases
+	case *ssa.Parameter:
+		parValue, _ := resolveParameter(fnCallType, frame)
+		if parValue != nil {
+			// TODO: refactor analyseCall to accept an adjusted call
+			// return analyseCall(parValue, parFrame, config, targetsClient, targetsServer)
+		}
+		return
 	case *ssa.Function:
 		// Qualified function name is: package + interface + function
+		// TODO: handle parameter equivalence to other interface
 		qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
 		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
@@ -126,6 +138,14 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// The following creates a copy of 'frame'.
 		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
+
+		// Keep track of given parameters for resolving
+		for i, par := range fnCallType.Params {
+			newFrame.params[par] = &call.Call.Args[i]
+		}
+
+		// Keep a reference to the parent frame
+		newFrame.parent = frame
 
 		if fnCallType.Blocks != nil {
 			visitBlocks(fnCallType.Blocks, &newFrame, config)
@@ -156,16 +176,19 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 			if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
 				variables, isResolved = resolveGinAddrSlice(call.Call.Args[1])
-				requestLocation = path.Join(variables...)
+				// TODO: parse the url
+				requestLocation = strings.Join(variables, "")
 			} else {
 				substitutionConfig := SubstitutionConfig{
 					config.substitutionCalls,
 					config.environment[service],
 				}
-				variables, isResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, substitutionConfig)
-				requestLocation = path.Join(variables...)
+				variables, isResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
+				// TODO: parse the url
+				requestLocation = strings.Join(variables, "")
 			}
 		}
+
 		// Additional information about the call
 
 		callTarget := &CallTarget{
@@ -204,8 +227,9 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 				config.substitutionCalls,
 				config.environment[service],
 			}
-			variables, isResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, substitutionConfig)
-			requestLocation = path.Join(variables...)
+			variables, isResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
+			// TODO: parse the url
+			requestLocation = strings.Join(variables, "")
 		}
 
 		callTarget := &CallTarget{
@@ -295,7 +319,8 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	baseFrame := Frame{
 		visited: make(map[*ssa.BasicBlock]bool, 0),
 		// Reference to the final list of all _targets of the entire package
-		pkg: pkg,
+		pkg:    pkg,
+		params: make(map[*ssa.Parameter]*ssa.Value),
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{
 			make([]*CallTarget, 0),
