@@ -36,7 +36,7 @@ func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 
 			return left + right, false
 		default:
-			return "Only ADD binary operation is supported", false
+			return "unknown: only ADD binary operation is supported", false
 		}
 	case *ssa.Const:
 		switch val.Value.Kind() { //nolint:exhaustive
