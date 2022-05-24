@@ -20,6 +20,7 @@ import (
 var (
 	projectDir string
 	serviceDir string
+	envVars    string
 )
 
 // depScanCmd creates and returns a depScan command object
@@ -39,8 +40,12 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
+			if ex, err := pathExists(envVars); !ex && envVars != "" || err != nil {
+				return fmt.Errorf("invalid environment variable file specified: %s", envVars)
+			}
+
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir)
+			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir, envVars)
 			if err != nil {
 				return err
 			}
@@ -58,6 +63,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	}
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
+	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	return cmd
 }
 
@@ -82,13 +88,23 @@ func pathExists(path string) (bool, error) {
 // buildDependencies is responsible for integrating different stages
 // of the program.
 // TODO: the output should be changed to a list of string once the integration is done
-func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func buildDependencies(svcDir string, projectDir string, envVars string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
 	initial, err := stages.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	if envVars != "" {
+		envVariables, err := stages.MapEnvVarFile(envVars)
+		fmt.Println("env: ")
+		fmt.Println(envVariables)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	// TODO: Integrate the envVariables into discovery
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery

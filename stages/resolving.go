@@ -3,9 +3,12 @@
 package stages
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
@@ -84,4 +87,22 @@ func envMap(path string) map[string]interface{} {
 		log.Fatal(err2)
 	}
 	return envVars
+}
+
+func MapEnvVarFile(path string) (map[string]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+	var envVars map[string]string
+	if err := json.NewDecoder(file).Decode(&envVars); err != nil {
+		return nil, fmt.Errorf("the file cannot be parsed")
+	}
+	return envVars, nil
 }
