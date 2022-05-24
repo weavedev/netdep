@@ -5,8 +5,9 @@ import "golang.org/x/tools/go/ssa"
 // Frame is a struct for keeping track of the traversal packages while looking for interesting functions
 type Frame struct {
 	// visited is a set of blocks that have been visited.
-	visited map[*ssa.BasicBlock]bool
-	pkg     *ssa.Package
+	visited           map[*ssa.BasicBlock]bool
+	pkg               *ssa.Package
+	targetsCollection *TargetsCollection
 }
 
 // hasVisited returns whether the block has already been visited.

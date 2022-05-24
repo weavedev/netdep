@@ -3,7 +3,6 @@ Package callanalyzer defines call scanning methods
 Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 */
 
-//nolint:gocritic,exhaustive
 package callanalyzer
 
 import (
@@ -13,43 +12,60 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-// resolveVariable returns a string value of ssa.Value
-// if the value can be resolved. It also returns a bool
-// which indicates whether the variable was resolved.
-func resolveVariable(value ssa.Value) (string, bool) {
+// resolveVariable Resolves a supplied variable value, only in the cases that are supported by the tool:
+//
+// - string concatenation (see BinOp),
+//
+// - string literal
+//
+// - call to os.GetEnv
+//
+// - other InterestingCalls with the action Substitute
+func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 	switch val := value.(type) {
 	case *ssa.Parameter:
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
-		switch val.Op {
+		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveVariable(val.X)
-			right, isRightResolved := resolveVariable(val.Y)
+			left, isLeftResolved := resolveVariable(val.X, config)
+			right, isRightResolved := resolveVariable(val.Y, config)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
 
 			return left + right, false
+		default:
+			return "unknown: only ADD binary operation is supported", false
 		}
-		return "unknown: only string concatenation can be resolved", false
 	case *ssa.Const:
-		switch val.Value.Kind() {
+		switch val.Value.Kind() { //nolint:exhaustive
 		case constant.String:
 			return constant.StringVal(val.Value), true
+		default:
+			return "unknown: not a string constant", false
 		}
+	default:
 		return "unknown: constant is not a string", false
-	}
 
-	return "unknown: var(" + value.Name() + ") = ??", false
+	case *ssa.Call:
+		// TODO: here shall the substitution happen
+		if config.interestingCallsCommon["To be call value"].action == Substitute {
+			return "unknown: interesting call that could be substituted (currently not implemented)", true
+		}
+		return "unknown: interesting call that is not supported", false
+	}
 }
 
-func resolveVariables(parameters []ssa.Value, positions []int) ([]string, bool) {
+// resolveParameters iterates over the parameters, resolving those where possible.
+// It also keeps track of whether all variables could be resolved or not.
+func resolveParameters(parameters []ssa.Value, positions []int, config *AnalyserConfig) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveVariable(parameters[idx])
+			variable, isResolved := resolveVariable(parameters[idx], config)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
@@ -65,6 +81,7 @@ func resolveVariables(parameters []ssa.Value, positions []int) ([]string, bool) 
 // Returns list of strings that represent the slice, and bool value indicating whether the variable was resolved.
 // TODO: implement a general way for resolving variables in slices
 func resolveGinAddrSlice(value ssa.Value) ([]string, bool) {
+	unresolvedType := []string{"unknown: var(" + value.Name() + ") = ??"}
 	switch val := value.(type) {
 	case *ssa.Slice:
 		switch val1Type := val.X.(type) {
@@ -77,16 +94,24 @@ func resolveGinAddrSlice(value ssa.Value) ([]string, bool) {
 				case *ssa.Store:
 					switch storeValType := instruction.Val.(type) {
 					case *ssa.Const:
-						switch storeValType.Value.Kind() {
+						switch storeValType.Value.Kind() { //nolint:exhaustive
 						case constant.String:
 							return []string{constant.StringVal(storeValType.Value)}, true
+						default:
+							return unresolvedType, false
 						}
+					default:
+						return unresolvedType, false
 					}
+				default:
+					return unresolvedType, false
 				}
 			}
+		default:
+			return unresolvedType, false
 		}
 	case *ssa.Const:
 		return []string{":8080"}, true
 	}
-	return []string{"unknown: var(" + value.Name() + ") = ??"}, false
+	return unresolvedType, false
 }

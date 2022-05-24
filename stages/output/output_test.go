@@ -9,26 +9,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func CreateSmallTestGraph() NodeGraph {
+// createSmallTestGraph creates a graph with three nodes, where node 1 had edges to node 2 and 3, and node 2 to node 3
+func createSmallTestGraph() NodeGraph {
 	node1 := ServiceNode{
 		ServiceName: "Node1",
-		IsUnknown:   false,
 	}
 	node2 := ServiceNode{
 		ServiceName: "Node2",
-		IsUnknown:   false,
 	}
 	node3 := ServiceNode{
 		ServiceName: "Node3",
-		IsUnknown:   false,
 	}
 
 	edge12 := ConnectionEdge{
 		Call: NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "http://Node2:80/URL_2",
+			URL:       "",
 			Arguments: nil,
-			Location:  "./node1/path/to/some/file.go:24",
+			Location:  "",
 		},
 		Source: &node1,
 		Target: &node2,
@@ -37,38 +35,27 @@ func CreateSmallTestGraph() NodeGraph {
 	edge13 := ConnectionEdge{
 		Call: NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "http://Node3:80/URL_3",
+			URL:       "",
 			Arguments: nil,
-			Location:  "./node1/path/to/some/other/file.go:36",
+			Location:  "",
 		},
 		Source: &node1,
 		Target: &node3,
 	}
 
-	edge23a := ConnectionEdge{
+	edge23 := ConnectionEdge{
 		Call: NetworkCall{
 			Protocol:  "HTTP",
-			URL:       "http://Node3:80/URL_3",
+			URL:       "",
 			Arguments: nil,
-			Location:  "./node1/path/to/some/file.go:245",
-		},
-		Source: &node2,
-		Target: &node3,
-	}
-
-	edge23b := ConnectionEdge{
-		Call: NetworkCall{
-			Protocol:  "HTTP",
-			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
-			Location:  "./node2/path/to/some/other/file.go:436",
+			Location:  "",
 		},
 		Source: &node2,
 		Target: &node3,
 	}
 
 	nodes := []*ServiceNode{&node1, &node2, &node3}
-	edges := []*ConnectionEdge{&edge12, &edge13, &edge23a, &edge23b}
+	edges := []*ConnectionEdge{&edge12, &edge13, &edge23}
 
 	return NodeGraph{
 		Nodes: nodes,
@@ -78,7 +65,7 @@ func CreateSmallTestGraph() NodeGraph {
 
 // Tests adjacency list construction based on data found in discovery stage
 func TestConstructAdjacencyList(t *testing.T) {
-	graph := CreateSmallTestGraph()
+	graph := createSmallTestGraph()
 	res := ConstructAdjacencyList(graph)
 
 	expected := AdjacencyList{
@@ -100,8 +87,8 @@ func TestConstructAdjacencyList(t *testing.T) {
 			{
 				// node 3
 				Service:       graph.Nodes[2].ServiceName,
-				Calls:         []NetworkCall{graph.Edges[2].Call, graph.Edges[3].Call},
-				NumberOfCalls: 2,
+				Calls:         []NetworkCall{graph.Edges[2].Call},
+				NumberOfCalls: 1,
 			},
 		},
 		"Node3": {},
@@ -118,10 +105,9 @@ func TestSerialiseOutputNull(t *testing.T) {
 
 // TestSerialiseOutput test a realistic output of a serialisation. More of a sanity check.
 func TestSerialiseOutput(t *testing.T) {
-	graph := CreateSmallTestGraph()
+	graph := createSmallTestGraph()
 	list := ConstructAdjacencyList(graph)
 	str, _ := SerializeAdjacencyList(list, false)
-	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node2:80/URL_2\",\"arguments\":null,\"location\":\"./node1/path/to/some/file.go:24\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node1/path/to/some/other/file.go:36\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node1/path/to/some/file.go:245\"},{\"protocol\":\"HTTP\",\"url\":\"http://Node3:80/URL_3\",\"arguments\":null,\"location\":\"./node2/path/to/some/other/file.go:436\"}],\"count\":2}],\"Node3\":[]}"
-
+	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
 	assert.Equal(t, expected, str)
 }
