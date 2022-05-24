@@ -7,6 +7,7 @@ package callanalyzer
 import (
 	"fmt"
 	"go/token"
+	"go/types"
 	"os"
 	"strconv"
 	"strings"
@@ -91,68 +92,93 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
-	if call.Call.Method != nil {
+	var fnCallType *ssa.Function
+
+	if call.Call.IsInvoke() {
 		// TODO: resolve a call to a method
-		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
+		pkg := call.Call.Method.Pkg()
+		name := call.Call.Method.Name()
+		prog := frame.prog
+		var mtype types.Type
+		switch fnCallType := call.Call.Value.(type) {
+		case *ssa.Parameter:
+			parValue, _ := resolveParameter(fnCallType, frame)
+			if parValue != nil {
+				switch expr := (*parValue).(type) {
+				case *ssa.MakeInterface:
+					mtype = expr.X.Type()
+				}
+			}
+			break
+		default:
+			break
+		}
+
+		if mtype == nil {
+			mtype = call.Call.Method.Type()
+		}
+
+		mset := prog.MethodSets.MethodSet(mtype)
+		sel := mset.Lookup(pkg, name)
+		if sel != nil {
+			fnCallType = prog.MethodValue(sel)
+		}
+	} else {
+		fnCallType = call.Call.StaticCallee()
+		if param, isParam := call.Call.Value.(*ssa.Parameter); isParam && fnCallType == nil {
+			parValue, _ := resolveParameter(param, frame)
+			if paramFn, isFn := (*parValue).(*ssa.Function); isFn {
+				fnCallType = paramFn
+			}
+			return
+		}
 	}
 
-	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
-	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
-	switch fnCallType := call.Call.Value.(type) {
-	// TODO: handle other cases
-	case *ssa.Parameter:
-		parValue, _ := resolveParameter(fnCallType, frame)
-		if parValue != nil {
-			// TODO: refactor analyseCall to accept an adjusted call
-			// return analyseCall(parValue, parFrame, config, targetsClient, targetsServer)
-		}
+	if fnCallType == nil {
 		return
-	case *ssa.Function:
-		// Qualified function name is: package + interface + function
-		// TODO: handle parameter equivalence to other interface
-		qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
-		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
-		// This is therefore not the grandparent package, but the *type.Package of the fnCall
-		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
+	}
 
-		_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
-		if isInterestingClient {
-			// TODO: Resolve the arguments of the function call
-			handleInterestingClientCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
-			return
-		}
+	// Qualified function name is: package + interface + function
+	// TODO: handle parameter equivalence to other interface
+	qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
+	// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
+	// This is therefore not the grandparent package, but the *type.Package of the fnCall
+	calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
 
-		_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
-		if isInterestingServer {
-			// TODO: Resolve the arguments of the function call
-			handleInterestingServerCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
-			return
-		}
-
-		_, isIgnored := config.ignoreList[calledFunctionPackage]
-
-		if isIgnored {
-			// Do not recurse into the packageName if it is ignored
-			return
-		}
-		// The following creates a copy of 'frame'.
-		// This is the correct place for this because we are going to visit child blocks next.
-		newFrame := *frame
-
-		// Keep track of given parameters for resolving
-		for i, par := range fnCallType.Params {
-			newFrame.params[par] = &call.Call.Args[i]
-		}
-
-		// Keep a reference to the parent frame
-		newFrame.parent = frame
-
-		if fnCallType.Blocks != nil {
-			visitBlocks(fnCallType.Blocks, &newFrame, config)
-		}
-	default:
-		// Unsupported call type
+	_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+	if isInterestingClient {
+		// TODO: Resolve the arguments of the function call
+		handleInterestingClientCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
 		return
+	}
+
+	_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+	if isInterestingServer {
+		// TODO: Resolve the arguments of the function call
+		handleInterestingServerCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
+		return
+	}
+
+	_, isIgnored := config.ignoreList[calledFunctionPackage]
+
+	if isIgnored {
+		// Do not recurse into the packageName if it is ignored
+		return
+	}
+	// The following creates a copy of 'frame'.
+	// This is the correct place for this because we are going to visit child blocks next.
+	newFrame := *frame
+
+	// Keep track of given parameters for resolving
+	for i, par := range fnCallType.Params {
+		newFrame.params[par] = &call.Call.Args[i]
+	}
+
+	// Keep a reference to the parent frame
+	newFrame.parent = frame
+
+	if fnCallType.Blocks != nil {
+		visitBlocks(fnCallType.Blocks, &newFrame, config)
 	}
 }
 
@@ -306,6 +332,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 		visited: make(map[*ssa.BasicBlock]bool, 0),
 		// Reference to the final list of all _targets of the entire package
 		pkg:    pkg,
+		prog:   pkg.Prog,
 		params: make(map[*ssa.Parameter]*ssa.Value),
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{

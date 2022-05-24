@@ -9,6 +9,7 @@ type Frame struct {
 	// params maps a parameter inside a function to a argument value given in another frame
 	params map[*ssa.Parameter]*ssa.Value
 	pkg    *ssa.Package
+	prog   *ssa.Program
 	// parent is necessary to recursively resolve variables (in different scopes)
 	parent            *Frame
 	targetsCollection *TargetsCollection
