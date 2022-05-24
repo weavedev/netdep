@@ -16,7 +16,7 @@ func TestEnvVarResolution(t *testing.T) {
 	thisFileParent := path.Dir(thisFilePath)
 
 	projDir := path.Dir(path.Dir(thisFileParent))
-	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http", "env_variable")
+	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http", "env_service")
 
 	initial, _ := stages.LoadServices(projDir, svcDir)
 	_, _, _ = Discover(initial)
