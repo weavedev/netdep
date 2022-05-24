@@ -1,4 +1,3 @@
-//nolint
 package main
 
 import (
@@ -8,7 +7,6 @@ import (
 )
 
 func main() {
-
 	http.HandleFunc("/test", HelloHandler)
 
 	log.Println("Listening...")
@@ -16,6 +14,5 @@ func main() {
 }
 
 func HelloHandler(w http.ResponseWriter, _ *http.Request) {
-
 	fmt.Fprintf(w, "Hello, there\n")
 }
