@@ -96,7 +96,7 @@ func TestWrappedClientCall(t *testing.T) {
 	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http", "wrapped_client")
 
 	initial, _ := stages.LoadPackages(projDir, svcDir)
-	res, _, _ := Discover(initial)
+	res, _, _ := Discover(initial, nil)
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
 	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.
 	assert.Equal(t, "18", res[0].PositionInFile, "Expected line number 18")
