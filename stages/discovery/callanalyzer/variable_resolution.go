@@ -36,25 +36,28 @@ func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
 	return nil, fr
 }
 
-// resolveVariable returns a string value of ssa.Value
-// if the value can be resolved. It also returns a bool
-// which indicates whether the variable was resolved.
-func resolveVariable(value *ssa.Value, fr *Frame, config *AnalyserConfig) (string, bool) {
+// resolveValue Resolves a supplied ssa.Value, only in the cases that are supported by the tool:
+// - string concatenation (see BinOp),
+// - string literal
+// - call to os.GetEnv
+// - other InterestingCalls with the action Substitute
+// It also returns a bool which indicates whether the variable was resolved.
+func resolveValue(value *ssa.Value, fr *Frame, config *AnalyserConfig) (string, bool) {
 	switch val := (*value).(type) {
 	case *ssa.Parameter:
 		// (recursively) resolve a parameter to a value and return that value, if it is defined
 		parameterValue, resolvedFrame := resolveParameter(val, fr)
 
 		if parameterValue != nil {
-			return resolveVariable(parameterValue, resolvedFrame, config)
+			return resolveValue(parameterValue, resolvedFrame, config)
 		}
 
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveVariable(&val.X, fr, config)
-			right, isRightResolved := resolveVariable(&val.Y, fr, config)
+			left, isLeftResolved := resolveValue(&val.X, fr, config)
+			right, isRightResolved := resolveValue(&val.Y, fr, config)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -90,7 +93,7 @@ func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, confi
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveVariable(&parameters[idx], fr, config)
+			variable, isResolved := resolveValue(&parameters[idx], fr, config)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
