@@ -1,4 +1,6 @@
-package stages
+// Package matching constructs a graph from the found calls in the discovery stage
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+package matching
 
 import (
 	"fmt"

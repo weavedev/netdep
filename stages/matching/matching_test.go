@@ -1,19 +1,85 @@
-package stages
+package matching
 
 import (
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func CreateSmallTestGraph() output.NodeGraph {
+	node1 := output.ServiceNode{
+		ServiceName: "Node1",
+		IsUnknown:   false,
+	}
+	node2 := output.ServiceNode{
+		ServiceName: "Node2",
+		IsUnknown:   false,
+	}
+	node3 := output.ServiceNode{
+		ServiceName: "Node3",
+		IsUnknown:   false,
+	}
+
+	edge12 := output.ConnectionEdge{
+		Call: output.NetworkCall{
+			Protocol:  "HTTP",
+			URL:       "http://Node2:80/URL_2",
+			Arguments: nil,
+			Location:  "./node1/path/to/some/file.go:24",
+		},
+		Source: &node1,
+		Target: &node2,
+	}
+
+	edge13 := output.ConnectionEdge{
+		Call: output.NetworkCall{
+			Protocol:  "HTTP",
+			URL:       "http://Node3:80/URL_3",
+			Arguments: nil,
+			Location:  "./node1/path/to/some/other/file.go:36",
+		},
+		Source: &node1,
+		Target: &node3,
+	}
+
+	edge23a := output.ConnectionEdge{
+		Call: output.NetworkCall{
+			Protocol:  "HTTP",
+			URL:       "http://Node3:80/URL_3",
+			Arguments: nil,
+			Location:  "./node1/path/to/some/file.go:245",
+		},
+		Source: &node2,
+		Target: &node3,
+	}
+
+	edge23b := output.ConnectionEdge{
+		Call: output.NetworkCall{
+			Protocol:  "HTTP",
+			URL:       "http://Node3:80/URL_3",
+			Arguments: nil,
+			Location:  "./node2/path/to/some/other/file.go:436",
+		},
+		Source: &node2,
+		Target: &node3,
+	}
+
+	nodes := []*output.ServiceNode{&node1, &node2, &node3}
+	edges := []*output.ConnectionEdge{&edge12, &edge13, &edge23a, &edge23b}
+
+	return output.NodeGraph{
+		Nodes: nodes,
+		Edges: edges,
+	}
+}
+
 // test basic functionality of the matching functionality
 func TestEmptyCaseCreateDependencyGraph(t *testing.T) {
-	graph := stages.CreateDependencyGraph(nil, nil)
+	graph := CreateDependencyGraph(nil, nil)
 
 	assert.Equal(t, make([]*output.ServiceNode, 0), graph.Nodes)
 	assert.Equal(t, make([]*output.ConnectionEdge, 0), graph.Edges)
@@ -66,7 +132,7 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 	// reuse graph from output stage tests
 	expectedGraph := CreateSmallTestGraph()
 
-	graph := stages.CreateDependencyGraph(calls, endpoints)
+	graph := CreateDependencyGraph(calls, endpoints)
 
 	assert.Equal(t, len(expectedGraph.Nodes), len(graph.Nodes))
 	for i := range expectedGraph.Nodes {
@@ -162,7 +228,7 @@ func TestWithUnknownService(t *testing.T) {
 	expectedNodes := []*output.ServiceNode{&node1, &node2, &node3}
 	expectedEdges := []*output.ConnectionEdge{&edge12a, &edge12b, &edge13}
 
-	graph := stages.CreateDependencyGraph(calls, endpoints)
+	graph := CreateDependencyGraph(calls, endpoints)
 
 	assert.Equal(t, len(expectedNodes), len(graph.Nodes))
 	for i := range expectedNodes {
