@@ -9,12 +9,8 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 )
 
-type (
-	TargetList []*callanalyzer.CallTarget
-)
-
 // createEmptyNodes create a set of services, but populates them to nil
-func createEmptyNodes(calls TargetList, endpoints TargetList) (map[string]*output.ServiceNode, []*output.ServiceNode) {
+func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) (map[string]*output.ServiceNode, []*output.ServiceNode) {
 	nodes := make([]*output.ServiceNode, 0)
 	serviceMap := make(map[string]*output.ServiceNode)
 
@@ -39,7 +35,7 @@ func createEmptyNodes(calls TargetList, endpoints TargetList) (map[string]*outpu
 }
 
 // createBasicPortMap finds all port definition and sets them for the corresponding service
-func createBasicPortMap(endpoints TargetList) map[string]string {
+func createBasicPortMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 	portMap := make(map[string]string)
 
 	// find port definitions
@@ -54,7 +50,7 @@ func createBasicPortMap(endpoints TargetList) map[string]string {
 
 // createEndpointMap create a map of an endpoint to a service name
 // TODO: this URL is very rudimentary currently
-func createEndpointMap(endpoints TargetList) map[string]string {
+func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 	endpointMap := make(map[string]string)
 	portMap := createBasicPortMap(endpoints)
 
@@ -77,7 +73,7 @@ func createEndpointMap(endpoints TargetList) map[string]string {
 }
 
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
-func CreateDependencyGraph(calls TargetList, endpoints TargetList) output.NodeGraph {
+func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) output.NodeGraph {
 	unknownServiceMap := make(map[string]*output.ServiceNode)
 	edges := make([]*output.ConnectionEdge, 0)
 	serviceMap, nodes := createEmptyNodes(calls, endpoints)
