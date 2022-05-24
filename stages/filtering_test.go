@@ -5,6 +5,7 @@ package stages
 
 import (
 	"go/ast"
+	"go/token"
 	"path"
 	"runtime"
 	"testing"
@@ -27,7 +28,7 @@ func TestLoadServicesEmpty(t *testing.T) {
 	projDir := path.Dir(thisFileParent)
 	svcDir := path.Join(path.Dir(thisFileParent), "test", "empty", "empty")
 
-	_, err := LoadServices(projDir, svcDir)
+	_, _, err := LoadServices(projDir, svcDir)
 
 	assert.Equal(t, "no service to analyse were found", err.Error())
 }
@@ -39,7 +40,7 @@ func TestLoadServices(t *testing.T) {
 	projDir := path.Dir(thisFileParent)
 	svcDir := path.Join(path.Dir(thisFileParent), "stages")
 
-	services, _ := LoadServices(projDir, svcDir)
+	services, _, _ := LoadServices(projDir, svcDir)
 
 	assert.Equal(t, "discovery", services[0].Pkg.Name())
 	assert.Equal(t, "output", services[1].Pkg.Name())
@@ -52,7 +53,7 @@ func TestLoadServicesError(t *testing.T) {
 	projDir := path.Dir(thisFileParent)
 	svcDir := path.Join(path.Dir(thisFileParent), "test", "example", "svc")
 
-	_, err := LoadServices(projDir, svcDir)
+	_, _, err := LoadServices(projDir, svcDir)
 
 	assert.Equal(t, "packages contain errors", err.Error())
 }
@@ -75,4 +76,28 @@ func TestLoadPackagesError(t *testing.T) {
 	_, err := LoadPackages(projDir, projDir)
 
 	assert.Equal(t, "packages contain errors", err.Error())
+}
+
+func TestLoadAnnotations(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+	svcDir := path.Join(path.Dir(thisFileParent), path.Join("test/sample", path.Join("http", "basic_call")))
+	ann, _ := LoadAnnotations(svcDir, "basic_call")
+	expected := &Annotation{
+		ServiceName: "basic_call",
+		Position: token.Position{
+			Filename: path.Join(svcDir, "basic_call.go"),
+			Offset:   89,
+			Line:     10,
+			Column:   2,
+		},
+		Value: "//netdep:caller -s targetService",
+	}
+	assert.Equal(t, expected, ann[0])
+}
+
+func TestLoadAnnotationsInvalidPath(t *testing.T) {
+	ann, err := LoadAnnotations("invalidPath", "serviceName")
+	assert.Nil(t, ann)
+	assert.NotNil(t, err)
 }

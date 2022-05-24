@@ -5,13 +5,22 @@ package stages
 import (
 	"fmt"
 	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 )
+
+type Annotation struct {
+	ServiceName string
+	Position    token.Position
+	Value       string
+}
 
 // LoadPackages takes in project root directory path and the path
 // of one service and returns an ssa representation of the service.
@@ -47,15 +56,16 @@ func LoadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error)
 
 // LoadServices takes a project directory and a service
 // directory and for each directory of that service builds
-// an SSA representation for each service in svcDir.
-func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
+// an SSA representation and a list of annotations for each service in svcDir.
+func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, []*Annotation, error) {
 	// Collect all files within the services directory
 	files, err := os.ReadDir(svcDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	packagesToAnalyze := make([]*ssa.Package, 0)
+	annotations := make([]*Annotation, 0)
 
 	for _, file := range files {
 		if file.IsDir() {
@@ -64,18 +74,82 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 
 			pkgs, err := LoadPackages(projectDir, servicePath)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
+			serviceAnnotations, err := LoadAnnotations(servicePath, file.Name())
+			if err != nil {
+				return nil, nil, err
+			}
+			annotations = append(annotations, serviceAnnotations...)
 
 			packagesToAnalyze = append(packagesToAnalyze, pkgs...)
 		}
 	}
 
 	if len(packagesToAnalyze) == 0 {
-		return nil, fmt.Errorf("no service to analyse were found")
+		return nil, nil, fmt.Errorf("no service to analyse were found")
 	}
 
-	return packagesToAnalyze, nil
+	return packagesToAnalyze, annotations, nil
+}
+
+// LoadAnnotations scans all the files of a given service directory and returns a list of
+// Annotation from the comments in the format "//netdep: ..." that it discovers.
+func LoadAnnotations(servicePath string, serviceName string) ([]*Annotation, error) {
+	files, err := os.ReadDir(servicePath)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceAnnotations := make([]*Annotation, 0)
+
+	for _, file := range files {
+		if file.Name()[len(file.Name())-3:] == ".go" {
+			// If the file is a .go file - parse it
+			fileAnnotations, err := parseComments(path.Join(servicePath, file.Name()), serviceName)
+			if err != nil {
+				return nil, err
+			}
+			serviceAnnotations = append(serviceAnnotations, fileAnnotations...)
+		} else if file.IsDir() {
+			// If the file is a directory - recursively look for .go files inside it
+			innerServiceAnnotations, err := LoadAnnotations(path.Join(servicePath, file.Name()), serviceName)
+			if err != nil {
+				return nil, err
+			}
+			serviceAnnotations = append(serviceAnnotations, innerServiceAnnotations...)
+		}
+	}
+
+	return serviceAnnotations, nil
+}
+
+// parseComments parses the given file with a parser.ParseComments mode, filters out
+// the comments which don't contain a substring "netdep", generates an Annotation for
+// every remaining comment and returns a list of them.
+func parseComments(path string, serviceName string) ([]*Annotation, error) {
+	fs := token.NewFileSet()
+	f, err := parser.ParseFile(fs, path, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+
+	annotations := make([]*Annotation, 0)
+
+	for _, commentGroup := range f.Comments {
+		for _, comment := range commentGroup.List {
+			if strings.Contains(comment.Text, "netdep") {
+				ann := &Annotation{
+					ServiceName: serviceName,
+					Position:    fs.Position(comment.Slash),
+					Value:       comment.Text,
+				}
+				annotations = append(annotations, ann)
+			}
+		}
+	}
+
+	return annotations, nil
 }
 
 /*

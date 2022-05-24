@@ -24,7 +24,7 @@ func TestDiscovery(t *testing.T) {
 	projDir := path.Dir(path.Dir(thisFileParent))
 	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http")
 
-	initial, _ := stages.LoadServices(projDir, svcDir)
+	initial, _, _ := stages.LoadServices(projDir, svcDir)
 	resC, _, _ := Discover(initial)
 	assert.Equal(t, 13, len(resC), "Expect 12 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
@@ -81,7 +81,7 @@ func TestCallInfo(t *testing.T) {
 	projDir := path.Dir(path.Dir(thisFileParent))
 	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http")
 
-	initial, _ := stages.LoadServices(projDir, svcDir)
+	initial, _, _ := stages.LoadServices(projDir, svcDir)
 	res, _, _ := Discover(initial)
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
 	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 27")

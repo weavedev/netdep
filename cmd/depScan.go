@@ -84,17 +84,24 @@ func pathExists(path string) (bool, error) {
 // TODO: the output should be changed to a list of string once the integration is done
 func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	initial, err := stages.LoadServices(projectDir, svcDir)
+	initial, annotations, err := stages.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// TODO: Endpoint discovery
 	// Client Call Discovery
 	clientCalls, serverCalls, err := discovery.Discover(initial)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// TODO: make use of annotations in the matching stage
+	fmt.Println("Discovered annotations:")
+	for _, ann := range annotations {
+		fmt.Println("Service: " + ann.ServiceName)
+		fmt.Println(ann.Position)
+		fmt.Println(ann.Value + "\n")
 	}
 
 	// TODO: Matching
