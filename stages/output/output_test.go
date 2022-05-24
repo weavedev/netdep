@@ -6,13 +6,11 @@ package output
 import (
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
-
 	"github.com/stretchr/testify/assert"
 )
 
 // createSmallTestGraph creates a graph with three nodes, where node 1 had edges to node 2 and 3, and node 2 to node 3
-func createSmallTestGraph() ([]*ServiceNode, []*ConnectionEdge) {
+func createSmallTestGraph() NodeGraph {
 	node1 := ServiceNode{
 		ServiceName: "Node1",
 	}
@@ -28,7 +26,7 @@ func createSmallTestGraph() ([]*ServiceNode, []*ConnectionEdge) {
 			Protocol:  "HTTP",
 			URL:       "",
 			Arguments: nil,
-			Location:  discovery.CallData{},
+			Location:  "",
 		},
 		Source: &node1,
 		Target: &node2,
@@ -39,7 +37,7 @@ func createSmallTestGraph() ([]*ServiceNode, []*ConnectionEdge) {
 			Protocol:  "HTTP",
 			URL:       "",
 			Arguments: nil,
-			Location:  discovery.CallData{},
+			Location:  "",
 		},
 		Source: &node1,
 		Target: &node3,
@@ -50,7 +48,7 @@ func createSmallTestGraph() ([]*ServiceNode, []*ConnectionEdge) {
 			Protocol:  "HTTP",
 			URL:       "",
 			Arguments: nil,
-			Location:  discovery.CallData{},
+			Location:  "",
 		},
 		Source: &node2,
 		Target: &node3,
@@ -58,34 +56,38 @@ func createSmallTestGraph() ([]*ServiceNode, []*ConnectionEdge) {
 
 	nodes := []*ServiceNode{&node1, &node2, &node3}
 	edges := []*ConnectionEdge{&edge12, &edge13, &edge23}
-	return nodes, edges
+
+	return NodeGraph{
+		Nodes: nodes,
+		Edges: edges,
+	}
 }
 
 // Tests adjacency list construction based on data found in discovery stage
 func TestConstructAdjacencyList(t *testing.T) {
-	nodes, edges := createSmallTestGraph()
-	res := ConstructAdjacencyList(nodes, edges)
+	graph := createSmallTestGraph()
+	res := ConstructAdjacencyList(graph)
 
 	expected := AdjacencyList{
 		"Node1": {
 			{
 				// node 2
-				Service:       *nodes[1],
-				Calls:         []NetworkCall{edges[0].Call},
+				Service:       graph.Nodes[1].ServiceName,
+				Calls:         []NetworkCall{graph.Edges[0].Call},
 				NumberOfCalls: 1,
 			},
 			{
 				// node 3
-				Service:       *nodes[2],
-				Calls:         []NetworkCall{edges[1].Call},
+				Service:       graph.Nodes[2].ServiceName,
+				Calls:         []NetworkCall{graph.Edges[1].Call},
 				NumberOfCalls: 1,
 			},
 		},
 		"Node2": {
 			{
 				// node 3
-				Service:       *nodes[2],
-				Calls:         []NetworkCall{edges[2].Call},
+				Service:       graph.Nodes[2].ServiceName,
+				Calls:         []NetworkCall{graph.Edges[2].Call},
 				NumberOfCalls: 1,
 			},
 		},
@@ -103,9 +105,9 @@ func TestSerialiseOutputNull(t *testing.T) {
 
 // TestSerialiseOutput test a realistic output of a serialisation. More of a sanity check.
 func TestSerialiseOutput(t *testing.T) {
-	nodes, edges := createSmallTestGraph()
-	list := ConstructAdjacencyList(nodes, edges)
+	graph := createSmallTestGraph()
+	list := ConstructAdjacencyList(graph)
 	str, _ := SerializeAdjacencyList(list, false)
-	expected := "{\"Node1\":[{\"service\":{\"serviceName\":\"Node2\"},\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":{\"filepath\":\"\",\"line\":0}}],\"count\":1},{\"service\":{\"serviceName\":\"Node3\"},\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":{\"filepath\":\"\",\"line\":0}}],\"count\":1}],\"Node2\":[{\"service\":{\"serviceName\":\"Node3\"},\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":{\"filepath\":\"\",\"line\":0}}],\"count\":1}],\"Node3\":[]}"
+	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
 	assert.Equal(t, expected, str)
 }
