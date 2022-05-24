@@ -90,14 +90,13 @@ func envMap(path string) map[string]interface{} {
 }
 
 func MapEnvVarFile(path string) (map[string]string, error) {
-	file, err := os.Open(path)
+	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-
 		}
 	}(file)
 	var envVars map[string]string
