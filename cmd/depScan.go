@@ -5,9 +5,11 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -46,12 +48,15 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			}
 
 			fmt.Println("Successfully analysed, here is a list of dependencies:")
-			for _, client := range clientCalls {
-				fmt.Println(json.Marshal(client))
+
+			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
+			adjacencyList := output.ConstructAdjacencyList(graph)
+			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
+			if err != nil {
+				return err
 			}
-			for _, server := range serverCalls {
-				fmt.Println(json.Marshal(server))
-			}
+
+			fmt.Println(JSON)
 
 			return nil
 		},
@@ -97,9 +102,7 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 		return nil, nil, err
 	}
 
-	// TODO: Matching
-
 	// For now this returns client calls,
 	// as we don't have any other functionality in place.
-	return clientCalls, serverCalls, nil
+	return clientCalls, serverCalls, err
 }

@@ -5,8 +5,6 @@ package output
 import (
 	"encoding/json"
 	"sort"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 )
 
 /*
@@ -18,15 +16,16 @@ Refer to the Project plan, chapter 5.4 for more information.
 
 // NetworkCall represents a call that can be made in the network
 type NetworkCall struct {
-	Protocol  string             `json:"protocol"`
-	URL       string             `json:"url"`
-	Arguments []string           `json:"arguments"`
-	Location  discovery.CallData `json:"location"`
+	Protocol  string   `json:"protocol"`
+	URL       string   `json:"url"`
+	Arguments []string `json:"arguments"`
+	Location  string   `json:"location"`
 }
 
 // ServiceNode represents a node in the output graph, which is a Service
 type ServiceNode struct {
 	ServiceName string `json:"serviceName"`
+	IsUnknown   bool   `json:"isUnknown"`
 }
 
 // ConnectionEdge represents a directed edge in the output graph
@@ -38,9 +37,14 @@ type ConnectionEdge struct {
 
 // ServiceCallList holds the NetworkCall's related to a Service, used in the AdjacencyList
 type ServiceCallList struct {
-	Service       ServiceNode   `json:"service"`
+	Service       string        `json:"service"`
 	Calls         []NetworkCall `json:"calls"`
 	NumberOfCalls int           `json:"count"`
+}
+
+type NodeGraph struct {
+	Nodes []*ServiceNode
+	Edges []*ConnectionEdge
 }
 
 type (
@@ -77,11 +81,11 @@ func groupEdgesByServiceTargetAndSource(edges []*ConnectionEdge) GroupedEdgeMap 
 
 // ConstructAdjacencyList constructs an adjacency list of service dependencies.
 // In its current representation this is a map to a list of adjacent nodes.
-func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) AdjacencyList {
+func ConstructAdjacencyList(graph NodeGraph) AdjacencyList {
 	adjacencyList := make(map[string][]ServiceCallList)
-	groupedEdges := groupEdgesByServiceTargetAndSource(edges)
+	groupedEdges := groupEdgesByServiceTargetAndSource(graph.Edges)
 
-	for _, node := range nodes {
+	for _, node := range graph.Nodes {
 		adjacencyList[node.ServiceName] = make([]ServiceCallList, 0)
 
 		// find the related edges in groupedEdges
@@ -100,7 +104,7 @@ func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) Adjac
 
 			// add the connection to the adjacencyList
 			adjacencyList[node.ServiceName] = append(adjacencyList[node.ServiceName], ServiceCallList{
-				Service:       *targetServiceName,
+				Service:       targetServiceName.ServiceName,
 				Calls:         callList,
 				NumberOfCalls: len(callList),
 			})
@@ -111,7 +115,7 @@ func ConstructAdjacencyList(nodes []*ServiceNode, edges []*ConnectionEdge) Adjac
 			x := adjacencyList[node.ServiceName][i]
 			y := adjacencyList[node.ServiceName][j]
 
-			return x.Service.ServiceName < y.Service.ServiceName
+			return x.Service < y.Service
 		})
 	}
 
