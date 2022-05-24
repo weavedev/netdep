@@ -94,9 +94,14 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
+	if frame.hasVisited(call) {
+		return
+	}
+
 	switch fnCallType := call.Call.Value.(type) {
 	// TODO: handle other cases
 	case *ssa.Function:
+
 		// Qualified function name is: package + interface + function
 		qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
 		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
@@ -126,6 +131,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// The following creates a copy of 'frame'.
 		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
+		newFrame.visited = append(newFrame.visited, call)
 
 		if fnCallType.Blocks != nil {
 			visitBlocks(fnCallType.Blocks, &newFrame, config)
@@ -194,6 +200,11 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 			requestLocation = path.Join(variables...)
 		}
 
+		if !isResolved {
+			fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
+			PrintTraceToCall(append(frame.visited, call), frame, config)
+		}
+
 		callTarget := &CallTarget{
 			packageName:     packageName,
 			MethodName:      qualifiedFunctionNameOfTarget,
@@ -243,18 +254,10 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 	if len(fr.visited) > config.maxTraversalDepth {
-		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
 		return
 	}
-
 	for _, block := range blocks {
-		if fr.hasVisited(block) || block == nil {
-			continue
-		}
-		newFr := fr
-		// Mark the block as visited
-		newFr.visited[block] = true
-		analyseInstructionsOfBlock(block, newFr, config)
+		analyseInstructionsOfBlock(block, fr, config)
 	}
 }
 
@@ -279,7 +282,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	baseFrame := Frame{
-		visited: make(map[*ssa.BasicBlock]bool, 0),
+		visited: make([]*ssa.Call, 0),
 		// Reference to the final list of all _targets of the entire package
 		pkg: pkg,
 		// targetsCollection is a pointer to the global target collection.

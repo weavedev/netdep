@@ -87,3 +87,15 @@ func TestCallInfo(t *testing.T) {
 	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 27")
 	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
+
+func TestWrappedNestedUnknown(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+
+	projDir := path.Dir(path.Dir(thisFileParent))
+	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http", "nested_unknown")
+
+	initial, _ := stages.LoadPackages(projDir, svcDir)
+	res, _, _ := Discover(initial)
+	assert.Equal(t, "nested_unknown", res[0].ServiceName, "Expected service name nested_unknown.go")
+}

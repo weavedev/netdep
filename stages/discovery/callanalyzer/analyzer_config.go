@@ -11,6 +11,7 @@ const (
 
 // defaultMaxTraversalDepth is the default max traversal depth for the analyser
 const defaultMaxTraversalDepth = 16
+const defaultMaxTraceDepth = 2
 
 // InterestingCall holds information about a call that is to be outputted,
 // substituted or otherwise inspected (by the analyzer).
@@ -30,6 +31,7 @@ type AnalyserConfig struct {
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
 	maxTraversalDepth int
+	maxTraceDepth     int
 }
 
 // DefaultConfigForFindingHTTPCalls returns the default config
@@ -66,6 +68,7 @@ func DefaultConfigForFindingHTTPCalls() AnalyserConfig {
 		},
 
 		maxTraversalDepth: defaultMaxTraversalDepth,
+		maxTraceDepth:     defaultMaxTraceDepth,
 
 		ignoreList: map[string]bool{
 			"fmt":                  true,
