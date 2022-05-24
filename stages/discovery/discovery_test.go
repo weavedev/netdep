@@ -26,7 +26,7 @@ func TestDiscovery(t *testing.T) {
 
 	initial, _ := stages.LoadServices(projDir, svcDir)
 	resC, _, _ := Discover(initial)
-	assert.Equal(t, 13, len(resC), "Expect 12 interesting call")
+	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
@@ -98,4 +98,20 @@ func TestWrappedNestedUnknown(t *testing.T) {
 	initial, _ := stages.LoadPackages(projDir, svcDir)
 	res, _, _ := Discover(initial)
 	assert.Equal(t, "nested_unknown", res[0].ServiceName, "Expected service name nested_unknown.go")
+}
+
+func TestWrappedClientCall(t *testing.T) {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	thisFileParent := path.Dir(thisFilePath)
+
+	projDir := path.Dir(path.Dir(thisFileParent))
+	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http", "wrapped_client")
+
+	initial, _ := stages.LoadPackages(projDir, svcDir)
+	res, _, _ := Discover(initial)
+	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
+	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.
+	assert.Equal(t, "18", res[0].PositionInFile, "Expected line number 18")
+	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
+	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }
