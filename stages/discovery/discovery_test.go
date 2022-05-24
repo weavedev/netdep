@@ -26,7 +26,7 @@ func TestDiscovery(t *testing.T) {
 
 	initial, _ := stages.LoadServices(projDir, svcDir)
 	resC, _, _ := Discover(initial)
-	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
+	assert.Equal(t, 15, len(resC), "Expect 17 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
