@@ -26,5 +26,8 @@ func wrappedGetCustomClient(client Client, url string) {
 // target: GET example.com
 func main() {
 	wrappedWrappedGetClient(http.Client{}, "http://example.com/")
+
+	// TODO: this does not get detected correctly, yet
+	// if we support it, add a test!
 	wrappedGetCustomClient(&http.Client{}, "http://example.com/")
 }
