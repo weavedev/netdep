@@ -6,9 +6,9 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package callanalyzer
 
 import (
+	"fmt"
 	"go/constant"
 	"go/token"
-
 	"golang.org/x/tools/go/ssa"
 )
 
@@ -21,15 +21,15 @@ import (
 // - call to os.GetEnv
 //
 // - other InterestingCalls with the action Substitute
-func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
+func resolveVariable(value ssa.Value, substConf SubstitutionConfig) (string, bool) {
 	switch val := value.(type) {
 	case *ssa.Parameter:
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveVariable(val.X, config)
-			right, isRightResolved := resolveVariable(val.Y, config)
+			left, isLeftResolved := resolveVariable(val.X, substConf)
+			right, isRightResolved := resolveVariable(val.Y, substConf)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -46,35 +46,48 @@ func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 			return "unknown: not a string constant", false
 		}
 	case *ssa.Call:
-		return handleSubstitutableCall(val, config)
+		return handleSubstitutableCall(val, substConf)
 	default:
 		return "unknown: the parameter was not resolved", false
 	}
 }
 
-func handleSubstitutableCall(val *ssa.Call, config *AnalyserConfig) (string, bool) {
+func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (string, bool) {
 	switch fnCallType := val.Call.Value.(type) {
 	case *ssa.Function:
 		{
 			qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
-			if config.interestingCallsCommon[qualifiedFunctionNameOfTarget].action == Substitute {
-				//TODO do the actual substitution here
+			if substConf.substitutionCalls[qualifiedFunctionNameOfTarget].action == Substitute {
+				switch osGetEnvArg := val.Call.Args[0].(type) {
+				case *ssa.Const:
+					{
+						envVarName := constant.StringVal(osGetEnvArg.Value)
+						envVarVal, ok := substConf.serviceEnv[envVarName]
+						if ok {
+							return envVarVal, true
+						} else {
+							return fmt.Sprintf("unknown: environment variable %s not set", envVarName), false
+						}
+					}
+				default:
+					return "unknown: substitutable call that is not supported", false
+				}
 			}
-			break
 		}
+		break
 	}
-	return "unknown: interesting call that is not supported", false
+	return "unknown: substitutable call that is not supported", false
 }
 
 // resolveParameters iterates over the parameters, resolving those where possible.
 // It also keeps track of whether all variables could be resolved or not.
-func resolveParameters(parameters []ssa.Value, positions []int, config *AnalyserConfig) ([]string, bool) {
+func resolveParameters(parameters []ssa.Value, positions []int, serviceEnv SubstitutionConfig) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveVariable(parameters[idx], config)
+			variable, isResolved := resolveVariable(parameters[idx], serviceEnv)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {

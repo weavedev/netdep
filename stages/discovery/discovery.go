@@ -25,7 +25,7 @@ type ServiceCalls struct {
 	Calls   map[string][]CallData `json:"calls"`   // TODO: see above ^
 }
 
-// DiscoveredData is initialised and populated during the discovery stage.
+// DiscoveredData is initialised and populated during the discovery stage.f
 // It stores a list of ServiceCalls for each service and a map of all handled endpoints / methods
 // along with the name of the service that handles each one.
 type DiscoveredData struct {
@@ -34,20 +34,33 @@ type DiscoveredData struct {
 }
 
 // Discover finds client calls in the specified project directory
-func Discover(pkgsToAnalyse []*ssa.Package) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func Discover(pkgsToAnalyse []*ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// The current output data structure. TODO: add additional fields
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
+
 	for _, pkg := range pkgsToAnalyse {
-		// Analyse each package
-		clientTargetsOfCurrPkg, serverTargetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)
+		var (
+			clientTargetsOfCurrPkg []*callanalyzer.CallTarget
+			serverTargetsOfCurrPkg []*callanalyzer.CallTarget
+			err                    error
+		)
+
+		if config == nil {
+			defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls(nil)
+			// Analyse each package with the default config
+			clientTargetsOfCurrPkg, serverTargetsOfCurrPkg, err = callanalyzer.AnalysePackageCalls(pkg, &defaultConf)
+		} else {
+			// Analyse each package
+			clientTargetsOfCurrPkg, serverTargetsOfCurrPkg, err = callanalyzer.AnalysePackageCalls(pkg, config)
+		}
 		if err != nil {
 			return nil, nil, err
 		}
 
 		allClientTargets = append(allClientTargets, clientTargetsOfCurrPkg...)
 		allServerTargets = append(allServerTargets, serverTargetsOfCurrPkg...)
+
 	}
 	return allClientTargets, allServerTargets, nil
 }

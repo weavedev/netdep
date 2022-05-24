@@ -92,7 +92,7 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, serverCalls, err := discovery.Discover(initial)
+	clientCalls, serverCalls, err := discovery.Discover(initial, nil)
 	if err != nil {
 		return nil, nil, err
 	}

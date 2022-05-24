@@ -1,7 +1,10 @@
 package discovery
 
 import (
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"path"
 	"runtime"
 	"testing"
@@ -16,10 +19,17 @@ func TestEnvVarResolution(t *testing.T) {
 	thisFileParent := path.Dir(thisFilePath)
 
 	projDir := path.Dir(path.Dir(thisFileParent))
-	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http", "env_service")
+	svcDir := path.Join(path.Dir(path.Dir(thisFileParent)), "test", "sample", "http", "env_variable")
 
 	initial, _ := stages.LoadServices(projDir, svcDir)
-	_, _, _ = Discover(initial)
-	// assert.Equal(t, 13, len(resC), "Expect 12 interesting call")
-	// assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
+	destinationURL := "127.0.0.1:8081"
+	env := map[string]map[string]string{
+		"env_service": {
+			"FOO": destinationURL,
+		},
+	}
+	configWithEnv := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+	resC, _, _ := Discover(initial, &configWithEnv)
+	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
+	assert.Equal(t, destinationURL, resC[0].RequestLocation, fmt.Sprintf("Expect %s", destinationURL))
 }
