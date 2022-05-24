@@ -14,16 +14,22 @@ import (
 
 // resolveParameter resolves a parameter in a frame, recursively
 func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
-	if fr != nil {
-		parameterValue, hasParam := fr.params[par]
-		if hasParam {
-			recPar, isParam := (*parameterValue).(*ssa.Parameter)
+	if fr == nil {
+		return nil, fr
+	}
 
-			if isParam {
-				return resolveParameter(recPar, fr.parent)
-			} else {
-				return parameterValue, fr
-			}
+	// fetch saved parameter link
+	parameterValue, hasParam := fr.params[par]
+
+	if hasParam {
+		// check if the value is a parameter again.
+		// if that is the case, we recurse on the parameter in the PARENT frame
+		recursionParam, isParam := (*parameterValue).(*ssa.Parameter)
+
+		if isParam {
+			return resolveParameter(recursionParam, fr.parent)
+		} else {
+			return parameterValue, fr
 		}
 	}
 
@@ -37,10 +43,10 @@ func resolveVariable(value *ssa.Value, fr *Frame, config *AnalyserConfig) (strin
 	switch val := (*value).(type) {
 	case *ssa.Parameter:
 		// (recursively) resolve a parameter to a value and return that value, if it is defined
-		parValue, resFrame := resolveParameter(val, fr)
+		parameterValue, resolvedFrame := resolveParameter(val, fr)
 
-		if parValue != nil {
-			return resolveVariable(parValue, resFrame, config)
+		if parameterValue != nil {
+			return resolveVariable(parameterValue, resolvedFrame, config)
 		}
 
 		return "unknown: the parameter was not resolved", false
