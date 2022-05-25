@@ -8,7 +8,7 @@ import (
 	"runtime"
 )
 
-//RootDir is used in tests all over the project,
+// RootDir is used in tests all over the project,
 // in most cases to point the analyzer to a certain
 // project directory, relative to the project RootDir
 var RootDir = getRootDir() //nolint:gochecknoglobals

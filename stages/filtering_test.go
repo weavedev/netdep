@@ -5,9 +5,10 @@ package stages
 
 import (
 	"go/ast"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 	"path"
 	"testing"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"github.com/stretchr/testify/assert"
 )

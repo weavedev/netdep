@@ -4,9 +4,10 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 	"path"
 	"testing"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
