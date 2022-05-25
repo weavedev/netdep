@@ -125,7 +125,7 @@ func LoadAnnotations(servicePath string, serviceName string) ([]*Annotation, err
 }
 
 // parseComments parses the given file with a parser.ParseComments mode, filters out
-// the comments which don't contain a substring "netdep", generates an Annotation for
+// the comments which don't contain a substring "netdep:client" or "netdep:endpoint", generates an Annotation for
 // every remaining comment and returns a list of them.
 func parseComments(path string, serviceName string) ([]*Annotation, error) {
 	fs := token.NewFileSet()
@@ -138,11 +138,11 @@ func parseComments(path string, serviceName string) ([]*Annotation, error) {
 
 	for _, commentGroup := range f.Comments {
 		for _, comment := range commentGroup.List {
-			if strings.Contains(comment.Text, "netdep") {
+			if strings.Contains(comment.Text, "netdep:client") || strings.Contains(comment.Text, "netdep:endpoint") {
 				ann := &Annotation{
 					ServiceName: serviceName,
 					Position:    fs.Position(comment.Slash),
-					Value:       comment.Text,
+					Value:       strings.Join(strings.Split(comment.Text, ":")[1:], ""),
 				}
 				annotations = append(annotations, ann)
 			}

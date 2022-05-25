@@ -92,7 +92,7 @@ func TestLoadAnnotations(t *testing.T) {
 			Line:     10,
 			Column:   2,
 		},
-		Value: "//netdep:caller -s targetService",
+		Value: "client -s targetService",
 	}
 	assert.Equal(t, expected, ann[0])
 }
