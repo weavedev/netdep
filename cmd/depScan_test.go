@@ -4,10 +4,9 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 	"path"
 	"testing"
-
-	. "lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -32,10 +31,10 @@ func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
 
 func TestExecuteDepScanNoServicePackages(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-	svcDir := path.Join(RootDir, "test", "sample", "http", "aliased_call")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "aliased_call")
 
 	runDepScanCmd.SetArgs([]string{
-		"-p", RootDir,
+		"-p", helpers.RootDir,
 		"-s", svcDir,
 	})
 
@@ -46,8 +45,8 @@ func TestExecuteDepScanNoServicePackages(t *testing.T) {
 
 func TestExecuteDepScanNoMainFunctionFound(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-	projDir := path.Join(RootDir, "test", "example") // root of the project
-	svcDir := path.Join(RootDir, "test", "example", "pkg")
+	projDir := path.Join(helpers.RootDir, "test", "example") // root of the project
+	svcDir := path.Join(helpers.RootDir, "test", "example", "pkg")
 
 	runDepScanCmd.SetArgs([]string{
 		"-p", projDir,
@@ -61,10 +60,10 @@ func TestExecuteDepScanNoMainFunctionFound(t *testing.T) {
 
 func TestExecuteDepScanNoGoFiles(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-	svcDir := path.Join(RootDir, "test", "empty")
+	svcDir := path.Join(helpers.RootDir, "test", "empty")
 
 	runDepScanCmd.SetArgs([]string{
-		"-p", RootDir,
+		"-p", helpers.RootDir,
 		"-s", svcDir,
 	})
 
@@ -79,8 +78,8 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 func TestExecuteDepScanExampleServices(t *testing.T) {
 	runDepScanCmd := depScanCmd()
 
-	projDir := path.Join(RootDir, "test", "example")
-	svcDir := path.Join(RootDir, "test", "example", "svc")
+	projDir := path.Join(helpers.RootDir, "test", "example")
+	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
 
 	runDepScanCmd.SetArgs([]string{
 		"-p", projDir,
@@ -93,9 +92,9 @@ func TestExecuteDepScanExampleServices(t *testing.T) {
 
 func TestExecuteDepScanFull(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-	svcDir := path.Join(RootDir, "test", "sample", "http")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 	runDepScanCmd.SetArgs([]string{
-		"--project-directory", RootDir,
+		"--project-directory", helpers.RootDir,
 		"--service-directory", svcDir,
 	})
 
@@ -105,10 +104,10 @@ func TestExecuteDepScanFull(t *testing.T) {
 
 func TestExecuteDepScanShortHand(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-	svcDir := path.Join(RootDir, "test", "sample", "http")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 
 	runDepScanCmd.SetArgs([]string{
-		"-p", RootDir,
+		"-p", helpers.RootDir,
 		"-s", svcDir,
 	})
 

@@ -4,11 +4,10 @@
 package discovery
 
 import (
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 	"os"
 	"path"
 	"testing"
-
-	. "lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 
@@ -19,8 +18,8 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestDiscovery(t *testing.T) {
-	svcDir := path.Join(RootDir, "test", "sample", "http")
-	initial, _ := stages.LoadServices(RootDir, svcDir)
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
+	initial, _ := stages.LoadServices(helpers.RootDir, svcDir)
 	resC, _, _ := Discover(initial)
 
 	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
@@ -28,7 +27,7 @@ func TestDiscovery(t *testing.T) {
 }
 
 func TestDiscoveryBasicCall(t *testing.T) {
-	projDir := path.Join(RootDir, "test", "sample", "http", "basic_call")
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
 	initial, _ := stages.LoadPackages(projDir, projDir)
 	resC, _, _ := Discover(initial)
 
@@ -37,7 +36,7 @@ func TestDiscoveryBasicCall(t *testing.T) {
 }
 
 func TestDiscoveryBasicHandle(t *testing.T) {
-	projDir := path.Join(RootDir, "test", "sample", "http", "basic_handle")
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
 	initial, _ := stages.LoadPackages(projDir, projDir)
 	_, resS, _ := Discover(initial)
 
@@ -46,7 +45,7 @@ func TestDiscoveryBasicHandle(t *testing.T) {
 }
 
 func TestDiscoveryBasicHandleFunc(t *testing.T) {
-	projDir := path.Join(RootDir, "test", "sample", "http", "basic_handlefunc")
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handlefunc")
 	initial, _ := stages.LoadPackages(projDir, projDir)
 	_, resS, _ := Discover(initial)
 
@@ -55,7 +54,7 @@ func TestDiscoveryBasicHandleFunc(t *testing.T) {
 }
 
 func TestDiscoveryGinHandle(t *testing.T) {
-	projDir := path.Join(RootDir, path.Join("test/sample", path.Join("http", "gin_handle")))
+	projDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "gin_handle")))
 	initial, _ := stages.LoadPackages(projDir, projDir)
 	_, resS, _ := Discover(initial)
 
@@ -64,9 +63,9 @@ func TestDiscoveryGinHandle(t *testing.T) {
 }
 
 func TestCallInfo(t *testing.T) {
-	svcDir := path.Join(RootDir, "test", "sample", "http")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 
-	initial, _ := stages.LoadServices(RootDir, svcDir)
+	initial, _ := stages.LoadServices(helpers.RootDir, svcDir)
 	res, _, _ := Discover(initial)
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
 	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 27")
@@ -74,9 +73,9 @@ func TestCallInfo(t *testing.T) {
 }
 
 func TestWrappedClientCall(t *testing.T) {
-	svcDir := path.Join(RootDir, "test", "sample", "http", "wrapped_client")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
 
-	initial, _ := stages.LoadPackages(RootDir, svcDir)
+	initial, _ := stages.LoadPackages(helpers.RootDir, svcDir)
 	res, _, _ := Discover(initial)
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
 	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.

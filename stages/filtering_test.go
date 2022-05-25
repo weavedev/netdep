@@ -5,10 +5,9 @@ package stages
 
 import (
 	"go/ast"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 	"path"
 	"testing"
-
-	. "lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,15 +21,15 @@ func TestFiltering(t *testing.T) {
 }
 
 func TestLoadServicesEmpty(t *testing.T) {
-	svcDir := path.Join(RootDir, "test", "empty", "empty")
-	_, err := LoadServices(RootDir, svcDir)
+	svcDir := path.Join(helpers.RootDir, "test", "empty", "empty")
+	_, err := LoadServices(helpers.RootDir, svcDir)
 	assert.Equal(t, "no service to analyse were found", err.Error())
 }
 
 func TestLoadServices(t *testing.T) {
-	svcDir := path.Join(RootDir, "stages")
+	svcDir := path.Join(helpers.RootDir, "stages")
 
-	services, _ := LoadServices(RootDir, svcDir)
+	services, _ := LoadServices(helpers.RootDir, svcDir)
 
 	assert.Equal(t, "discovery", services[0].Pkg.Name())
 	assert.Equal(t, "matching", services[1].Pkg.Name())
@@ -38,22 +37,22 @@ func TestLoadServices(t *testing.T) {
 }
 
 func TestLoadServicesError(t *testing.T) {
-	svcDir := path.Join(RootDir, "test", "example", "svc")
+	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
 
-	_, err := LoadServices(RootDir, svcDir)
+	_, err := LoadServices(helpers.RootDir, svcDir)
 
 	assert.Equal(t, "packages contain errors", err.Error())
 }
 
 func TestLoadPackages(t *testing.T) {
-	svcDir := path.Join(RootDir, "test", "sample", "http", "basic_call")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
 	initial, _ := LoadPackages(svcDir, svcDir)
 
 	assert.Equal(t, "main", initial[0].Pkg.Name())
 }
 
 func TestLoadPackagesError(t *testing.T) {
-	projDir := path.Join(RootDir, "test", "example", "svc")
+	projDir := path.Join(helpers.RootDir, "test", "example", "svc")
 	_, err := LoadPackages(projDir, projDir)
 
 	assert.Equal(t, "packages contain errors", err.Error())
