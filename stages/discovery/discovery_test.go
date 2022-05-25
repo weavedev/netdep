@@ -30,7 +30,7 @@ func TestDiscovery(t *testing.T) {
 
 	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(false)
 	resC, _, _ := Discover(initial, analyseConfig)
-	assert.Equal(t, 15, len(resC), "Expect 17 interesting call")
+	assert.Equal(t, 17, len(resC), "Expect 17 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
