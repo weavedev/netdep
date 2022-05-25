@@ -4,6 +4,7 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"os"
 	"path"
 	"runtime"
 	"testing"
@@ -30,6 +31,7 @@ func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
 }
 
 func TestExecuteDepScanNoServicePackages(t *testing.T) {
+	os.Stdout, _ = os.Open(os.DevNull)
 	runDepScanCmd := depScanCmd()
 
 	// thisFilePath is ./cmd/depScan_test.go
