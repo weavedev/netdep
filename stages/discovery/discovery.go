@@ -14,11 +14,11 @@ Refer to the Project plan, chapter 5.3 for more information.
 */
 
 // Discover finds client calls in the specified project directory
-func Discover(pkgsToAnalyse []*ssa.Package) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func Discover(pkgsToAnalyse []*ssa.Package, config callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// The current output data structure. TODO: add additional fields
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
+
 	for _, pkg := range pkgsToAnalyse {
 		// Analyse each package
 		clientTargetsOfCurrPkg, serverTargetsOfCurrPkg, err := callanalyzer.AnalysePackageCalls(pkg, &config)

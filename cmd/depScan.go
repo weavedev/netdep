@@ -22,7 +22,14 @@ import (
 var (
 	projectDir string
 	serviceDir string
+	logTrace   bool
 )
+
+type RunConfig struct {
+	ProjectDir string
+	ServiceDir string
+	LogTrace   bool
+}
 
 // depScanCmd creates and returns a depScan command object
 func depScanCmd() *cobra.Command {
@@ -41,8 +48,14 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
+			config := RunConfig{
+				ProjectDir: projectDir,
+				ServiceDir: serviceDir,
+				LogTrace:   logTrace,
+			}
+
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir)
+			clientCalls, serverCalls, err := buildDependencies(config)
 			if err != nil {
 				return err
 			}
@@ -63,6 +76,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	}
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
+	cmd.Flags().BoolVarP(&logTrace, "log-trace", "t", false, "toggle logging trace of unknown variables")
 	return cmd
 }
 
@@ -87,9 +101,9 @@ func pathExists(path string) (bool, error) {
 // buildDependencies is responsible for integrating different stages
 // of the program.
 // TODO: the output should be changed to a list of string once the integration is done
-func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func buildDependencies(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	initial, err := stages.LoadServices(projectDir, svcDir)
+	initial, err := stages.LoadServices(config.ProjectDir, config.ServiceDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
 	if err != nil {
 		return nil, nil, err
@@ -97,7 +111,8 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, serverCalls, err := discovery.Discover(initial)
+	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(config.LogTrace)
+	clientCalls, serverCalls, err := discovery.Discover(initial, analyseConfig)
 	if err != nil {
 		return nil, nil, err
 	}

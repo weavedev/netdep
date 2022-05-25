@@ -2,6 +2,7 @@ package callanalyzer
 
 import (
 	"fmt"
+
 	"golang.org/x/tools/go/ssa"
 )
 
@@ -15,10 +16,12 @@ func PrintTraceToCall(trace []*ssa.Call, frame *Frame, config *AnalyserConfig) {
 		}
 
 		_, file, position := getCallInformation(call.Pos(), frame.pkg)
-		var signature = ""
+		signature := ""
 		switch callee := call.Call.Value.(type) {
 		case *ssa.Function:
 			signature = callee.RelString(nil)
+		default:
+			signature = call.Call.Value.String()
 		}
 		fmt.Printf("%d: %s:%s\t%s\n", traces-i, file, position, signature)
 	}
