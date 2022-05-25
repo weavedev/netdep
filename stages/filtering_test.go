@@ -6,8 +6,9 @@ package stages
 import (
 	"go/ast"
 	"path"
-	"runtime"
 	"testing"
+
+	. "lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,25 +22,15 @@ func TestFiltering(t *testing.T) {
 }
 
 func TestLoadServicesEmpty(t *testing.T) {
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	thisFileParent := path.Dir(thisFilePath)
-
-	projDir := path.Dir(thisFileParent)
-	svcDir := path.Join(path.Dir(thisFileParent), "test", "empty", "empty")
-
-	_, err := LoadServices(projDir, svcDir)
-
+	svcDir := path.Join(RootDir, "test", "empty", "empty")
+	_, err := LoadServices(RootDir, svcDir)
 	assert.Equal(t, "no service to analyse were found", err.Error())
 }
 
 func TestLoadServices(t *testing.T) {
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	thisFileParent := path.Dir(thisFilePath)
+	svcDir := path.Join(RootDir, "stages")
 
-	projDir := path.Dir(thisFileParent)
-	svcDir := path.Join(path.Dir(thisFileParent), "stages")
-
-	services, _ := LoadServices(projDir, svcDir)
+	services, _ := LoadServices(RootDir, svcDir)
 
 	assert.Equal(t, "discovery", services[0].Pkg.Name())
 	assert.Equal(t, "matching", services[1].Pkg.Name())
@@ -47,32 +38,22 @@ func TestLoadServices(t *testing.T) {
 }
 
 func TestLoadServicesError(t *testing.T) {
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	thisFileParent := path.Dir(thisFilePath)
+	svcDir := path.Join(RootDir, "test", "example", "svc")
 
-	projDir := path.Dir(thisFileParent)
-	svcDir := path.Join(path.Dir(thisFileParent), "test", "example", "svc")
-
-	_, err := LoadServices(projDir, svcDir)
+	_, err := LoadServices(RootDir, svcDir)
 
 	assert.Equal(t, "packages contain errors", err.Error())
 }
 
 func TestLoadPackages(t *testing.T) {
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	thisFileParent := path.Dir(thisFilePath)
-
-	projDir := path.Join(path.Dir(thisFileParent), path.Join("test/sample", path.Join("http", "basic_call")))
-	initial, _ := LoadPackages(projDir, projDir)
+	svcDir := path.Join(RootDir, "test", "sample", "http", "basic_call")
+	initial, _ := LoadPackages(svcDir, svcDir)
 
 	assert.Equal(t, "main", initial[0].Pkg.Name())
 }
 
 func TestLoadPackagesError(t *testing.T) {
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	thisFileParent := path.Dir(thisFilePath)
-
-	projDir := path.Join(path.Dir(thisFileParent), path.Join("test/example", path.Join("svc")))
+	projDir := path.Join(RootDir, "test", "example", "svc")
 	_, err := LoadPackages(projDir, projDir)
 
 	assert.Equal(t, "packages contain errors", err.Error())
