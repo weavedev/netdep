@@ -4,6 +4,7 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"log"
 	"os"
 	"path"
 	"runtime"
@@ -30,8 +31,27 @@ func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
 	assert.Equal(t, "invalid service directory specified: invalid", err.Error())
 }
 
+func noOutput() func() {
+	devNull, _ := os.Open(os.DevNull) // For discarding
+	stdOut := os.Stdout               // For resetting afterwards
+	stdErr := os.Stderr
+
+	os.Stdout = devNull
+	os.Stderr = devNull
+
+	log.SetOutput(devNull)
+
+	return func() {
+		// Resets the stdOut/errOut/logOut to the standard ones
+		defer devNull.Close()
+		os.Stdout = stdOut
+		os.Stderr = stdErr
+		log.SetOutput(os.Stderr)
+	}
+}
+
 func TestExecuteDepScanNoServicePackages(t *testing.T) {
-	os.Stdout, _ = os.Open(os.DevNull)
+	defer noOutput()()
 	runDepScanCmd := depScanCmd()
 
 	// thisFilePath is ./cmd/depScan_test.go
