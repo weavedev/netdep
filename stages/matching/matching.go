@@ -42,7 +42,7 @@ func createBasicPortMap(endpoints []*callanalyzer.CallTarget) map[string]string 
 
 	// find port definitions
 	for _, call := range endpoints {
-		if call.RequestLocation[0] == ':' {
+		if len(call.RequestLocation) >= 1 && call.RequestLocation[0] == ':' {
 			portMap[call.ServiceName] = call.RequestLocation
 		}
 	}
@@ -64,7 +64,7 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 
 		port := portMap[call.ServiceName]
 
-		if call.RequestLocation[0] == '/' {
+		if call.RequestLocation == "" || call.RequestLocation[0] == '/' {
 			// register request
 			endpointURL := fmt.Sprintf("http://%s%s%s", call.ServiceName, port, call.RequestLocation)
 			endpointMap[endpointURL] = call.ServiceName
