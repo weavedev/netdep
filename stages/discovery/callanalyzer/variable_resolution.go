@@ -82,6 +82,7 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (st
 }
 
 func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (string, bool) {
+	unknownCallError := "unknown: substitutable call that is not supported"
 	switch fnCallType := val.Call.Value.(type) {
 	case *ssa.Function:
 		{
@@ -99,12 +100,14 @@ func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (strin
 						}
 					}
 				default:
-					return "unknown: substitutable call that is not supported", false
+					return unknownCallError, false
 				}
 			}
 		}
+	default:
+		return unknownCallError, false
 	}
-	return "unknown: substitutable call that is not supported", false
+	return unknownCallError, false
 }
 
 // resolveParameters iterates over the parameters, resolving those where possible.

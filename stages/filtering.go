@@ -50,7 +50,6 @@ func LoadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error)
 // an SSA representation for each service in svcDir.
 func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 	// Collect all files within the services directory
-	var err error = nil
 	files, err := os.ReadDir(svcDir)
 	if err != nil {
 		return nil, err
@@ -68,7 +67,7 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 			// Do not throw here, but instead accumulate the errors for the final return value (if any)
 			if specificErr != nil {
 				if err != nil {
-					err = fmt.Errorf("multiple errors: %v, %v", err.Error(), specificErr.Error())
+					err = fmt.Errorf("multiple errors: %w, %v", err, specificErr.Error())
 				} else {
 					err = specificErr
 				}
