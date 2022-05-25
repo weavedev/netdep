@@ -80,6 +80,17 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string
 	return service, parts, position
 }
 
+func analyseCallArguments(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
+	for _, argument := range call.Call.Args {
+		switch arg := argument.(type) {
+		case *ssa.Call:
+			analyseCall(arg, frame, config)
+		case *ssa.Function:
+			visitBlocks(arg.Blocks, frame, config)
+		}
+	}
+}
+
 // analyseCall recursively traverses the SSA, with call being the starting point,
 // and using the environment specified in the frame
 // Variables are only resolved if the call is 'interesting'
@@ -126,6 +137,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		if isInterestingServer {
 			// TODO: Resolve the arguments of the function call
 			handleInterestingServerCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
+			analyseCallArguments(call, frame, config)
 			return
 		}
 
@@ -141,8 +153,11 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 
 		// Keep track of given parameters for resolving
 		for i, par := range fnCallType.Params {
-			newFrame.params[par] = &call.Call.Args[i]
+			argument := call.Call.Args[i]
+			newFrame.params[par] = &argument
 		}
+
+		analyseCallArguments(call, frame, config)
 
 		// Keep a reference to the parent frame
 		newFrame.parent = frame

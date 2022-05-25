@@ -27,6 +27,16 @@ func TestDiscovery(t *testing.T) {
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
+func TestExampleDiscovery(t *testing.T) {
+	projDir := path.Join(helpers.RootDir, "test", "example")
+	svcDir := path.Join(projDir, "svc")
+	initial, _ := stages.LoadServices(projDir, svcDir)
+	resC, _, _ := Discover(initial)
+
+	assert.Equal(t, 5, len(resC), "Expect 5 interesting call")
+	//	TODO: extend this test
+}
+
 func TestDiscoveryBasicCall(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
 	initial, _ := stages.LoadPackages(projDir, projDir)
