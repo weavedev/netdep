@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/constant"
 	"go/token"
+
 	"golang.org/x/tools/go/ssa"
 )
 
@@ -102,7 +103,6 @@ func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (strin
 				}
 			}
 		}
-		break
 	}
 	return "unknown: substitutable call that is not supported", false
 }
