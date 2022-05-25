@@ -11,7 +11,7 @@ import (
 // RootDir is used in tests all over the project,
 // in most cases to point the analyzer to a certain
 // project directory, relative to the project RootDir
-var RootDir = getRootDir()
+var RootDir = getRootDir() //nolint:gochecknoglobals
 
 // getRootDir is implicitly called on init.
 // Its value is stored in the RootDir global variable.
