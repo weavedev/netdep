@@ -12,24 +12,52 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-// resolveVariable Resolves a supplied variable value, only in the cases that are supported by the tool:
-//
+// resolveParameter resolves a parameter in a frame, recursively
+func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
+	if fr == nil {
+		return nil, fr
+	}
+
+	// fetch saved parameter link
+	parameterValue, hasParam := fr.params[par]
+
+	if hasParam {
+		// check if the value is a parameter again.
+		// if that is the case, we recurse on the parameter in the PARENT frame
+		recursionParam, isParam := (*parameterValue).(*ssa.Parameter)
+
+		if isParam {
+			return resolveParameter(recursionParam, fr.parent)
+		} else {
+			return parameterValue, fr
+		}
+	}
+
+	return nil, fr
+}
+
+// resolveValue Resolves a supplied ssa.Value, only in the cases that are supported by the tool:
 // - string concatenation (see BinOp),
-//
 // - string literal
-//
 // - call to os.GetEnv
-//
 // - other InterestingCalls with the action Substitute
-func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
-	switch val := value.(type) {
+// It also returns a bool which indicates whether the variable was resolved.
+func resolveValue(value *ssa.Value, fr *Frame, config *AnalyserConfig) (string, bool) {
+	switch val := (*value).(type) {
 	case *ssa.Parameter:
+		// (recursively) resolve a parameter to a value and return that value, if it is defined
+		parameterValue, resolvedFrame := resolveParameter(val, fr)
+
+		if parameterValue != nil {
+			return resolveValue(parameterValue, resolvedFrame, config)
+		}
+
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveVariable(val.X, config)
-			right, isRightResolved := resolveVariable(val.Y, config)
+			left, isLeftResolved := resolveValue(&val.X, fr, config)
+			right, isRightResolved := resolveValue(&val.Y, fr, config)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -45,27 +73,27 @@ func resolveVariable(value ssa.Value, config *AnalyserConfig) (string, bool) {
 		default:
 			return "unknown: not a string constant", false
 		}
-	default:
-		return "unknown: constant is not a string", false
-
 	case *ssa.Call:
 		// TODO: here shall the substitution happen
 		if config.interestingCallsCommon["To be call value"].action == Substitute {
 			return "unknown: interesting call that could be substituted (currently not implemented)", true
 		}
 		return "unknown: interesting call that is not supported", false
+
+	default:
+		return "unknown: unable to resolve", false
 	}
 }
 
 // resolveParameters iterates over the parameters, resolving those where possible.
 // It also keeps track of whether all variables could be resolved or not.
-func resolveParameters(parameters []ssa.Value, positions []int, config *AnalyserConfig) ([]string, bool) {
+func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, config *AnalyserConfig) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveVariable(parameters[idx], config)
+			variable, isResolved := resolveValue(&parameters[idx], fr, config)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
