@@ -53,6 +53,12 @@ func resolveValue(value *ssa.Value, fr *Frame, config *AnalyserConfig) (string, 
 		}
 
 		return "unknown: the parameter was not resolved", false
+	case *ssa.Global:
+		global, ok := fr.globals[val]
+		if ok {
+			return resolveValue(global, fr, config)
+		}
+		return "unknown: the global was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
@@ -65,6 +71,13 @@ func resolveValue(value *ssa.Value, fr *Frame, config *AnalyserConfig) (string, 
 			return left + right, false
 		default:
 			return "unknown: only ADD binary operation is supported", false
+		}
+	case *ssa.UnOp:
+		switch val.Op { //nolint:exhaustive
+		case token.MUL:
+			return resolveValue(&val.X, fr, config)
+		default:
+			return "unknown: only MUL unary operation is supported", false
 		}
 	case *ssa.Const:
 		switch val.Value.Kind() { //nolint:exhaustive

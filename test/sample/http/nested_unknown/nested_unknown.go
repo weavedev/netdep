@@ -19,7 +19,7 @@ func recurse(url string, depth int) {
 	}
 }
 
-const unresolved = "UNKNOWN"
+var unresolved = "UNKNOWN"
 
 func main() {
 	recurse(unresolved, 25)

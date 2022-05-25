@@ -144,6 +144,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
 		newFrame.visited = append(newFrame.visited, call)
+		newFrame.params = make(map[*ssa.Parameter]*ssa.Value)
 
 		// Keep track of given parameters for resolving
 		for i, par := range fnCallType.Params {
@@ -263,6 +264,12 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 		switch instruction := instr.(type) {
 		case *ssa.Call:
 			analyseCall(instruction, fr, config)
+			break
+		case *ssa.Store:
+			if global, ok := instruction.Addr.(*ssa.Global); ok {
+				fr.globals[global] = &instruction.Val
+			}
+			break
 		default:
 			continue
 		}
@@ -298,7 +305,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 
 	// TODO: look for the init function will be useful if we want to know
 	// the values of global file-scoped variables
-	// initFunction := findFunctionInPackage(pkg, "init")
+	initFunction := findFunctionInPackage(pkg, "init")
 
 	// Find the main function
 	if mainFunction == nil {
@@ -308,8 +315,9 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	baseFrame := Frame{
 		visited: make([]*ssa.Call, 0),
 		// Reference to the final list of all _targets of the entire package
-		pkg:    pkg,
-		params: make(map[*ssa.Parameter]*ssa.Value),
+		pkg:     pkg,
+		params:  make(map[*ssa.Parameter]*ssa.Value),
+		globals: make(map[*ssa.Global]*ssa.Value),
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{
 			make([]*CallTarget, 0),
@@ -317,7 +325,15 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 		},
 	}
 
+	for _, m := range pkg.Members {
+		switch v := m.(type) {
+		case *ssa.Global:
+			baseFrame.globals[v] = nil
+		}
+	}
+
 	// Visit each of the block of the main function
+	visitBlocks(initFunction.Blocks, &baseFrame, config)
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)
 
 	// Here we can return the targets of the base frame: it is just a reference. All frames hold the same reference
