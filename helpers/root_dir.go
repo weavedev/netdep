@@ -1,4 +1,6 @@
-//Package helpers
+// Package helpers contains useful constants
+// (and possibly, in the future, utility functions as well)
+// for any test gofiles.
 package helpers
 
 import (
