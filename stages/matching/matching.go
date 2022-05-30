@@ -76,50 +76,42 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
 func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) output.NodeGraph {
-	unknownServiceMap := make(map[string]*output.ServiceNode)
+	UnknownService := &output.ServiceNode{
+		ServiceName: "UnknownService",
+		IsUnknown:   true,
+	}
+
 	edges := make([]*output.ConnectionEdge, 0)
 	serviceMap, nodes := createEmptyNodes(calls, endpoints)
 	endpointMap := createEndpointMap(endpoints)
-
-	unknownCount := 0
+	hasUnknown := false
 
 	// Add edges (eg. matching)
 	// This order is guaranteed because calls is an array
 	for _, call := range calls {
 		sourceNode := serviceMap[call.ServiceName]
+		targetServiceName, isResolved := findTargetNodeName(call, endpointMap)
 
-		// TODO improve matching, compare URL
-		// TODO handle dynamic urls like "/_var"
-		targetServiceName, hasTarget := endpointMap[call.RequestLocation]
 		var targetNode *output.ServiceNode
 
-		// find target service
-		if hasTarget {
-			targetService, exists := serviceMap[targetServiceName]
-
-			if exists {
-				targetNode = targetService
-			}
+		if target, ok := serviceMap[targetServiceName]; ok && isResolved {
+			targetNode = target
+			// Set target to UnknownService if not found
+			// There are 3 possibilities for this scenario:
+			// 1. endpoint definition of call.RequestLocation wasn't resolved correctly.
+			// 2. call.RequestLocation references external API, which is not contained
+			// in the endpointMap.
+			// 3. The call.RequestLocation itself was not resolved correctly.
+			// In the future this distinction could be made.
+		} else {
+			targetNode = UnknownService
 		}
 
-		if targetNode == nil {
-			// set unknown service
-			// re-use if url is already used before
-			oldUnknownService, exists := unknownServiceMap[call.RequestLocation]
-
-			if exists && call.IsResolved {
-				targetNode = oldUnknownService
-			} else {
-				// create new unknown node (new one, otherwise the graph becomes distorted)
-				unknownCount += 1
-				serviceNode := &output.ServiceNode{
-					ServiceName: fmt.Sprintf("Unknown Service #%d", unknownCount),
-					IsUnknown:   true,
-				}
-				nodes = append(nodes, serviceNode)
-				targetNode = serviceNode
-				unknownServiceMap[call.RequestLocation] = serviceNode
-			}
+		// If at least one unknown target has been found,
+		// add it to a list of nodes.
+		if targetNode == UnknownService && !hasUnknown {
+			nodes = append(nodes, UnknownService)
+			hasUnknown = true
 		}
 
 		connectionEdge := &output.ConnectionEdge{
@@ -150,4 +142,21 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 		Nodes: nodes,
 		Edges: edges,
 	}
+}
+
+// findTargetNodeName returns a name of the target service
+// If call was unresolved in discovery stage it by default returns false
+// If call was resolved, but the endpointMap does not contain the URL,
+// then empty string and false is returned.
+// Otherwise, a name of the target service is returned.
+func findTargetNodeName(call *callanalyzer.CallTarget, endpointMap map[string]string) (string, bool) {
+	if !call.IsResolved {
+		return "", false
+	}
+
+	// TODO improve matching, compare URL
+	// TODO handle dynamic urls like "/_var"
+	targetServiceName, hasTarget := endpointMap[call.RequestLocation]
+
+	return targetServiceName, hasTarget
 }
