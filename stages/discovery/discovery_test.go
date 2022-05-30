@@ -4,11 +4,12 @@
 package discovery
 
 import (
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path"
 	"testing"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 
