@@ -11,6 +11,7 @@ import (
 	"time"
 
 	httpClient "example/pkg/http"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/hashicorp/go-retryablehttp"
 )
