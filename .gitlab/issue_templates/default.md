@@ -1,11 +1,11 @@
 <!-- Don't forget to add Weight , Assignee, labels, milestones, time estimates! 
 
 /weight
-/assign
-/label
+/assign @
+/label ~
 /milestone %
 /estimate
-/relate 
+/relate #
 
 More quick actions: https://docs.gitlab.com/ee/user/project/quick_actions.html
 
