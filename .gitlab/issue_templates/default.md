@@ -5,6 +5,7 @@
 /label
 /milestone %
 /estimate
+/relate 
 
 More quick actions: https://docs.gitlab.com/ee/user/project/quick_actions.html
 
