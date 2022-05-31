@@ -42,7 +42,7 @@ func TestLoadServicesError(t *testing.T) {
 
 	_, err := LoadServices(helpers.RootDir, svcDir)
 
-	assert.Equal(t, "packages contain errors", err.Error())
+	assert.Equal(t, "no service to analyse were found", err.Error())
 }
 
 func TestLoadPackages(t *testing.T) {

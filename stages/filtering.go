@@ -62,20 +62,24 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
 			servicePath := path.Join(svcDir, file.Name())
 			fmt.Println(servicePath)
 
-			pkgs, err := LoadPackages(projectDir, servicePath)
-			if err != nil {
-				return nil, err
-			}
+			pkgs, specificErr := LoadPackages(projectDir, servicePath)
 
+			// Do not throw here, but instead accumulate the errors for the final return value (if any)
+			if specificErr != nil {
+				if err != nil {
+					err = fmt.Errorf("multiple errors: %w, %v", err, specificErr.Error())
+				} else {
+					err = specificErr
+				}
+			}
 			packagesToAnalyze = append(packagesToAnalyze, pkgs...)
 		}
 	}
-
 	if len(packagesToAnalyze) == 0 {
 		return nil, fmt.Errorf("no service to analyse were found")
 	}
 
-	return packagesToAnalyze, nil
+	return packagesToAnalyze, err
 }
 
 /*
