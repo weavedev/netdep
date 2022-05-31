@@ -9,44 +9,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/*
-A test for the sample implementation of the resolution method
-*/
-func TestResolving(t *testing.T) {
-	res := ResolveEnvVars("../test/example/svc")
-
-	expected := make(map[string]map[string]interface{})
-
-	expected["node-basic-http"] = make(map[string]interface{})
-	expected["node-basic-http"]["scopes"] = map[string]interface{}{
-		"public": []interface{}{
-			map[string]interface{}{
-				"endpoint": "/services/ServiceB",
-				"name":     "ServiceB",
-			},
-		},
-		"secure": []interface{}{
-			map[string]interface{}{
-				"endpoint": "/services/ServiceA",
-				"name":     "ServiceA",
-				"scope":    "service_a",
-			},
-		},
-	}
-
-	assert.Equal(t, expected, res, "Expected the resolution method to return mapped env variables")
-}
-
 func TestResolvingInvalid(t *testing.T) {
-	res := ResolveEnvVars("../test/example/svc/node-gin-http")
-	expected := make(map[string]map[string]interface{})
-	assert.Equal(t, expected, res, "Expected the resolution method to return an empty map")
+	_, err := MapEnvVars("../test/example/svc/node-basic-http/values.yaml")
+	assert.NotNil(t, err)
+	assert.Equal(t, "the file cannot be parsed", err.Error())
 }
 
 func TestMapEnvVarFile(t *testing.T) {
-	res, _ := MapEnvVarFile("../test/example/svc/node-basic-http/env")
-	expected := make(map[string]string)
-	expected["var1"] = "value1"
-	expected["var2"] = "value2"
+	res, _ := MapEnvVars("../test/example/svc/node-basic-http/env")
+	expected := make(map[string]map[string]string)
+	expected["service1"] = make(map[string]string)
+	expected["service1"]["var1"] = "value1"
+	expected["service1"]["var2"] = "value2"
+	expected["service2"] = make(map[string]string)
+	expected["service2"]["var3"] = "value3"
 	assert.Equal(t, expected, res, "Expected to return a map of env vars")
 }

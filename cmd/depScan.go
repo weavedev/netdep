@@ -102,7 +102,7 @@ func buildDependencies(svcDir string, projectDir string, envVars string) ([]*cal
 	}
 
 	if envVars != "" {
-		envVariables, err := stages.MapEnvVarFile(envVars)
+		envVariables, err := stages.MapEnvVars(envVars)
 		fmt.Println("env: ")
 		fmt.Println(envVariables)
 		if err != nil {
