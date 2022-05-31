@@ -166,45 +166,56 @@ type SubstitutionConfig struct {
 // the parameters of the function call.
 func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, frame *Frame) {
 	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
-	if interestingStuffServer.action == Output {
-		requestLocation := ""
-		var isResolved bool
-		var variables []string
-
-		service, file, position := getCallInformation(call.Pos(), frame.pkg)
-
-		if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
-			if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
-				variables, isResolved = resolveGinAddrSlice(call.Call.Args[1])
-				// TODO: parse the url
-				requestLocation = strings.Join(variables, "")
-			} else {
-				substitutionConfig := SubstitutionConfig{
-					config.substitutionCalls,
-					config.environment[service],
-				}
-				variables, isResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
-				// TODO: parse the url
-				requestLocation = strings.Join(variables, "")
-			}
-		}
-
-		// Additional information about the call
-
-		callTarget := &CallTarget{
-			packageName:     packageName,
-			MethodName:      qualifiedFunctionNameOfTarget,
-			RequestLocation: requestLocation,
-			IsResolved:      isResolved,
-			ServiceName:     service,
-			FileName:        file,
-			PositionInFile:  position,
-		}
-
-		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
-
-		frame.targetsCollection.serverTargets = append(frame.targetsCollection.serverTargets, callTarget)
+	if interestingStuffServer.action != Output {
 		return
+	}
+
+	// callTarget holds all the details of the interesting call
+	callTarget := defaultCallTarget(packageName, qualifiedFunctionNameOfTarget)
+
+	// variables store the local variables of the call target
+	var variables []string
+
+	callTarget.ServiceName, callTarget.FileName, callTarget.PositionInFile = getCallInformation(call.Pos(), frame.pkg)
+
+	if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
+		if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
+			variables, callTarget.IsResolved = resolveGinAddrSlice(call.Call.Args[1])
+			// TODO: parse the url
+			callTarget.RequestLocation = strings.Join(variables, "")
+		} else {
+			// Since the environment can vary on a per-service basis,
+			// a substConfig is created for the specific service
+			substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
+			variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
+			// TODO: parse the url
+			callTarget.RequestLocation = strings.Join(variables, "")
+		}
+	}
+
+	// Additional information about the call
+	frame.targetsCollection.serverTargets = append(frame.targetsCollection.serverTargets, callTarget)
+}
+
+// getSubstConfig returns the substitution config (environment)
+// for the specific service
+func getSubstConfig(config *AnalyserConfig, service string) SubstitutionConfig {
+	return SubstitutionConfig{
+		config.substitutionCalls,
+		config.environment[service],
+	}
+}
+
+// defaultCallTarget returns a new callTarget with initialised packageName, functionName and IsResolved fields
+func defaultCallTarget(packageName, functionName string) *CallTarget {
+	return &CallTarget{
+		packageName:     packageName,
+		MethodName:      functionName,
+		RequestLocation: "",
+		IsResolved:      false,
+		ServiceName:     "",
+		FileName:        "",
+		PositionInFile:  "",
 	}
 }
 
@@ -214,39 +225,29 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, packageName, qualifiedFunctionNameOfTarget string, frame *Frame) {
 	interestingStuffClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 
-	if interestingStuffClient.action == Output {
-		requestLocation := ""
-		var isResolved bool
-		var variables []string
-
-		// Additional information about the call
-		service, file, position := getCallInformation(call.Pos(), frame.pkg)
-
-		if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
-			substitutionConfig := SubstitutionConfig{
-				config.substitutionCalls,
-				config.environment[service],
-			}
-			variables, isResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
-			// TODO: parse the url
-			requestLocation = strings.Join(variables, "")
-		}
-
-		callTarget := &CallTarget{
-			packageName:     packageName,
-			MethodName:      qualifiedFunctionNameOfTarget,
-			RequestLocation: requestLocation,
-			IsResolved:      isResolved,
-			ServiceName:     service,
-			FileName:        file,
-			PositionInFile:  position,
-		}
-
-		// fmt.Println("Found call to function " + qualifiedFunctionNameOfTarget)
-
-		frame.targetsCollection.clientTargets = append(frame.targetsCollection.clientTargets, callTarget)
+	if interestingStuffClient.action != Output {
 		return
 	}
+
+	// callTarget holds all the details of the interesting call
+	callTarget := defaultCallTarget(packageName, qualifiedFunctionNameOfTarget)
+
+	// variables store the local variables of the call target
+	var variables []string
+
+	// Additional information about the call
+	callTarget.ServiceName, callTarget.FileName, callTarget.PositionInFile = getCallInformation(call.Pos(), frame.pkg)
+
+	if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
+		// Since the environment can vary on a per-service basis,
+		// a substConfig is created for the specific service
+		substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
+		variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
+		// TODO: parse the url
+		callTarget.RequestLocation = strings.Join(variables, "")
+	}
+
+	frame.targetsCollection.clientTargets = append(frame.targetsCollection.clientTargets, callTarget)
 }
 
 // analyseInstructionsOfBlock checks the type of each iteration in a block.
