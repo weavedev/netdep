@@ -25,6 +25,7 @@ var (
 	verbose    bool
 )
 
+// RunConfig defines the parameters for a depScan command run
 type RunConfig struct {
 	ProjectDir string
 	ServiceDir string

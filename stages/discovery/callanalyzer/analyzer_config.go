@@ -11,6 +11,9 @@ const (
 
 // defaultMaxTraversalDepth is the default max traversal depth for the analyser
 const defaultMaxTraversalDepth = 16
+
+// defaultMaxTraceDepth defines the maximum number of calls reported
+// when verbosely printing unresolved call stack traces
 const defaultMaxTraceDepth = 8
 
 // InterestingCall holds information about a call that is to be outputted,
