@@ -6,6 +6,7 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package callanalyzer
 
 import (
+	"fmt"
 	"go/constant"
 	"go/token"
 
@@ -40,24 +41,24 @@ func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
 // - string concatenation (see BinOp),
 // - string literal
 // - call to os.GetEnv
-// - other InterestingCalls with the action Substitute
+// - other InterestingCalls with the action Substitute.
 // It also returns a bool which indicates whether the variable was resolved.
-func resolveValue(value *ssa.Value, fr *Frame, config *AnalyserConfig) (string, bool) {
+func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (string, bool) {
 	switch val := (*value).(type) {
 	case *ssa.Parameter:
 		// (recursively) resolve a parameter to a value and return that value, if it is defined
 		parameterValue, resolvedFrame := resolveParameter(val, fr)
 
 		if parameterValue != nil {
-			return resolveValue(parameterValue, resolvedFrame, config)
+			return resolveValue(parameterValue, resolvedFrame, substConf)
 		}
 
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveValue(&val.X, fr, config)
-			right, isRightResolved := resolveValue(&val.Y, fr, config)
+			left, isLeftResolved := resolveValue(&val.X, fr, substConf)
+			right, isRightResolved := resolveValue(&val.Y, fr, substConf)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -74,26 +75,50 @@ func resolveValue(value *ssa.Value, fr *Frame, config *AnalyserConfig) (string, 
 			return "unknown: not a string constant", false
 		}
 	case *ssa.Call:
-		// TODO: here shall the substitution happen
-		if config.interestingCallsCommon["To be call value"].action == Substitute {
-			return "unknown: interesting call that could be substituted (currently not implemented)", true
-		}
-		return "unknown: interesting call that is not supported", false
-
+		return handleSubstitutableCall(val, substConf)
 	default:
-		return "unknown: unable to resolve", false
+		return "unknown: the parameter was not resolved", false
 	}
+}
+
+func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (string, bool) {
+	unknownCallError := "unknown: substitutable call that is not supported"
+	switch fnCallType := val.Call.Value.(type) {
+	case *ssa.Function:
+		{
+			qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
+			if substConf.substitutionCalls[qualifiedFunctionNameOfTarget].action == Substitute {
+				switch argOfReplaceableCall := val.Call.Args[0].(type) {
+				case *ssa.Const:
+					{
+						envVarName := constant.StringVal(argOfReplaceableCall.Value)
+						envVarVal, ok := substConf.serviceEnv[envVarName]
+						if ok {
+							return envVarVal, true
+						} else {
+							return fmt.Sprintf("unknown: environment variable %s not set", envVarName), false
+						}
+					}
+				default:
+					return unknownCallError, false
+				}
+			}
+		}
+	default:
+		return unknownCallError, false
+	}
+	return unknownCallError, false
 }
 
 // resolveParameters iterates over the parameters, resolving those where possible.
 // It also keeps track of whether all variables could be resolved or not.
-func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, config *AnalyserConfig) ([]string, bool) {
+func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, serviceEnv SubstitutionConfig) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveValue(&parameters[idx], fr, config)
+			variable, isResolved := resolveValue(&parameters[idx], fr, serviceEnv)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
