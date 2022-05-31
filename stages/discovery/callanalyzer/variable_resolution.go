@@ -88,10 +88,10 @@ func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (strin
 		{
 			qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
 			if substConf.substitutionCalls[qualifiedFunctionNameOfTarget].action == Substitute {
-				switch osGetEnvArg := val.Call.Args[0].(type) {
+				switch argOfReplaceableCall := val.Call.Args[0].(type) {
 				case *ssa.Const:
 					{
-						envVarName := constant.StringVal(osGetEnvArg.Value)
+						envVarName := constant.StringVal(argOfReplaceableCall.Value)
 						envVarVal, ok := substConf.serviceEnv[envVarName]
 						if ok {
 							return envVarVal, true
