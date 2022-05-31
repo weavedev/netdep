@@ -91,17 +91,17 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
-	if call.Call.Method != nil {
-		// TODO: resolve a call to a method
-		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
-	}
-
-	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
-	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	if frame.hasVisited(call) {
 		return
 	}
 
+	if call.Call.Method != nil {
+		// TODO: resolve a call to a method
+		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
+	}
+	
+	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
+	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	switch fnCallType := call.Call.Value.(type) {
 	// TODO: handle other cases
 	case *ssa.Parameter:
