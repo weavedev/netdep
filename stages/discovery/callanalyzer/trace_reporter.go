@@ -8,10 +8,14 @@ import (
 
 func PrintTraceToCall(trace []*ssa.Call, frame *Frame, config *AnalyserConfig) {
 	traces := len(trace)
-	minOffset := traces - config.maxTraceDepth
+
+	// displayStartingIndex is used to limit the number of traces to log
+	// as defined by config.maxTraceDepth
+	displayStartingIndex := traces - config.maxTraceDepth
 
 	for i, call := range trace {
-		if i < minOffset {
+		// only show the last few items, as defined in the config
+		if i < displayStartingIndex {
 			continue
 		}
 
