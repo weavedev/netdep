@@ -30,14 +30,14 @@ type AnalyserConfig struct {
 	interestingCallsCommon map[string]InterestingCall
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
-	logTrace          bool
+	verbose           bool
 	maxTraversalDepth int
 	maxTraceDepth     int
 }
 
 // DefaultConfigForFindingHTTPCalls returns the default config
 // for locating calls
-func DefaultConfigForFindingHTTPCalls(log bool) AnalyserConfig {
+func DefaultConfigForFindingHTTPCalls(verbose bool) AnalyserConfig {
 	return AnalyserConfig{
 		interestingCallsClient: map[string]InterestingCall{
 			"(*net/http.Client).Do":          {action: Output, interestingArgs: []int{0}},
@@ -70,7 +70,7 @@ func DefaultConfigForFindingHTTPCalls(log bool) AnalyserConfig {
 
 		maxTraversalDepth: defaultMaxTraversalDepth,
 		maxTraceDepth:     defaultMaxTraceDepth,
-		logTrace:          log,
+		verbose:           verbose,
 
 		ignoreList: map[string]bool{
 			"fmt":                  true,

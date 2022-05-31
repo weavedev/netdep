@@ -22,13 +22,13 @@ import (
 var (
 	projectDir string
 	serviceDir string
-	logTrace   bool
+	verbose    bool
 )
 
 type RunConfig struct {
 	ProjectDir string
 	ServiceDir string
-	LogTrace   bool
+	Verbose    bool
 }
 
 // depScanCmd creates and returns a depScan command object
@@ -51,7 +51,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			config := RunConfig{
 				ProjectDir: projectDir,
 				ServiceDir: serviceDir,
-				LogTrace:   logTrace,
+				Verbose:    verbose,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
@@ -76,7 +76,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	}
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
-	cmd.Flags().BoolVarP(&logTrace, "log-trace", "t", false, "toggle logging trace of unknown variables")
+	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "toggle logging trace of unknown variables")
 	return cmd
 }
 
@@ -111,7 +111,7 @@ func buildDependencies(config RunConfig) ([]*callanalyzer.CallTarget, []*callana
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(config.LogTrace)
+	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(config.Verbose)
 	clientCalls, serverCalls, err := discovery.Discover(initial, analyseConfig)
 	if err != nil {
 		return nil, nil, err

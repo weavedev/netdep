@@ -224,7 +224,7 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 			requestLocation = strings.Join(variables, "")
 		}
 
-		if !isResolved && config.logTrace {
+		if !isResolved && config.verbose {
 			fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 			PrintTraceToCall(append(frame.visited, call), frame, config)
 		}
