@@ -7,6 +7,6 @@ import (
 
 // target: GET example.com
 func main() {
-	//netdep:client -s targetService
+	//netdep:client https://example.com/
 	http.Get("https://example.com/")
 }

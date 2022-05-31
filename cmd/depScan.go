@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocess"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
@@ -15,8 +16,6 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
 var (
@@ -89,7 +88,7 @@ func pathExists(path string) (bool, error) {
 // TODO: the output should be changed to a list of string once the integration is done
 func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	initial, annotations, err := stages.LoadServices(projectDir, svcDir)
+	initial, annotations, err := preprocess.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
 	if err != nil {
 		return nil, nil, err
