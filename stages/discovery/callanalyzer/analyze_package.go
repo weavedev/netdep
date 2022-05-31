@@ -99,7 +99,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// TODO: resolve a call to a method
 		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
 	}
-	
+
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
 	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
 	switch fnCallType := call.Call.Value.(type) {
@@ -143,6 +143,9 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// The following creates a copy of 'frame'.
 		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
+
+		// copy visited and append current call
+		copy(newFrame.visited, frame.visited)
 		newFrame.visited = append(newFrame.visited, call)
 
 		// Keep track of given parameters for resolving
