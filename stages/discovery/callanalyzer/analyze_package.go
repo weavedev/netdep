@@ -34,6 +34,13 @@ type CallTarget struct {
 	PositionInFile string
 }
 
+// SubstitutionConfig holds interesting calls to substitute,
+// as well as a map of the current service's environment
+type SubstitutionConfig struct {
+	substitutionCalls map[string]InterestingCall
+	serviceEnv        map[string]string
+}
+
 // TargetsCollection holds the output structures that are to be returned by the
 // discovery stage
 type TargetsCollection struct {
@@ -157,11 +164,6 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// Unsupported call type
 		return
 	}
-}
-
-type SubstitutionConfig struct {
-	substitutionCalls map[string]InterestingCall
-	serviceEnv        map[string]string
 }
 
 // handleInterestingServerCall collects the information about a supplied endpoint declaration
