@@ -64,20 +64,23 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 // Arguments:
 // pos is the position of the call
 // frame is a structure for keeping track of the recursion and package
-func getCallInformation(pos token.Pos, pkg *ssa.Package) (string, string, string) {
+func getCallInformation(pos token.Pos, pkg *ssa.Package, packageName, functionName string) *CallTarget {
+	callTarget := defaultCallTarget(packageName, functionName)
+
+	callTarget.ServiceName = pkg.String()[strings.LastIndex(pkg.String(), "/")+1:]
+
 	// split package name and take the last item to get the service name
-	service := pkg.String()[strings.LastIndex(pkg.String(), "/")+1:]
 
 	// absolute file path
 	filePath := pkg.Prog.Fset.File(pos).Name()
 	// split absolute path to get the relative file path from the service directory
-	parts := filePath[strings.LastIndex(filePath, string(os.PathSeparator)+service+string(os.PathSeparator))+1:]
+	callTarget.FileName = filePath[strings.LastIndex(filePath, string(os.PathSeparator)+callTarget.ServiceName+string(os.PathSeparator))+1:]
 
 	base := 10
 	// take the position of the call within the file and convert to string
-	position := strconv.FormatInt(int64(pkg.Prog.Fset.Position(pos).Line), base)
+	callTarget.PositionInFile = strconv.FormatInt(int64(pkg.Prog.Fset.Position(pos).Line), base)
 
-	return service, parts, position
+	return callTarget
 }
 
 // analyseCall recursively traverses the SSA, with call being the starting point,
@@ -169,14 +172,10 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 	if interestingStuffServer.action != Output {
 		return
 	}
-
-	// callTarget holds all the details of the interesting call
-	callTarget := defaultCallTarget(packageName, qualifiedFunctionNameOfTarget)
-
 	// variables store the local variables of the call target
 	var variables []string
 
-	callTarget.ServiceName, callTarget.FileName, callTarget.PositionInFile = getCallInformation(call.Pos(), frame.pkg)
+	callTarget := getCallInformation(call.Pos(), frame.pkg, packageName, qualifiedFunctionNameOfTarget)
 
 	if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 		if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
@@ -229,14 +228,11 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 		return
 	}
 
-	// callTarget holds all the details of the interesting call
-	callTarget := defaultCallTarget(packageName, qualifiedFunctionNameOfTarget)
-
 	// variables store the local variables of the call target
 	var variables []string
 
-	// Additional information about the call
-	callTarget.ServiceName, callTarget.FileName, callTarget.PositionInFile = getCallInformation(call.Pos(), frame.pkg)
+	// callTarget holds all the details of the interesting call
+	callTarget := getCallInformation(call.Pos(), frame.pkg, packageName, qualifiedFunctionNameOfTarget)
 
 	if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
 		// Since the environment can vary on a per-service basis,
