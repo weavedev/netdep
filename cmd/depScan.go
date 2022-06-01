@@ -22,6 +22,7 @@ import (
 var (
 	projectDir string
 	serviceDir string
+	envVars    string
 )
 
 // depScanCmd creates and returns a depScan command object
@@ -43,7 +44,13 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 			// Given a correct project directory en service directory,
 			// apply our discovery algorithm to find all interesting calls
-			clientCalls, serverCalls, err := discoverAllCalls(serviceDir, projectDir)
+			if ex, err := pathExists(envVars); !ex && envVars != "" || err != nil {
+				return fmt.Errorf("invalid environment variable file specified: %s", envVars)
+			}
+
+			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
+			clientCalls, serverCalls, err := discoverAllCalls(serviceDir, projectDir, envVars)
+
 			if err != nil {
 				return err
 			}
@@ -67,6 +74,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	}
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
+	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	return cmd
 }
 
@@ -88,12 +96,28 @@ func pathExists(path string) (bool, error) {
 	return false, err
 }
 
+// resolveEnvironmentValues calls resolving stage if the path is not unspecified(""), returns nil otherwise
+func resolveEnvironmentValues(path string) (map[string]map[string]string, error) {
+	if path == "" {
+		return nil, nil
+	}
+	return stages.MapEnvVars(path)
+}
+
 // discoverAllCalls calls the correct stages for loading, building,
 // filtering and discovering all client and server calls.
-func discoverAllCalls(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
 	services, err := stages.FindServices(svcDir)
 	fmt.Printf("Starting to analyse %d services.\n", len(services))
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// resolve environment values
+	// TODO: Integrate the envVariables into discovery
+	envVariables, err := resolveEnvironmentValues(envVars)
 
 	if err != nil {
 		return nil, nil, err
@@ -103,6 +127,8 @@ func discoverAllCalls(svcDir string, projectDir string) ([]*callanalyzer.CallTar
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 
 	packageCount := 0
+
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
 
 	for _, serviceDir := range services {
 		// load packages
@@ -114,7 +140,7 @@ func discoverAllCalls(svcDir string, projectDir string) ([]*callanalyzer.CallTar
 		}
 
 		// discover calls
-		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, nil)
+		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &config)
 		if err != nil {
 			return nil, nil, err
 		}
