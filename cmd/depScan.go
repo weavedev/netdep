@@ -113,7 +113,6 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 
 		// discover calls
 		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, nil)
-
 		if err != nil {
 			return nil, nil, err
 		}
@@ -121,7 +120,6 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 		// append and release
 		allClientTargets = append(allClientTargets, clientCalls...)
 		allServerTargets = append(allServerTargets, serverCalls...)
-
 	}
 
 	if packageCount == 0 {

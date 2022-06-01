@@ -19,7 +19,6 @@ func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) (
 
 	for _, pkg := range packages {
 		clientCalls, serverCalls, err := Discover(pkg, config)
-
 		if err != nil {
 			return nil, nil, err
 		}

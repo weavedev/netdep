@@ -4,10 +4,11 @@
 package discovery
 
 import (
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path"
 	"testing"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func discoverAllServices(projectDir string, services []string, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func discoverAllServices(projectDir string, services []string, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget) {
 	resC := make([]*callanalyzer.CallTarget, 0)
 	resS := make([]*callanalyzer.CallTarget, 0)
 
@@ -24,14 +25,12 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 	for _, serviceDir := range services {
 		// load packages
 		packagesInService, err := stages.LoadPackages(projectDir, serviceDir)
-
 		if err != nil {
 			continue
 		}
 
 		// discover calls
 		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config)
-
 		if err != nil {
 			continue
 		}
@@ -41,7 +40,7 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 		resS = append(resS, serviceCalls...)
 	}
 
-	return resC, resS, nil
+	return resC, resS
 }
 
 /*
@@ -50,7 +49,7 @@ A test for the sample implementation of the resolution method
 func TestDiscovery(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 	services, _ := stages.LoadServices(svcDir)
-	resC, _, _ := discoverAllServices(helpers.RootDir, services, nil)
+	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
@@ -96,7 +95,7 @@ func TestCallInfo(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 
 	services, _ := stages.LoadServices(svcDir)
-	res, _, _ := discoverAllServices(helpers.RootDir, services, nil)
+	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
 	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 25")
