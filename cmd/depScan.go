@@ -120,7 +120,9 @@ func buildDependencies(svcDir string, projectDir string, envVars string) ([]*cal
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, serverCalls, err := discovery.Discover(initial, nil, envVariables)
+
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
+	clientCalls, serverCalls, err := discovery.Discover(initial, &config)
 	if err != nil {
 		return nil, nil, err
 	}
