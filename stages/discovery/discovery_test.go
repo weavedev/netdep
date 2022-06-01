@@ -4,6 +4,7 @@
 package discovery
 
 import (
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path"
 	"testing"
@@ -15,13 +16,41 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func discoverAllServices(services []string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+	resC := make([]*callanalyzer.CallTarget, 0)
+	resS := make([]*callanalyzer.CallTarget, 0)
+
+	// for each service
+	for _, serviceDir := range services {
+		// load packages
+		packagesInService, err := stages.LoadPackages(helpers.RootDir, serviceDir)
+
+		if err != nil {
+			continue
+		}
+
+		// discover calls
+		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, nil)
+
+		if err != nil {
+			continue
+		}
+
+		// append and release
+		resC = append(resC, clientCalls...)
+		resS = append(resS, serviceCalls...)
+	}
+
+	return resC, resS, nil
+}
+
 /*
 A test for the sample implementation of the resolution method
 */
 func TestDiscovery(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
-	initial, _ := stages.LoadServices(helpers.RootDir, svcDir)
-	resC, _, _ := Discover(initial, nil)
+	services, _ := stages.LoadServices(svcDir)
+	resC, _, _ := discoverAllServices(services)
 
 	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
@@ -30,7 +59,7 @@ func TestDiscovery(t *testing.T) {
 func TestDiscoveryBasicCall(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
 	initial, _ := stages.LoadPackages(projDir, projDir)
-	resC, _, _ := Discover(initial, nil)
+	resC, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
@@ -39,7 +68,7 @@ func TestDiscoveryBasicCall(t *testing.T) {
 func TestDiscoveryBasicHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
 	initial, _ := stages.LoadPackages(projDir, projDir)
-	_, resS, _ := Discover(initial, nil)
+	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
 	assert.Equal(t, "net/http.Handle", resS[0].MethodName, "Expect net/http.Handle to be called")
@@ -48,7 +77,7 @@ func TestDiscoveryBasicHandle(t *testing.T) {
 func TestDiscoveryBasicHandleFunc(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handlefunc")
 	initial, _ := stages.LoadPackages(projDir, projDir)
-	_, resS, _ := Discover(initial, nil)
+	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
 	assert.Equal(t, "net/http.HandleFunc", resS[0].MethodName, "Expect net/http.HandleFunc to be called")
@@ -57,7 +86,7 @@ func TestDiscoveryBasicHandleFunc(t *testing.T) {
 func TestDiscoveryGinHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "gin_handle")))
 	initial, _ := stages.LoadPackages(projDir, projDir)
-	_, resS, _ := Discover(initial, nil)
+	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
 	assert.Equal(t, "(*github.com/gin-gonic/gin.RouterGroup).GET", resS[0].MethodName, "Expect (*github.com/gin-gonic/gin.RouterGroup).GET to be called")
@@ -66,8 +95,8 @@ func TestDiscoveryGinHandle(t *testing.T) {
 func TestCallInfo(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 
-	initial, _ := stages.LoadServices(helpers.RootDir, svcDir)
-	res, _, _ := Discover(initial, nil)
+	services, _ := stages.LoadServices(svcDir)
+	res, _, _ := discoverAllServices(services)
 
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
 	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 25")
@@ -78,7 +107,7 @@ func TestWrappedClientCall(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
 
 	initial, _ := stages.LoadPackages(helpers.RootDir, svcDir)
-	res, _, _ := Discover(initial, nil)
+	res, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
 	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.

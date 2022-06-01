@@ -70,7 +70,8 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "no service to analyse were found", err.Error())
+	// we found no go files, but that is an error for the builder
+	assert.Equal(t, "packages contain errors", err.Error())
 }
 
 // TODO: Good weather tests currently stackoverflow,

@@ -89,20 +89,52 @@ func pathExists(path string) (bool, error) {
 // TODO: the output should be changed to a list of string once the integration is done
 func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	initial, err := stages.LoadServices(projectDir, svcDir)
-	fmt.Printf("Starting to analyse %s\n", initial)
+	services, err := stages.LoadServices(svcDir)
+	fmt.Printf("Starting to analyse %d services.\n", len(services))
+
 	if err != nil {
 		return nil, nil, err
 	}
 
+	allClientTargets := make([]*callanalyzer.CallTarget, 0)
+	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+
+	packageCount := 0
+
+	// for each service
+	for _, serviceDir := range services {
+		// load packages
+		packagesInService, err := stages.LoadPackages(projectDir, serviceDir)
+		packageCount += len(packagesInService)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// discover calls
+		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, nil)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// append and release
+		allClientTargets = append(allClientTargets, clientCalls...)
+		allServerTargets = append(allServerTargets, serverCalls...)
+
+	}
+
+	if packageCount == 0 {
+		return nil, nil, fmt.Errorf("no service to analyse were found")
+	}
+
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, serverCalls, err := discovery.Discover(initial, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// For now this returns client calls,
 	// as we don't have any other functionality in place.
-	return clientCalls, serverCalls, err
+	return allClientTargets, allServerTargets, err
 }

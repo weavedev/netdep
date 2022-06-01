@@ -48,33 +48,22 @@ func LoadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error)
 // LoadServices takes a project directory and a service
 // directory and for each directory of that service builds
 // an SSA representation for each service in svcDir.
-func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, error) {
+func LoadServices(svcDir string) ([]string, error) {
 	// Collect all files within the services directory
 	files, err := os.ReadDir(svcDir)
 	if err != nil {
 		return nil, err
 	}
 
-	packagesToAnalyze := make([]*ssa.Package, 0)
+	packagesToAnalyze := make([]string, 0)
 
 	for _, file := range files {
 		if file.IsDir() {
 			servicePath := path.Join(svcDir, file.Name())
-			fmt.Println(servicePath)
-
-			pkgs, specificErr := LoadPackages(projectDir, servicePath)
-
-			// Do not throw here, but instead accumulate the errors for the final return value (if any)
-			if specificErr != nil {
-				if err != nil {
-					err = fmt.Errorf("multiple errors: %w, %v", err, specificErr.Error())
-				} else {
-					err = specificErr
-				}
-			}
-			packagesToAnalyze = append(packagesToAnalyze, pkgs...)
+			packagesToAnalyze = append(packagesToAnalyze, servicePath)
 		}
 	}
+
 	if len(packagesToAnalyze) == 0 {
 		return nil, fmt.Errorf("no service to analyse were found")
 	}
