@@ -5,8 +5,9 @@ package cmd
 
 import (
 	"path"
-	"runtime"
 	"testing"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -31,14 +32,10 @@ func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
 
 func TestExecuteDepScanNoServicePackages(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-
-	// thisFilePath is ./cmd/depScan_test.go
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	projDir := path.Dir(path.Dir(thisFilePath)) // root of the project
-	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "sample", "http", "aliased_call")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "aliased_call")
 
 	runDepScanCmd.SetArgs([]string{
-		"-p", projDir,
+		"-p", helpers.RootDir,
 		"-s", svcDir,
 	})
 
@@ -49,11 +46,8 @@ func TestExecuteDepScanNoServicePackages(t *testing.T) {
 
 func TestExecuteDepScanNoMainFunctionFound(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-
-	// thisFilePath is ./cmd/depScan_test.go
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	projDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example") // root of the project
-	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example", "pkg")
+	projDir := path.Join(helpers.RootDir, "test", "example") // root of the project
+	svcDir := path.Join(helpers.RootDir, "test", "example", "pkg")
 
 	runDepScanCmd.SetArgs([]string{
 		"-p", projDir,
@@ -67,14 +61,10 @@ func TestExecuteDepScanNoMainFunctionFound(t *testing.T) {
 
 func TestExecuteDepScanNoGoFiles(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-
-	// thisFilePath is ./cmd/depScan_test.go
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	projDir := path.Dir(path.Dir(thisFilePath)) // root of the project
-	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "empty")
+	svcDir := path.Join(helpers.RootDir, "test", "empty")
 
 	runDepScanCmd.SetArgs([]string{
-		"-p", projDir,
+		"-p", helpers.RootDir,
 		"-s", svcDir,
 	})
 
@@ -89,10 +79,8 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 func TestExecuteDepScanExampleServices(t *testing.T) {
 	runDepScanCmd := depScanCmd()
 
-	// thisFilePath is ./cmd/depScan_test.go
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	projDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example") // root of the project
-	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "example", "svc")
+	projDir := path.Join(helpers.RootDir, "test", "example")
+	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
 
 	runDepScanCmd.SetArgs([]string{
 		"-p", projDir,
@@ -105,12 +93,9 @@ func TestExecuteDepScanExampleServices(t *testing.T) {
 
 func TestExecuteDepScanFull(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-	// thisFilePath is ./cmd/depScan_test.go
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	projDir := path.Dir(path.Dir(thisFilePath)) // root of the project
-	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "sample", "http")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 	runDepScanCmd.SetArgs([]string{
-		"--project-directory", projDir,
+		"--project-directory", helpers.RootDir,
 		"--service-directory", svcDir,
 	})
 
@@ -120,17 +105,62 @@ func TestExecuteDepScanFull(t *testing.T) {
 
 func TestExecuteDepScanShortHand(t *testing.T) {
 	runDepScanCmd := depScanCmd()
-
-	// thisFilePath is ./cmd/depScan_test.go
-	_, thisFilePath, _, _ := runtime.Caller(0)
-	projDir := path.Dir(path.Dir(thisFilePath)) // root of the project
-	svcDir := path.Join(path.Dir(path.Dir(thisFilePath)), "test", "sample", "http")
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 
 	runDepScanCmd.SetArgs([]string{
-		"-p", projDir,
+		"-p", helpers.RootDir,
 		"-s", svcDir,
 	})
 
 	err := runDepScanCmd.Execute()
 	assert.Nil(t, err)
+}
+
+func TestExecuteDepScanInvalidEnvVarFile(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
+
+	runDepScanCmd.SetArgs([]string{
+		"-s", svcDir,
+		"-e", "invalid",
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "invalid environment variable file specified: invalid", err.Error())
+}
+
+func TestExecuteDepScanEnvFile(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+
+	projDir := path.Join(helpers.RootDir, "test", "sample") // root of the project
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
+	envVars := path.Join(helpers.RootDir, "test", "sample", "http", "env_variable", "env")
+
+	runDepScanCmd.SetArgs([]string{
+		"-p", projDir,
+		"-s", svcDir,
+		"-e", envVars,
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.Nil(t, err)
+}
+
+func TestExecuteDepScanEnvFileWrongFormat(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+
+	projDir := path.Join(helpers.RootDir, "test", "example") // root of the project
+	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
+	envVars := path.Join(helpers.RootDir, "test", "example", "svc", "node-basic-http", "values.yaml")
+
+	runDepScanCmd.SetArgs([]string{
+		"-p", projDir,
+		"-s", svcDir,
+		"-e", envVars,
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "the file cannot be parsed", err.Error())
 }

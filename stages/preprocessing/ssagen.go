@@ -1,6 +1,6 @@
-// Package preprocess defines preprocessing of a given Go project directory
+// Package preprocessing defines preprocessing of a given Go project directory
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-package preprocess
+package preprocessing
 
 import (
 	"fmt"

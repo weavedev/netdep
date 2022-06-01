@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocess"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
@@ -17,11 +17,14 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
 var (
 	projectDir string
 	serviceDir string
+	envVars    string
 )
 
 // depScanCmd creates and returns a depScan command object
@@ -41,8 +44,12 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
+			if ex, err := pathExists(envVars); !ex && envVars != "" || err != nil {
+				return fmt.Errorf("invalid environment variable file specified: %s", envVars)
+			}
+
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir)
+			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir, envVars)
 			if err != nil {
 				return err
 			}
@@ -63,6 +70,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	}
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
+	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	return cmd
 }
 
@@ -84,19 +92,39 @@ func pathExists(path string) (bool, error) {
 	return false, err
 }
 
+// envMap calls resolving stage if the path is not unspecified(""), returns nil otherwise
+func envMap(path string) (map[string]map[string]string, error) {
+	if path == "" {
+		return nil, nil
+	}
+	return stages.MapEnvVars(path)
+}
+
 // buildDependencies is responsible for integrating different stages
 // of the program.
 // TODO: the output should be changed to a list of string once the integration is done
-func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func buildDependencies(svcDir string, projectDir string, envVars string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	initial, annotations, err := preprocess.LoadServices(projectDir, svcDir)
+	initial, annotations, err := preprocessing.LoadServices(projectDir, svcDir)
 	fmt.Printf("Starting to analyse %s\n", initial)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	envVariables, err := envMap(envVars)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fmt.Println("env: ")
+	fmt.Println(envVariables)
+	// TODO: Integrate the envVariables into discovery
+
+	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, serverCalls, err := discovery.Discover(initial)
+
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
+	clientCalls, serverCalls, err := discovery.Discover(initial, &config)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -189,13 +189,8 @@ func TestWithUnknownService(t *testing.T) {
 		IsUnknown:   false,
 	}
 
-	node2 := output.ServiceNode{
-		ServiceName: "Unknown Service #1",
-		IsUnknown:   true,
-	}
-
-	node3 := output.ServiceNode{
-		ServiceName: "Unknown Service #2",
+	unknownService := output.ServiceNode{
+		ServiceName: "UnknownService",
 		IsUnknown:   true,
 	}
 
@@ -207,7 +202,7 @@ func TestWithUnknownService(t *testing.T) {
 			Location:  "./node1/path/to/some/file.go:24",
 		},
 		Source: &node1,
-		Target: &node2,
+		Target: &unknownService,
 	}
 
 	edge12b := output.ConnectionEdge{
@@ -218,7 +213,7 @@ func TestWithUnknownService(t *testing.T) {
 			Location:  "./node1/path/to/some/other/file.go:436",
 		},
 		Source: &node1,
-		Target: &node2,
+		Target: &unknownService,
 	}
 
 	edge13 := output.ConnectionEdge{
@@ -229,10 +224,10 @@ func TestWithUnknownService(t *testing.T) {
 			Location:  "./node1/path/to/some/other_file.go:24",
 		},
 		Source: &node1,
-		Target: &node3,
+		Target: &unknownService,
 	}
 
-	expectedNodes := []*output.ServiceNode{&node1, &node2, &node3}
+	expectedNodes := []*output.ServiceNode{&node1, &unknownService}
 	expectedEdges := []*output.ConnectionEdge{&edge12a, &edge12b, &edge13}
 
 	graph := CreateDependencyGraph(calls, endpoints)
