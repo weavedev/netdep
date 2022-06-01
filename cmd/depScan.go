@@ -50,7 +50,6 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
 			clientCalls, serverCalls, err := discoverAllCalls(serviceDir, projectDir, envVars)
-
 			if err != nil {
 				return err
 			}
@@ -118,7 +117,6 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 	// resolve environment values
 	// TODO: Integrate the envVariables into discovery
 	envVariables, err := resolveEnvironmentValues(envVars)
-
 	if err != nil {
 		return nil, nil, err
 	}
