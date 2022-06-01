@@ -43,22 +43,22 @@ func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
 // - call to os.GetEnv
 // - other InterestingCalls with the action Substitute.
 // It also returns a bool which indicates whether the variable was resolved.
-func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (string, bool) {
+func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig, config *AnalyserConfig) (string, bool) {
 	switch val := (*value).(type) {
 	case *ssa.Parameter:
 		// (recursively) resolve a parameter to a value and return that value, if it is defined
 		parameterValue, resolvedFrame := resolveParameter(val, fr)
 
 		if parameterValue != nil {
-			return resolveValue(parameterValue, resolvedFrame, substConf)
+			return resolveValue(parameterValue, resolvedFrame, substConf, config)
 		}
 
 		return "unknown: the parameter was not resolved", false
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveValue(&val.X, fr, substConf)
-			right, isRightResolved := resolveValue(&val.Y, fr, substConf)
+			left, isLeftResolved := resolveValue(&val.X, fr, substConf, config)
+			right, isRightResolved := resolveValue(&val.Y, fr, substConf, config)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -76,6 +76,9 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (st
 		}
 	case *ssa.Call:
 		return handleSubstitutableCall(val, substConf)
+	case *ssa.Function:
+		visitBlocks(val.Blocks, fr, config)
+		return "very bad", false
 	default:
 		return "unknown: the parameter was not resolved", false
 	}
@@ -112,13 +115,13 @@ func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (strin
 
 // resolveParameters iterates over the parameters, resolving those where possible.
 // It also keeps track of whether all variables could be resolved or not.
-func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, serviceEnv SubstitutionConfig) ([]string, bool) {
+func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, serviceEnv SubstitutionConfig, config *AnalyserConfig) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveValue(&parameters[idx], fr, serviceEnv)
+			variable, isResolved := resolveValue(&parameters[idx], fr, serviceEnv, config)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {

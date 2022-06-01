@@ -55,7 +55,7 @@ func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string) 
 
 		interestingCallsServer: map[string]InterestingCall{
 			"net/http.Handle":                                 {action: Output, interestingArgs: []int{0}},
-			"net/http.HandleFunc":                             {action: Output, interestingArgs: []int{0}},
+			"net/http.HandleFunc":                             {action: Output, interestingArgs: []int{0, 1}},
 			"net/http.ListenAndServe":                         {action: Output, interestingArgs: []int{0}},
 			"(*github.com/gin-gonic/gin.RouterGroup).GET":     {action: Output, interestingArgs: []int{1}},
 			"(*github.com/gin-gonic/gin.RouterGroup).PUT":     {action: Output, interestingArgs: []int{1}},

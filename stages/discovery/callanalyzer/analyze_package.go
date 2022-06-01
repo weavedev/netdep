@@ -188,7 +188,7 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 			// Since the environment can vary on a per-service basis,
 			// a substConfig is created for the specific service
 			substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-			variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
+			variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig, config)
 			// TODO: parse the url
 			callTarget.RequestLocation = strings.Join(variables, "")
 		}
@@ -240,7 +240,7 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 		// Since the environment can vary on a per-service basis,
 		// a substConfig is created for the specific service
 		substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-		variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
+		variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig, config)
 		// TODO: parse the url
 		callTarget.RequestLocation = strings.Join(variables, "")
 	}

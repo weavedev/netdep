@@ -74,6 +74,34 @@ func TestCallInfo(t *testing.T) {
 	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
+func TestDiscoveryHandleFuncCallBack(t *testing.T) {
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_callback")
+	initial, _ := stages.LoadPackages(projDir, projDir)
+	resC, resS, _ := Discover(initial, nil)
+
+	assert.Equal(t, 1, len(resS), "Expect 2 interesting calls")
+	assert.Equal(t, 1, len(resC), "Expect 2 interesting calls")
+	assert.Equal(t, "net/http.HandleFunc", resS[0].MethodName, "Expect net/http.HandleFunc to be called")
+	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
+	assert.Equal(t, "https://example.com/", resC[0].RequestLocation, "Expect example.com")
+	assert.Equal(t, "/test", resS[0].RequestLocation, "Expect /test")
+
+}
+
+func TestDiscoveryHandleFuncCallBackAnon(t *testing.T) {
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_anon_callback")
+	initial, _ := stages.LoadPackages(projDir, projDir)
+	resC, resS, _ := Discover(initial, nil)
+
+	assert.Equal(t, 1, len(resS), "Expect 2 interesting calls")
+	assert.Equal(t, 1, len(resC), "Expect 2 interesting calls")
+	assert.Equal(t, "net/http.HandleFunc", resS[0].MethodName, "Expect net/http.HandleFunc to be called")
+	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
+	assert.Equal(t, "https://example.com/", resC[0].RequestLocation, "Expect example.com")
+	assert.Equal(t, "/test", resS[0].RequestLocation, "Expect /test")
+
+}
+
 func TestWrappedClientCall(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
 
