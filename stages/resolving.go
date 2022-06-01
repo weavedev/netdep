@@ -25,7 +25,7 @@ func ResolveEnvVars(svcDir string) (map[string]map[string]interface{}, error) {
 	// iterate through service directory
 	items, err := ioutil.ReadDir(svcDir)
 	if err != nil {
-		//log.Println(err)
+		// log.Println(err)
 		return nil, err
 	}
 
@@ -34,14 +34,12 @@ func ResolveEnvVars(svcDir string) (map[string]map[string]interface{}, error) {
 		if item.IsDir() {
 			env := make(map[string]interface{})
 			yamlFiles, err := findYaml(svcDir+"/"+item.Name(), ".yaml")
-
 			if err != nil {
 				return nil, err
 			}
 			// for every .yaml file, create a map of env vars
 			for _, file := range yamlFiles {
 				envVars, err := envMap(file)
-
 				if err != nil {
 					return nil, err
 				}
@@ -66,7 +64,7 @@ func findYaml(root, ext string) ([]string, error) {
 	var yamlFiles []string
 	err := filepath.WalkDir(root, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
-			//log.Fatal(e)
+			// log.Fatal(e)
 			return e
 		}
 		if filepath.Ext(d.Name()) == ext {
@@ -74,7 +72,6 @@ func findYaml(root, ext string) ([]string, error) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +83,7 @@ func findYaml(root, ext string) ([]string, error) {
 func envMap(path string) (map[string]interface{}, error) {
 	file, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
-		//log.Fatal(err)
+		// log.Fatal(err)
 		return nil, err
 	}
 
@@ -95,7 +92,7 @@ func envMap(path string) (map[string]interface{}, error) {
 	err2 := yaml.Unmarshal(file, &envVars)
 
 	if err2 != nil {
-		//log.Fatal(err2)
+		// log.Fatal(err2)
 		return nil, err
 	}
 

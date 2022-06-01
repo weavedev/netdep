@@ -28,7 +28,6 @@ func LoadAndBuildPackages(projectRootDir string, svcPath string) ([]*ssa.Package
 
 	// load all packages in the service directory
 	loadedPackages, err := packages.Load(buildConfig, svcPath)
-
 	if err != nil {
 		return nil, err
 	}

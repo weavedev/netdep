@@ -44,7 +44,6 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			// Given a correct project directory en service directory,
 			// apply our discovery algorithm to find all interesting calls
 			clientCalls, serverCalls, err := discoverAllCalls(serviceDir, projectDir)
-
 			if err != nil {
 				return err
 			}
@@ -55,7 +54,6 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
 			adjacencyList := output.ConstructAdjacencyList(graph)
 			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
-
 			if err != nil {
 				return err
 			}
