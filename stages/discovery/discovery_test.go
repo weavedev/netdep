@@ -16,21 +16,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func discoverAllServices(services []string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func discoverAllServices(projectDir string, services []string, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	resC := make([]*callanalyzer.CallTarget, 0)
 	resS := make([]*callanalyzer.CallTarget, 0)
 
 	// for each service
 	for _, serviceDir := range services {
 		// load packages
-		packagesInService, err := stages.LoadPackages(helpers.RootDir, serviceDir)
+		packagesInService, err := stages.LoadPackages(projectDir, serviceDir)
 
 		if err != nil {
 			continue
 		}
 
 		// discover calls
-		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, nil)
+		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config)
 
 		if err != nil {
 			continue
@@ -50,7 +50,7 @@ A test for the sample implementation of the resolution method
 func TestDiscovery(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 	services, _ := stages.LoadServices(svcDir)
-	resC, _, _ := discoverAllServices(services)
+	resC, _, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
@@ -96,7 +96,7 @@ func TestCallInfo(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 
 	services, _ := stages.LoadServices(svcDir)
-	res, _, _ := discoverAllServices(services)
+	res, _, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
 	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 25")
