@@ -90,6 +90,7 @@ func pathExists(path string) (bool, error) {
 	return false, err
 }
 
+// envMap calls resolving stage if the path is not unspecified(""), returns nil otherwise
 func envMap(path string) (map[string]map[string]string, error) {
 	if path == "" {
 		return nil, nil
@@ -107,17 +108,6 @@ func buildDependencies(svcDir string, projectDir string, envVars string) ([]*cal
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// var envVariables map[string]map[string]string = nil
-
-	/*if envVars != "" {
-		envVariables, err := stages.MapEnvVars(envVars)
-		fmt.Println("env: ")
-		fmt.Println(envVariables)
-		if err != nil {
-			return nil, nil, err
-		}
-	}*/
 
 	envVariables, err := envMap(envVars)
 	if err != nil {
