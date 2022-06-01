@@ -90,6 +90,13 @@ func pathExists(path string) (bool, error) {
 	return false, err
 }
 
+func envMap(path string) (map[string]map[string]string, error) {
+	if path == "" {
+		return nil, nil
+	}
+	return stages.MapEnvVars(path)
+}
+
 // buildDependencies is responsible for integrating different stages
 // of the program.
 // TODO: the output should be changed to a list of string once the integration is done
@@ -101,19 +108,29 @@ func buildDependencies(svcDir string, projectDir string, envVars string) ([]*cal
 		return nil, nil, err
 	}
 
-	if envVars != "" {
+	// var envVariables map[string]map[string]string = nil
+
+	/*if envVars != "" {
 		envVariables, err := stages.MapEnvVars(envVars)
 		fmt.Println("env: ")
 		fmt.Println(envVariables)
 		if err != nil {
 			return nil, nil, err
 		}
+	}*/
+
+	envVariables, err := envMap(envVars)
+	if err != nil {
+		return nil, nil, err
 	}
+
+	fmt.Println("env: ")
+	fmt.Println(envVariables)
 	// TODO: Integrate the envVariables into discovery
 
 	// TODO: Endpoint discovery
 	// Client Call Discovery
-	clientCalls, serverCalls, err := discovery.Discover(initial, nil)
+	clientCalls, serverCalls, err := discovery.Discover(initial, nil, envVariables)
 	if err != nil {
 		return nil, nil, err
 	}

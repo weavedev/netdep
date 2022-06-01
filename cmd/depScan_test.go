@@ -133,9 +133,9 @@ func TestExecuteDepScanInvalidEnvVarFile(t *testing.T) {
 func TestExecuteDepScanEnvFile(t *testing.T) {
 	runDepScanCmd := depScanCmd()
 
-	projDir := path.Join(helpers.RootDir, "test", "example") // root of the project
-	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
-	envVars := path.Join(helpers.RootDir, "test", "example", "svc", "node-basic-http", "env")
+	projDir := path.Join(helpers.RootDir, "test", "sample") // root of the project
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
+	envVars := path.Join(helpers.RootDir, "test", "sample", "http", "env_variable", "env")
 
 	runDepScanCmd.SetArgs([]string{
 		"-p", projDir,
