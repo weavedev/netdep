@@ -5,17 +5,18 @@ import (
 	"path"
 	"testing"
 
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"github.com/stretchr/testify/assert"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 )
 
 /*
-TestEnvVarResolution tests getEnv substitution. For now with no asserts,
-as we don't have a nice way to pass env values to the discovery stage.
+TestEnvVarResolution tests getEnv substitution. After passing
+the env vars to discovery, they can be properly substituted
 */
 func TestEnvVarResolution(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "example")
@@ -27,8 +28,9 @@ func TestEnvVarResolution(t *testing.T) {
 			"FOO": destinationURL,
 		},
 	}
-	configWithEnv := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
-	resC, _, _ := Discover(initial, &configWithEnv)
+
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+	resC, _, _ := Discover(initial, &config)
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
 	assert.Equal(t, destinationURL, resC[0].RequestLocation, fmt.Sprintf("Expect %s", destinationURL))
 }

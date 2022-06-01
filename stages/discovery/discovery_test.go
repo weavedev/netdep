@@ -8,6 +8,8 @@ import (
 	"path"
 	"testing"
 
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
@@ -83,6 +85,27 @@ func TestWrappedClientCall(t *testing.T) {
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
 	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.
 	assert.Equal(t, "18", res[0].PositionInFile, "Expected line number 18")
+	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
+	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+}
+
+func TestGetEnvCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "env_variable")
+
+	destinationURL := "http://example.com/endpoint"
+	env := map[string]map[string]string{
+		"env_variable": {
+			"FOO": destinationURL,
+		},
+	}
+
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+
+	initial, _ := stages.LoadPackages(helpers.RootDir, svcDir)
+	res, _, _ := Discover(initial, &config)
+
+	assert.Equal(t, "env_variable", res[0].ServiceName, "Expected service name env_variable.go")
+	assert.Equal(t, "11", res[0].PositionInFile, "Expected line number 11")
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }
