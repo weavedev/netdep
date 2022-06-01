@@ -13,6 +13,7 @@ In the Discovery stages, clients and endpoints are discovered and mapped to thei
 Refer to the Project plan, chapter 5.3 for more information.
 */
 
+// DiscoverAll creates a combined list of all discovered calls in the given packages.
 func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
@@ -30,7 +31,7 @@ func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) (
 	return allClientTargets, allServerTargets, nil
 }
 
-// Discover finds client calls in the specified project directory
+// Discover finds client and server calls in the given packages
 func Discover(pkg *ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// The current output data structure. TODO: add additional fields
 

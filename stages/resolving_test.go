@@ -13,7 +13,9 @@ import (
 A test for the sample implementation of the resolution method
 */
 func TestResolving(t *testing.T) {
-	res := ResolveEnvVars("../test/example/svc")
+	res, err := ResolveEnvVars("../test/example/svc")
+
+	assert.Nil(t, err)
 
 	expected := make(map[string]map[string]interface{})
 
@@ -38,7 +40,8 @@ func TestResolving(t *testing.T) {
 }
 
 func TestResolvingInvalid(t *testing.T) {
-	res := ResolveEnvVars("../test/example/svc/node-gin-http")
+	res, err := ResolveEnvVars("../test/example/svc/node-gin-http")
+	assert.Nil(t, err)
 	expected := make(map[string]map[string]interface{})
 	assert.Equal(t, expected, res, "Expected the resolution method to return an empty map")
 }

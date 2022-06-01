@@ -24,7 +24,7 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 	// for each service
 	for _, serviceDir := range services {
 		// load packages
-		packagesInService, err := stages.LoadPackages(projectDir, serviceDir)
+		packagesInService, err := stages.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
 			continue
 		}
@@ -48,7 +48,7 @@ A test for the sample implementation of the resolution method
 */
 func TestDiscovery(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
-	services, _ := stages.LoadServices(svcDir)
+	services, _ := stages.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
@@ -57,7 +57,7 @@ func TestDiscovery(t *testing.T) {
 
 func TestDiscoveryBasicCall(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
-	initial, _ := stages.LoadPackages(projDir, projDir)
+	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
 	resC, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
@@ -66,7 +66,7 @@ func TestDiscoveryBasicCall(t *testing.T) {
 
 func TestDiscoveryBasicHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
-	initial, _ := stages.LoadPackages(projDir, projDir)
+	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
@@ -75,7 +75,7 @@ func TestDiscoveryBasicHandle(t *testing.T) {
 
 func TestDiscoveryBasicHandleFunc(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handlefunc")
-	initial, _ := stages.LoadPackages(projDir, projDir)
+	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
@@ -84,7 +84,7 @@ func TestDiscoveryBasicHandleFunc(t *testing.T) {
 
 func TestDiscoveryGinHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "gin_handle")))
-	initial, _ := stages.LoadPackages(projDir, projDir)
+	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
@@ -94,7 +94,7 @@ func TestDiscoveryGinHandle(t *testing.T) {
 func TestCallInfo(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
 
-	services, _ := stages.LoadServices(svcDir)
+	services, _ := stages.FindServices(svcDir)
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
@@ -105,7 +105,7 @@ func TestCallInfo(t *testing.T) {
 func TestWrappedClientCall(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
 
-	initial, _ := stages.LoadPackages(helpers.RootDir, svcDir)
+	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")

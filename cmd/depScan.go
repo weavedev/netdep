@@ -41,21 +41,27 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
-			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir)
+			// Given a correct project directory en service directory,
+			// apply our discovery algorithm to find all interesting calls
+			clientCalls, serverCalls, err := discoverAllCalls(serviceDir, projectDir)
+
 			if err != nil {
 				return err
 			}
 
 			fmt.Println("Successfully analysed, here is a list of dependencies:")
 
+			// generate output
 			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
 			adjacencyList := output.ConstructAdjacencyList(graph)
 			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
+
 			if err != nil {
 				return err
 			}
 
+			// print output
+			// TODO: output to file
 			fmt.Println(JSON)
 
 			return nil
@@ -84,12 +90,11 @@ func pathExists(path string) (bool, error) {
 	return false, err
 }
 
-// buildDependencies is responsible for integrating different stages
-// of the program.
-// TODO: the output should be changed to a list of string once the integration is done
-func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+// discoverAllCalls calls the correct stages for loading, building,
+// filtering and discovering all client and server calls.
+func discoverAllCalls(svcDir string, projectDir string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	services, err := stages.LoadServices(svcDir)
+	services, err := stages.FindServices(svcDir)
 	fmt.Printf("Starting to analyse %d services.\n", len(services))
 
 	if err != nil {
@@ -101,10 +106,9 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 
 	packageCount := 0
 
-	// for each service
 	for _, serviceDir := range services {
 		// load packages
-		packagesInService, err := stages.LoadPackages(projectDir, serviceDir)
+		packagesInService, err := stages.LoadAndBuildPackages(projectDir, serviceDir)
 		packageCount += len(packagesInService)
 
 		if err != nil {
@@ -117,7 +121,7 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 			return nil, nil, err
 		}
 
-		// append and release
+		// append
 		allClientTargets = append(allClientTargets, clientCalls...)
 		allServerTargets = append(allServerTargets, serverCalls...)
 	}
@@ -126,13 +130,9 @@ func buildDependencies(svcDir string, projectDir string) ([]*callanalyzer.CallTa
 		return nil, nil, fmt.Errorf("no service to analyse were found")
 	}
 
-	// TODO: Endpoint discovery
-	// Client Call Discovery
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// For now this returns client calls,
-	// as we don't have any other functionality in place.
 	return allClientTargets, allServerTargets, err
 }

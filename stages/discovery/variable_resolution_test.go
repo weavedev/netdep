@@ -20,7 +20,7 @@ as we don't have a nice way to pass env values to the discovery stage.
 func TestEnvVarResolution(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "example")
 	svcDir := path.Join(helpers.RootDir, "test", "example", "env_svc")
-	services, _ := stages.LoadServices(svcDir)
+	services, _ := stages.FindServices(svcDir)
 	destinationURL := "127.0.0.1:8081"
 	env := map[string]map[string]string{
 		"env_variable": {

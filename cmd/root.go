@@ -3,8 +3,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -28,8 +26,10 @@ to quickly create a Cobra application.`,
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		//os.Exit(1)
+		return
 	}
+
 }
 
 func init() {
