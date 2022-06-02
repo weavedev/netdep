@@ -65,6 +65,17 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 	return foundFunction
 }
 
+// getPositionFromPos converts a token.Pos to a filename and line number
+func getPositionFromPos(pos token.Pos, pkg *ssa.Package) (string, string) {
+	filePath := pkg.Prog.Fset.File(pos).Name()
+
+	base := 10
+	// take the position of the call within the file and convert to string
+	positionInFile := strconv.FormatInt(int64(pkg.Prog.Fset.Position(pos).Line), base)
+
+	return filePath, positionInFile
+}
+
 // getCallInformation returns the service, file and line number
 // of a discovered call
 //
@@ -79,13 +90,12 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package, packageName, functionNa
 	// split package name and take the last item to get the service name
 
 	// absolute file path
-	filePath := pkg.Prog.Fset.File(pos).Name()
+	filePath, position := getPositionFromPos(pos, pkg)
 	// split absolute path to get the relative file path from the service directory
 	callTarget.FileName = filePath[strings.LastIndex(filePath, string(os.PathSeparator)+callTarget.ServiceName+string(os.PathSeparator))+1:]
 
-	base := 10
 	// take the position of the call within the file and convert to string
-	callTarget.PositionInFile = strconv.FormatInt(int64(pkg.Prog.Fset.Position(pos).Line), base)
+	callTarget.PositionInFile = position
 
 	return callTarget
 }

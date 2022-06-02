@@ -45,8 +45,8 @@ type AnalyserConfig struct {
 }
 
 // SetVerbose is a setter for verbose
-func (a AnalyserConfig) SetVerbose(verbose bool) {
-	a.verbose = verbose
+func (a *AnalyserConfig) SetVerbose(v bool) {
+	a.verbose = v
 }
 
 // DefaultConfigForFindingHTTPCalls returns the default config

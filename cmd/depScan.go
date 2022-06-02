@@ -60,7 +60,6 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
 			clientCalls, serverCalls, err := discoverAllCalls(config)
-
 			if err != nil {
 				return err
 			}
@@ -118,7 +117,6 @@ func resolveEnvironmentValues(path string) (map[string]map[string]string, error)
 // discoverAllCalls calls the correct stages for loading, building,
 // filtering and discovering all client and server calls.
 func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
-
 	// Given a correct project directory en service directory,
 	// apply our discovery algorithm to find all interesting calls
 	if ex, err := pathExists(config.EnvFile); !ex && config.EnvFile != "" || err != nil {

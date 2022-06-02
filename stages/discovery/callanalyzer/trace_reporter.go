@@ -19,7 +19,7 @@ func PrintTraceToCall(trace []*ssa.Call, frame *Frame, config *AnalyserConfig) {
 	}
 
 	for i, call := range trace[displayStartingIndex:] {
-		_, file, position := getCallInformation(call.Pos(), frame.pkg)
+		file, position := getPositionFromPos(call.Pos(), frame.pkg)
 		signature := ""
 		switch callee := call.Call.Value.(type) {
 		case *ssa.Function:

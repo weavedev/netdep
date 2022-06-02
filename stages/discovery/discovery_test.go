@@ -104,12 +104,11 @@ func TestCallInfo(t *testing.T) {
 func TestWrappedNestedUnknown(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "nested_unknown")
 
-	services, _ := stages.FindServices(svcDir)
-
 	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(nil)
 	analyseConfig.SetVerbose(true)
 
-	res, _ := discoverAllServices(helpers.RootDir, services, &analyseConfig)
+	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	res, _, _ := DiscoverAll(initial, &analyseConfig)
 
 	assert.Equal(t, "nested_unknown", res[0].ServiceName, "Expected service name nested_unknown.go")
 }
