@@ -41,7 +41,7 @@ go run main.go depScan -p "./some/project/dir" -s "./some/service/dir"
 | `-h, --help`              | Print help                                                         |          |
 | `-p, --project-directory` | The path to the project directory. Must be a valid path.           | `./`     |
 | `-s --service-directory`  | The path to the services inside the project. Must be a valid path. | `./svc/` |
-| `-t --log-trace`          | Toggle printing stack traces of unknown variables.                 | `false`  |
+| `-v --verbose`            | Toggle printing stack traces of unknown variables.                 | `false`  |
 
 
 ## Documentation
