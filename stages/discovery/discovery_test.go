@@ -50,7 +50,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, 17, len(resC), "Expect 17 interesting call")
+	assert.Equal(t, 19, len(resC), "Expect 19 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
