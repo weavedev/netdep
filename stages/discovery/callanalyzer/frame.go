@@ -8,7 +8,9 @@ type Frame struct {
 	visited map[*ssa.BasicBlock]bool
 	// params maps a parameter inside a function to a argument value given in another frame
 	params map[*ssa.Parameter]*ssa.Value
-	pkg    *ssa.Package
+	// globals keeps a map the values associated with global variables
+	globals map[*ssa.Global]*ssa.Value
+	pkg     *ssa.Package
 	// parent is necessary to recursively resolve variables (in different scopes)
 	parent            *Frame
 	targetsCollection *TargetsCollection

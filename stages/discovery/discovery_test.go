@@ -134,3 +134,15 @@ func TestGetEnvCall(t *testing.T) {
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }
+
+func TestGlobalVariableCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "global_variable")
+
+	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	res, _, _ := DiscoverAll(initial, nil)
+
+	assert.Equal(t, "global_variable", res[0].ServiceName, "Expected service name global_variable.go")
+	assert.Equal(t, "16", res[0].PositionInFile, "Expected line number 18")
+	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
+	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+}

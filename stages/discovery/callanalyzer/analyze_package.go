@@ -305,10 +305,7 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 // List of pointers to callTargets, or an error if something went wrong.
 func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
 	mainFunction := findFunctionInPackage(pkg, "main")
-
-	// TODO: look for the init function will be useful if we want to know
-	// the values of global file-scoped variables
-	// initFunction := findFunctionInPackage(pkg, "init")
+	initFunction := findFunctionInPackage(pkg, "init")
 
 	// Find the main function
 	if mainFunction == nil {
@@ -318,14 +315,27 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	baseFrame := Frame{
 		visited: make(map[*ssa.BasicBlock]bool, 0),
 		// Reference to the final list of all _targets of the entire package
-		pkg:    pkg,
-		params: make(map[*ssa.Parameter]*ssa.Value),
+		pkg:     pkg,
+		params:  make(map[*ssa.Parameter]*ssa.Value),
+		globals: make(map[*ssa.Global]*ssa.Value),
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{
 			make([]*CallTarget, 0),
 			make([]*CallTarget, 0),
 		},
 	}
+
+	// setup basic references to global variables
+	for _, m := range pkg.Members {
+		fmt.Println(m.Name())
+		switch v := m.(type) {
+		case *ssa.Global:
+			baseFrame.globals[v] = nil
+		}
+	}
+
+	// Visit the init function for globals
+	visitBlocks(initFunction.Blocks, &baseFrame, config)
 
 	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)
