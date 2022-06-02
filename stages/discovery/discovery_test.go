@@ -9,10 +9,9 @@ import (
 	"testing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +23,7 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 	// for each service
 	for _, serviceDir := range services {
 		// load packages
-		packagesInService, err := stages.LoadAndBuildPackages(projectDir, serviceDir)
+		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
 			continue
 		}
@@ -48,7 +47,7 @@ A test for the sample implementation of the resolution method
 */
 func TestDiscovery(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
-	services, _ := stages.FindServices(svcDir)
+	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, 17, len(resC), "Expect 17 interesting call")
@@ -57,7 +56,7 @@ func TestDiscovery(t *testing.T) {
 
 func TestDiscoveryBasicCall(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
-	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
+	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	resC, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
@@ -66,7 +65,7 @@ func TestDiscoveryBasicCall(t *testing.T) {
 
 func TestDiscoveryBasicHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
-	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
+	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
@@ -75,7 +74,7 @@ func TestDiscoveryBasicHandle(t *testing.T) {
 
 func TestDiscoveryBasicHandleFunc(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handlefunc")
-	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
+	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
@@ -84,7 +83,7 @@ func TestDiscoveryBasicHandleFunc(t *testing.T) {
 
 func TestDiscoveryGinHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "gin_handle")))
-	initial, _ := stages.LoadAndBuildPackages(projDir, projDir)
+	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
@@ -93,7 +92,7 @@ func TestDiscoveryGinHandle(t *testing.T) {
 
 func TestCallInfo(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
-	services, _ := stages.FindServices(svcDir)
+	services, _ := preprocessing.FindServices(svcDir)
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
@@ -107,7 +106,7 @@ func TestWrappedNestedUnknown(t *testing.T) {
 	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(nil)
 	analyseConfig.SetVerbose(true)
 
-	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, &analyseConfig)
 
 	assert.Equal(t, "nested_unknown", res[0].ServiceName, "Expected service name nested_unknown.go")
@@ -115,8 +114,7 @@ func TestWrappedNestedUnknown(t *testing.T) {
 
 func TestWrappedClientCall(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
-
-	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
@@ -137,7 +135,7 @@ func TestGetEnvCall(t *testing.T) {
 	}
 
 	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
-	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, &config)
 
 	assert.Equal(t, "env_variable", res[0].ServiceName, "Expected service name env_variable.go")
