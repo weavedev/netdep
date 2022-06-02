@@ -102,13 +102,12 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package, packageName, functionNa
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	// prevent infinite recursion
-	if frame.hasVisited(call) || len(frame.visited) > config.maxTraversalDepth {
+	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
 		return
 	}
 
 	if call.Call.Method != nil {
 		// TODO: resolve a call to a method
-		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
 	}
 
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
@@ -119,7 +118,6 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		parValue, _ := resolveParameter(fnCallType, frame)
 		if parValue != nil {
 			// TODO: refactor analyseCall to accept an adjusted call
-			// return analyseCall(parValue, parFrame, config, targetsClient, targetsServer)
 		}
 		return
 	case *ssa.Function:
@@ -158,20 +156,22 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// note: we do not copy globals
 		newFrame := *frame
 
-		// copy the list, otherwise it gets shared
-		copy(newFrame.visited, frame.visited)
-		newFrame.visited = append(newFrame.visited, call)
+		// Keep a reference to the parent frame
+		newFrame.parent = frame
 
-		// keep a new list of params, as the old one can be recursively accessed
-		newFrame.params = make(map[*ssa.Parameter]*ssa.Value)
+		// copy the list, otherwise it gets shared
+		copy(newFrame.trace, frame.trace)
+		newFrame.trace = append(newFrame.trace, call)
+		newFrame.visited[call] = true
+
+		// TODO: keep a new list of params, as the old one can be recursively accessed
+		// this currently breaks the parameters resolving
+		// newFrame.params = make(map[*ssa.Parameter]*ssa.Value)
 
 		// Keep track of given parameters for resolving
 		for i, par := range fnCallType.Params {
 			newFrame.params[par] = &call.Call.Args[i]
 		}
-
-		// Keep a reference to the parent frame
-		newFrame.parent = frame
 
 		if fnCallType.Blocks != nil {
 			visitBlocks(fnCallType.Blocks, &newFrame, config)
@@ -329,9 +329,10 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	baseFrame := Frame{
-		visited: make([]*ssa.Call, 0),
+		trace: make([]*ssa.Call, 0),
 		// Reference to the final list of all _targets of the entire package
 		pkg:     pkg,
+		visited: make(map[*ssa.Call]bool),
 		params:  make(map[*ssa.Parameter]*ssa.Value),
 		globals: make(map[*ssa.Global]*ssa.Value),
 		// targetsCollection is a pointer to the global target collection.
@@ -350,6 +351,9 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 
 	// Visit the init function for globals
 	visitBlocks(initFunction.Blocks, &baseFrame, config)
+
+	// rest visited
+	baseFrame.visited = make(map[*ssa.Call]bool)
 
 	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)

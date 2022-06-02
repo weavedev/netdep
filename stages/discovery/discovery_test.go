@@ -101,7 +101,7 @@ func TestCallInfo(t *testing.T) {
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 25")
+	assert.Equal(t, "23", res[7].PositionInFile, "Expected line number 23")
 	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
@@ -138,12 +138,12 @@ func TestGetEnvCall(t *testing.T) {
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }
 
-//func TestGinHandleCall(t *testing.T) {
-//	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
-//
-//	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
-//	DiscoverAll(initial, nil)
-//}
+func TestGinHandleCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
+
+	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	DiscoverAll(initial, nil)
+}
 
 // TestGlobalVariableCall inspects a call with a global variable as argument
 func TestGlobalVariableCall(t *testing.T) {
