@@ -44,6 +44,10 @@ func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
 // - other InterestingCalls with the action Substitute.
 // It also returns a bool which indicates whether the variable was resolved.
 func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (string, bool) {
+	if value == nil {
+		return "unknown: the give value is null", false
+	}
+
 	switch val := (*value).(type) {
 	case *ssa.Parameter:
 		// (recursively) resolve a parameter to a value and return that value, if it is defined
@@ -55,10 +59,10 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (st
 
 		return "unknown: the parameter was not resolved", false
 	case *ssa.Global:
-		global, ok := fr.globals[val]
-		if ok {
-			return resolveValue(global, fr, substConf)
+		if globalValue, ok := fr.globals[val]; ok {
+			return resolveValue(globalValue, fr, substConf)
 		}
+
 		return "unknown: the global was not resolved", false
 
 	case *ssa.UnOp:

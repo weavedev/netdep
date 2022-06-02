@@ -101,6 +101,11 @@ func getCallInformation(pos token.Pos, pkg *ssa.Package, packageName, functionNa
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
+	// prevent infinite recursion
+	if frame.hasVisited(call) || len(frame.visited) > config.maxTraversalDepth {
+		return
+	}
+
 	if call.Call.Method != nil {
 		// TODO: resolve a call to a method
 		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
@@ -123,7 +128,10 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
 		// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
 		// This is therefore not the grandparent package, but the *type.Package of the fnCall
-		calledFunctionPackage := fnCallType.Pkg.Pkg.Path() // e.g. net/http
+		calledFunctionPackage := ""
+		if fnCallType.Package() != nil && fnCallType.Package().Pkg != nil {
+			calledFunctionPackage = fnCallType.Package().Pkg.Path() // e.g. net/http
+		}
 
 		_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		if isInterestingClient {
@@ -147,7 +155,15 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		}
 		// The following creates a copy of 'frame'.
 		// This is the correct place for this because we are going to visit child blocks next.
+		// note: we do not copy globals
 		newFrame := *frame
+
+		// copy the list, otherwise it gets shared
+		copy(newFrame.visited, frame.visited)
+		newFrame.visited = append(newFrame.visited, call)
+
+		// keep a new list of params, as the old one can be recursively accessed
+		newFrame.params = make(map[*ssa.Parameter]*ssa.Value)
 
 		// Keep track of given parameters for resolving
 		for i, par := range fnCallType.Params {
@@ -265,14 +281,16 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 		switch instruction := instr.(type) {
 		case *ssa.Call:
 			analyseCall(instruction, fr, config)
-
 		case *ssa.Store:
 			// for a store to a value
 			if global, ok := instruction.Addr.(*ssa.Global); ok {
-				if fr.globals[global] != nil {
-					fmt.Println("Overriding global!", global.Name())
+				// TODO: structure this in a way that doesn't corrupt the value
+				// When recursing. Value might not correspond to actual value!
+
+				if _, ok := fr.globals[global]; ok {
+					// only save package globals!
+					fr.globals[global] = &instruction.Val
 				}
-				fr.globals[global] = &instruction.Val
 			}
 		default:
 			continue
@@ -288,19 +306,8 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
-	if len(fr.visited) > config.maxTraversalDepth {
-		// fmt.Println("Traversal defaultMaxTraversalDepth is more than 16; terminate this recursion branch")
-		return
-	}
-
 	for _, block := range blocks {
-		if fr.hasVisited(block) || block == nil {
-			continue
-		}
-		newFr := fr
-		// Mark the block as visited
-		newFr.visited[block] = true
-		analyseInstructionsOfBlock(block, newFr, config)
+		analyseInstructionsOfBlock(block, fr, config)
 	}
 }
 
@@ -322,7 +329,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	baseFrame := Frame{
-		visited: make(map[*ssa.BasicBlock]bool, 0),
+		visited: make([]*ssa.Call, 0),
 		// Reference to the final list of all _targets of the entire package
 		pkg:     pkg,
 		params:  make(map[*ssa.Parameter]*ssa.Value),
@@ -336,9 +343,8 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 
 	// setup basic references to global variables
 	for _, m := range pkg.Members {
-		switch v := m.(type) {
-		case *ssa.Global:
-			baseFrame.globals[v] = nil
+		if globalPointer, ok := m.(*ssa.Global); ok {
+			baseFrame.globals[globalPointer] = nil
 		}
 	}
 

@@ -4,6 +4,7 @@
 package discovery
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -24,11 +25,13 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 	// for each service
 	for _, serviceDir := range services {
 		// load packages
+		fmt.Println("Building service " + serviceDir)
 		packagesInService, err := stages.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
 			continue
 		}
 
+		fmt.Println("Discovering service " + serviceDir)
 		// discover calls
 		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config)
 		if err != nil {
@@ -51,7 +54,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := stages.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, 15, len(resC), "Expect 15 interesting call")
+	assert.Equal(t, 16, len(resC), "Expect 16 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
@@ -135,6 +138,14 @@ func TestGetEnvCall(t *testing.T) {
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }
 
+//func TestGinHandleCall(t *testing.T) {
+//	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
+//
+//	initial, _ := stages.LoadAndBuildPackages(helpers.RootDir, svcDir)
+//	DiscoverAll(initial, nil)
+//}
+
+// TestGlobalVariableCall inspects a call with a global variable as argument
 func TestGlobalVariableCall(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "global_variable")
 
