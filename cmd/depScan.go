@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
@@ -44,18 +45,21 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
+			// Given a correct project directory en service directory,
+			// apply our discovery algorithm to find all interesting calls
 			if ex, err := pathExists(envVars); !ex && envVars != "" || err != nil {
 				return fmt.Errorf("invalid environment variable file specified: %s", envVars)
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := buildDependencies(serviceDir, projectDir, envVars)
+			clientCalls, serverCalls, err := discoverAllCalls(serviceDir, projectDir, envVars)
 			if err != nil {
 				return err
 			}
 
 			fmt.Println("Successfully analysed, here is a list of dependencies:")
 
+			// generate output
 			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
 			adjacencyList := output.ConstructAdjacencyList(graph)
 			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
@@ -63,6 +67,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
+			// print output
+			// TODO: output to file
 			fmt.Println(JSON)
 
 			return nil
@@ -92,39 +98,69 @@ func pathExists(path string) (bool, error) {
 	return false, err
 }
 
-// envMap calls resolving stage if the path is not unspecified(""), returns nil otherwise
-func envMap(path string) (map[string]map[string]string, error) {
+// resolveEnvironmentValues calls resolving stage if the path is not unspecified(""), returns nil otherwise
+func resolveEnvironmentValues(path string) (map[string]map[string]string, error) {
 	if path == "" {
 		return nil, nil
 	}
 	return stages.MapEnvVars(path)
 }
 
-// buildDependencies is responsible for integrating different stages
-// of the program.
-// TODO: the output should be changed to a list of string once the integration is done
-func buildDependencies(svcDir string, projectDir string, envVars string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+// discoverAllCalls calls the correct stages for loading, building,
+// filtering and discovering all client and server calls.
+func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	initial, annotations, err := preprocessing.LoadServices(projectDir, svcDir)
-	fmt.Printf("Starting to analyse %s\n", initial)
+	services, err := preprocessing.FindServices(svcDir)
+	fmt.Printf("Starting to analyse %d services.\n", len(services))
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	envVariables, err := envMap(envVars)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	fmt.Println("env: ")
-	fmt.Println(envVariables)
+	// resolve environment values
 	// TODO: Integrate the envVariables into discovery
+	envVariables, err := resolveEnvironmentValues(envVars)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	// TODO: Endpoint discovery
-	// Client Call Discovery
+	allClientTargets := make([]*callanalyzer.CallTarget, 0)
+	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+	annotations := make(map[string]map[preprocessing.Position]string)
+
+	packageCount := 0
 
 	config := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
-	clientCalls, serverCalls, err := discovery.Discover(initial, &config)
+
+	for _, serviceDir := range services {
+		// load packages
+		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
+		if err != nil {
+			return nil, nil, err
+		}
+		packageCount += len(packagesInService)
+
+		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
+		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// discover calls
+		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &config)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// append
+		allClientTargets = append(allClientTargets, clientCalls...)
+		allServerTargets = append(allServerTargets, serverCalls...)
+	}
+
+	if packageCount == 0 {
+		return nil, nil, fmt.Errorf("no service to analyse were found")
+	}
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -140,7 +176,5 @@ func buildDependencies(svcDir string, projectDir string, envVars string) ([]*cal
 		}
 	}
 
-	// For now this returns client calls,
-	// as we don't have any other functionality in place.
-	return clientCalls, serverCalls, err
+	return allClientTargets, allServerTargets, err
 }

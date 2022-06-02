@@ -21,7 +21,7 @@ the env vars to discovery, they can be properly substituted
 func TestEnvVarResolution(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "example")
 	svcDir := path.Join(helpers.RootDir, "test", "example", "env_svc")
-	initial, _, _ := preprocessing.LoadServices(projDir, svcDir)
+	services, _ := preprocessing.FindServices(svcDir)
 	destinationURL := "127.0.0.1:8081"
 	env := map[string]map[string]string{
 		"env_variable": {
@@ -29,8 +29,10 @@ func TestEnvVarResolution(t *testing.T) {
 		},
 	}
 
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
-	resC, _, _ := Discover(initial, &config)
+	configWithEnv := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+	resC, resS := discoverAllServices(projDir, services, &configWithEnv)
+
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
+	assert.Equal(t, 0, len(resS), "Expect 0 interesting call")
 	assert.Equal(t, destinationURL, resC[0].RequestLocation, fmt.Sprintf("Expect %s", destinationURL))
 }

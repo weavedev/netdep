@@ -10,34 +10,38 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-// LoadPackages takes in project root directory path and the path
-// of one service and returns an ssa representation of the service.
-func LoadPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error) {
-	config := &packages.Config{
+// LoadAndBuildPackages takes in project root directory path and the path
+// of one service and returns the SSA representation of the service.
+func LoadAndBuildPackages(projectRootDir string, svcPath string) ([]*ssa.Package, error) {
+	// setup build buildConfig
+	buildConfig := &packages.Config{
 		Dir: projectRootDir,
 		//nolint // We are using this, as cmd/callgraph is using it.
 		Mode:  packages.LoadAllSyntax,
 		Tests: false,
 	}
-	mode := ssa.BuilderMode(0)
 
-	initial, err := packages.Load(config, svcPath)
+	builderMode := ssa.BuilderMode(0)
+
+	// load all packages in the service directory
+	loadedPackages, err := packages.Load(buildConfig, svcPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(initial) == 0 {
+	if len(loadedPackages) == 0 {
 		return nil, fmt.Errorf("no packages")
 	}
 
-	if packages.PrintErrors(initial) > 0 {
+	if packages.PrintErrors(loadedPackages) > 0 {
 		return nil, fmt.Errorf("packages contain errors")
 	}
 
-	prog, pkgs := ssautil.AllPackages(initial, mode)
+	prog, pkgs := ssautil.AllPackages(loadedPackages, builderMode)
 	// prog has a reference to pkgs internally,
 	// and prog.Build() populates pkgs with necessary
 	// information
 	prog.Build()
+
 	return pkgs, nil
 }

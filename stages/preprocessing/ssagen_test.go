@@ -13,15 +13,15 @@ import (
 )
 
 func TestLoadPackages(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "basic_call")))
-	initial, _ := LoadPackages(projDir, projDir)
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
+	initial, _ := LoadAndBuildPackages(svcDir, svcDir)
 
 	assert.Equal(t, "main", initial[0].Pkg.Name())
 }
 
 func TestLoadPackagesError(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, path.Join("test/example", path.Join("svc")))
-	_, err := LoadPackages(projDir, projDir)
+	projDir := path.Join(helpers.RootDir, "test", "example", "svc")
+	_, err := LoadAndBuildPackages(projDir, projDir)
 
 	assert.Equal(t, "packages contain errors", err.Error())
 }

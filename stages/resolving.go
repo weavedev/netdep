@@ -19,7 +19,6 @@ Refer to the Project plan, chapter 5.2 for more information.
 
 // MapEnvVars returns a map as described above, namely:
 // map{ service: map{ var.name: var.value }}
-
 func MapEnvVars(path string) (map[string]map[string]string, error) {
 	file, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
@@ -33,5 +32,6 @@ func MapEnvVars(path string) (map[string]map[string]string, error) {
 	if err2 != nil {
 		return nil, fmt.Errorf("the file cannot be parsed")
 	}
+
 	return envVars, nil
 }

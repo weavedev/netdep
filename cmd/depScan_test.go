@@ -70,7 +70,6 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "packages contain errors", err.Error())
 }
 
 // TODO: Good weather tests currently stackoverflow,
