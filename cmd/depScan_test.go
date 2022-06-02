@@ -70,6 +70,8 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
+	// we found no go files, but that is an error for the builder
+	assert.Equal(t, "no usable packages found", err.Error())
 }
 
 // TODO: Good weather tests currently stackoverflow,
