@@ -30,7 +30,13 @@ type AnalyserConfig struct {
 	// outputted as a party in a dependency (0) or substituted with a constant (1)
 	interestingCallsClient map[string]InterestingCall
 	interestingCallsServer map[string]InterestingCall
-	interestingCallsCommon map[string]InterestingCall
+
+	// substitutionCalls are the calls that are to be substituted with environment variable values
+	substitutionCalls map[string]InterestingCall
+
+	// environment: map[service name]map[variable name]value
+	environment map[string]map[string]string
+
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
 	verbose           bool
@@ -38,9 +44,14 @@ type AnalyserConfig struct {
 	maxTraceDepth     int
 }
 
+// SetVerbose is a setter for verbose
+func (a AnalyserConfig) SetVerbose(verbose bool) {
+	a.verbose = verbose
+}
+
 // DefaultConfigForFindingHTTPCalls returns the default config
 // for locating calls
-func DefaultConfigForFindingHTTPCalls(verbose bool) AnalyserConfig {
+func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string) AnalyserConfig {
 	return AnalyserConfig{
 		interestingCallsClient: map[string]InterestingCall{
 			"(*net/http.Client).Do":          {action: Output, interestingArgs: []int{0}},
@@ -67,13 +78,15 @@ func DefaultConfigForFindingHTTPCalls(verbose bool) AnalyserConfig {
 			"(*github.com/gin-gonic/gin.Engine).Run":          {action: Output, interestingArgs: []int{1}},
 		},
 
-		interestingCallsCommon: map[string]InterestingCall{
+		environment: environment,
+
+		substitutionCalls: map[string]InterestingCall{
 			"os.Getenv": {action: Substitute, interestingArgs: []int{0}}, // TODO: implement env var substitution
 		},
 
 		maxTraversalDepth: defaultMaxTraversalDepth,
 		maxTraceDepth:     defaultMaxTraceDepth,
-		verbose:           verbose,
+		verbose:           false,
 
 		ignoreList: map[string]bool{
 			"fmt":                  true,

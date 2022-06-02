@@ -23,12 +23,14 @@ var (
 	projectDir string
 	serviceDir string
 	verbose    bool
+	envVars    string
 )
 
 // RunConfig defines the parameters for a depScan command run
 type RunConfig struct {
 	ProjectDir string
 	ServiceDir string
+	EnvFile    string
 	Verbose    bool
 }
 
@@ -53,16 +55,19 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				ProjectDir: projectDir,
 				ServiceDir: serviceDir,
 				Verbose:    verbose,
+				EnvFile:    envVars,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := buildDependencies(config)
+			clientCalls, serverCalls, err := discoverAllCalls(config)
+
 			if err != nil {
 				return err
 			}
 
 			fmt.Println("Successfully analysed, here is a list of dependencies:")
 
+			// generate output
 			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
 			adjacencyList := output.ConstructAdjacencyList(graph)
 			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
@@ -70,6 +75,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
+			// print output
+			// TODO: output to file
 			fmt.Println(JSON)
 
 			return nil
@@ -78,6 +85,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "toggle logging trace of unknown variables")
+	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	return cmd
 }
 
@@ -99,26 +107,74 @@ func pathExists(path string) (bool, error) {
 	return false, err
 }
 
-// buildDependencies is responsible for integrating different stages
-// of the program.
-// TODO: the output should be changed to a list of string once the integration is done
-func buildDependencies(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+// resolveEnvironmentValues calls resolving stage if the path is not unspecified(""), returns nil otherwise
+func resolveEnvironmentValues(path string) (map[string]map[string]string, error) {
+	if path == "" {
+		return nil, nil
+	}
+	return stages.MapEnvVars(path)
+}
+
+// discoverAllCalls calls the correct stages for loading, building,
+// filtering and discovering all client and server calls.
+func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+
+	// Given a correct project directory en service directory,
+	// apply our discovery algorithm to find all interesting calls
+	if ex, err := pathExists(config.EnvFile); !ex && config.EnvFile != "" || err != nil {
+		return nil, nil, fmt.Errorf("invalid environment variable file specified: %s", config.EnvFile)
+	}
+
 	// Filtering
-	initial, err := stages.LoadServices(config.ProjectDir, config.ServiceDir)
-	fmt.Printf("Starting to analyse %s\n", initial)
+	services, err := stages.FindServices(config.ServiceDir)
+	fmt.Printf("Starting to analyse %d services.\n", len(services))
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// TODO: Endpoint discovery
-	// Client Call Discovery
-	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(config.Verbose)
-	clientCalls, serverCalls, err := discovery.Discover(initial, analyseConfig)
+	// resolve environment values
+	// TODO: Integrate the envVariables into discovery
+	envVariables, err := resolveEnvironmentValues(config.EnvFile)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// For now this returns client calls,
-	// as we don't have any other functionality in place.
-	return clientCalls, serverCalls, err
+	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
+	analyseConfig.SetVerbose(config.Verbose)
+
+	allClientTargets := make([]*callanalyzer.CallTarget, 0)
+	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+
+	packageCount := 0
+
+	for _, serviceDir := range services {
+		// load packages
+		packagesInService, err := stages.LoadAndBuildPackages(projectDir, serviceDir)
+		packageCount += len(packagesInService)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// discover calls
+		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &analyseConfig)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// append
+		allClientTargets = append(allClientTargets, clientCalls...)
+		allServerTargets = append(allServerTargets, serverCalls...)
+	}
+
+	if packageCount == 0 {
+		return nil, nil, fmt.Errorf("no service to analyse were found")
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return allClientTargets, allServerTargets, err
 }
