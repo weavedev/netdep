@@ -7,6 +7,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
@@ -107,7 +110,7 @@ func resolveEnvironmentValues(path string) (map[string]map[string]string, error)
 // filtering and discovering all client and server calls.
 func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	// Filtering
-	services, err := stages.FindServices(svcDir)
+	services, err := preprocessing.FindServices(svcDir)
 	fmt.Printf("Starting to analyse %d services.\n", len(services))
 
 	if err != nil {
@@ -123,6 +126,7 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+	annotations := make(map[string]map[preprocessing.Position]string)
 
 	packageCount := 0
 
@@ -130,9 +134,14 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 
 	for _, serviceDir := range services {
 		// load packages
-		packagesInService, err := stages.LoadAndBuildPackages(projectDir, serviceDir)
+		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
+		if err != nil {
+			return nil, nil, err
+		}
 		packageCount += len(packagesInService)
 
+		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
+		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -154,6 +163,17 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// TODO: make use of annotations in the matching stage
+	fmt.Println("Discovered annotations:")
+	for k1, serMap := range annotations {
+		for k2, val := range serMap {
+			fmt.Println("Service name: " + k1)
+			fmt.Print("Position: " + k2.Filename + ":")
+			fmt.Println(k2.Line)
+			fmt.Println("Value: " + val)
+		}
 	}
 
 	return allClientTargets, allServerTargets, err
