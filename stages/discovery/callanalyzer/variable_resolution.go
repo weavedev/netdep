@@ -54,6 +54,16 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (st
 		}
 
 		return "unknown: the parameter was not resolved", false
+	case *ssa.Global:
+		global, ok := fr.globals[val]
+		if ok {
+			return resolveValue(global, fr, substConf)
+		}
+		return "unknown: the global was not resolved", false
+
+	case *ssa.UnOp:
+		return resolveValue(&val.X, fr, substConf)
+
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:

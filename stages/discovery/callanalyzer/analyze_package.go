@@ -265,6 +265,15 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 		switch instruction := instr.(type) {
 		case *ssa.Call:
 			analyseCall(instruction, fr, config)
+
+		case *ssa.Store:
+			// for a store to a value
+			if global, ok := instruction.Addr.(*ssa.Global); ok {
+				if fr.globals[global] != nil {
+					fmt.Println("Overriding global!", global.Name())
+				}
+				fr.globals[global] = &instruction.Val
+			}
 		default:
 			continue
 		}
@@ -327,7 +336,6 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 
 	// setup basic references to global variables
 	for _, m := range pkg.Members {
-		fmt.Println(m.Name())
 		switch v := m.(type) {
 		case *ssa.Global:
 			baseFrame.globals[v] = nil
