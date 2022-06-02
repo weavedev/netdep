@@ -3,7 +3,6 @@
 package preprocessing
 
 import (
-	"go/token"
 	"path"
 	"testing"
 
@@ -13,27 +12,22 @@ import (
 )
 
 func TestLoadAnnotations(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "basic_call")))
-	ann, _ := LoadAnnotations(svcDir, "basic_call")
-	expected := &Annotation{
-		ServiceName: "basic_call",
-		Position: token.Position{
-			Filename: path.Join(svcDir, "basic_call.go"),
-			Offset:   89,
-			Line:     10,
-			Column:   2,
-		},
-		Value: "client https://example.com/",
+	svcDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "object_call")))
+	ann := make(map[string]map[Position]string)
+	LoadAnnotations(svcDir, "object_call", ann)
+	expected := make(map[string]map[Position]string)
+	expected["object_call"] = make(map[Position]string)
+	pos := Position{
+		Filename: path.Join(helpers.RootDir, "test", "sample", "http", "object_call", "object_call.go"),
+		Line:     14,
 	}
+	expected["object_call"][pos] = "client http://example.com/"
 
-	assert.Equal(t, expected.ServiceName, ann[0].ServiceName)
-	assert.Equal(t, expected.Value, ann[0].Value)
-	assert.Equal(t, expected.Position.Filename, ann[0].Position.Filename)
-	assert.Equal(t, expected.Position.Line, ann[0].Position.Line)
+	assert.Equal(t, expected, ann)
 }
 
 func TestLoadAnnotationsInvalidPath(t *testing.T) {
-	ann, err := LoadAnnotations("invalidPath", "serviceName")
-	assert.Nil(t, ann)
+	m := make(map[string]map[Position]string)
+	err := LoadAnnotations("invalidPath", "serviceName", m)
 	assert.NotNil(t, err)
 }

@@ -131,10 +131,12 @@ func buildDependencies(svcDir string, projectDir string, envVars string) ([]*cal
 
 	// TODO: make use of annotations in the matching stage
 	fmt.Println("Discovered annotations:")
-	for _, ann := range annotations {
-		fmt.Println("Service: " + ann.ServiceName)
-		fmt.Println(ann.Position)
-		fmt.Println(ann.Value + "\n")
+	for k1, serMap := range annotations {
+		for k2, val := range serMap {
+			fmt.Println("Service name: " + k1)
+			fmt.Println("Position: " + k2.Filename + " " + string(k2.Line))
+			fmt.Println("Value: " + val)
+		}
 	}
 
 	// For now this returns client calls,

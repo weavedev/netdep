@@ -13,7 +13,7 @@ import (
 // LoadServices takes a project directory and a service
 // directory and for each directory of that service builds
 // an SSA representation and a list of Annotation for each service in svcDir.
-func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, []*Annotation, error) {
+func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, map[string]map[Position]string, error) {
 	// Collect all files within the services directory
 	files, err := os.ReadDir(svcDir)
 	if err != nil {
@@ -21,7 +21,8 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, []*Annotati
 	}
 
 	packagesToAnalyze := make([]*ssa.Package, 0)
-	annotations := make([]*Annotation, 0)
+	//annotations := make([]*Annotation, 0)
+	annotations := make(map[string]map[Position]string)
 
 	for _, file := range files {
 		if file.IsDir() {
@@ -32,11 +33,10 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, []*Annotati
 			if err != nil {
 				return nil, nil, err
 			}
-			serviceAnnotations, err := LoadAnnotations(servicePath, file.Name())
+			err = LoadAnnotations(servicePath, file.Name(), annotations)
 			if err != nil {
 				return nil, nil, err
 			}
-			annotations = append(annotations, serviceAnnotations...)
 
 			packagesToAnalyze = append(packagesToAnalyze, pkgs...)
 		}
