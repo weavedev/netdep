@@ -134,7 +134,8 @@ func buildDependencies(svcDir string, projectDir string, envVars string) ([]*cal
 	for k1, serMap := range annotations {
 		for k2, val := range serMap {
 			fmt.Println("Service name: " + k1)
-			fmt.Println("Position: " + k2.Filename + " " + string(k2.Line))
+			fmt.Print("Position: " + k2.Filename + ":")
+			fmt.Println(k2.Line)
 			fmt.Println("Value: " + val)
 		}
 	}

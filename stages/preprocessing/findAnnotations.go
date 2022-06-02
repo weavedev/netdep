@@ -28,7 +28,7 @@ func LoadAnnotations(servicePath string, serviceName string, annotations map[str
 	for _, file := range files {
 		if file.Name()[len(file.Name())-3:] == ".go" {
 			// If the file is a .go file - parse it
-			parseComments(path.Join(servicePath, file.Name()), serviceName, annotations)
+			err := parseComments(path.Join(servicePath, file.Name()), serviceName, annotations)
 			if err != nil {
 				return err
 			}

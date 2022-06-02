@@ -21,7 +21,7 @@ func LoadServices(projectDir string, svcDir string) ([]*ssa.Package, map[string]
 	}
 
 	packagesToAnalyze := make([]*ssa.Package, 0)
-	//annotations := make([]*Annotation, 0)
+
 	annotations := make(map[string]map[Position]string)
 
 	for _, file := range files {
