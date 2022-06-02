@@ -70,6 +70,7 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
+	// we found no go files, but that is an error for the builder
 	assert.Equal(t, "packages contain errors", err.Error())
 }
 
@@ -114,4 +115,53 @@ func TestExecuteDepScanShortHand(t *testing.T) {
 
 	err := runDepScanCmd.Execute()
 	assert.Nil(t, err)
+}
+
+func TestExecuteDepScanInvalidEnvVarFile(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
+
+	runDepScanCmd.SetArgs([]string{
+		"-s", svcDir,
+		"-e", "invalid",
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "invalid environment variable file specified: invalid", err.Error())
+}
+
+func TestExecuteDepScanEnvFile(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+
+	projDir := path.Join(helpers.RootDir, "test", "sample") // root of the project
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
+	envVars := path.Join(helpers.RootDir, "test", "sample", "http", "env_variable", "env")
+
+	runDepScanCmd.SetArgs([]string{
+		"-p", projDir,
+		"-s", svcDir,
+		"-e", envVars,
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.Nil(t, err)
+}
+
+func TestExecuteDepScanEnvFileWrongFormat(t *testing.T) {
+	runDepScanCmd := depScanCmd()
+
+	projDir := path.Join(helpers.RootDir, "test", "example") // root of the project
+	svcDir := path.Join(helpers.RootDir, "test", "example", "svc")
+	envVars := path.Join(helpers.RootDir, "test", "example", "svc", "node-basic-http", "values.yaml")
+
+	runDepScanCmd.SetArgs([]string{
+		"-p", projDir,
+		"-s", svcDir,
+		"-e", envVars,
+	})
+
+	err := runDepScanCmd.Execute()
+	assert.NotNil(t, err)
+	assert.Equal(t, "the file cannot be parsed", err.Error())
 }
