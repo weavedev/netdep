@@ -118,6 +118,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		}
 		return
 	case *ssa.Function:
+		wasInteresting := false
 		// Qualified function name is: package + interface + function
 		// TODO: handle parameter equivalence to other interface
 		qualifiedFunctionNameOfTarget := fnCallType.RelString(nil)
@@ -129,14 +130,14 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		if isInterestingClient {
 			// TODO: Resolve the arguments of the function call
 			handleInterestingClientCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
-			return
+			wasInteresting = true
 		}
 
 		_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 		if isInterestingServer {
 			// TODO: Resolve the arguments of the function call
 			handleInterestingServerCall(call, config, calledFunctionPackage, qualifiedFunctionNameOfTarget, frame)
-			return
+			wasInteresting = true
 		}
 
 		_, isIgnored := config.ignoreList[calledFunctionPackage]
@@ -154,6 +155,14 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 			newFrame.params[par] = &call.Call.Args[i]
 		}
 
+		// recurse into arguments if they are functions or calls themselves
+		analyseCallArguments(call, frame, config)
+
+		// at this point analyseCallArguments has been called so we can return
+		if wasInteresting {
+			return
+		}
+
 		// Keep a reference to the parent frame
 		newFrame.parent = frame
 
@@ -163,6 +172,21 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	default:
 		// Unsupported call type
 		return
+	}
+}
+
+// analyseCallArguments goes over the call arguments and recurses into them
+// given that they potentially contain another block of code. That is possible in two cases:
+// 1. argument is a function. For example, a callback.
+// 2. argument is another call. For example. http.Get(getEndpoint(smth))
+func analyseCallArguments(call *ssa.Call, fr *Frame, config *AnalyserConfig) {
+	for _, argument := range call.Call.Args {
+		switch arg := argument.(type) {
+		case *ssa.Call:
+			analyseCall(arg, fr, config)
+		case *ssa.Function:
+			visitBlocks(arg.Blocks, fr, config)
+		}
 	}
 }
 
