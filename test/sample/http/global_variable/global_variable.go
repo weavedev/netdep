@@ -10,8 +10,12 @@ func wrappedGetCall(url string) {
 	http.Get(location)
 }
 
-var globalVariable = "https://example.com"
+var globalVariable string
 
 func main() {
+	globalVariable = "https://example.com"
+	wrappedGetCall(globalVariable)
+
+	globalVariable = "https://example2.com"
 	wrappedGetCall(globalVariable)
 }

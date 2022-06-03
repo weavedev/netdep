@@ -160,7 +160,6 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// copy visited and append current call
 		copy(newFrame.trace, frame.trace)
 		newFrame.trace = append(newFrame.trace, call)
-		newFrame.visited[call] = true
 
 		// Keep track of given parameters for resolving
 		for i, par := range fnCallType.Params {
@@ -198,6 +197,8 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		if wasInteresting {
 			return
 		}
+
+		newFrame.visited[call] = true
 
 		// recurse into function blocks
 		if fnCallType.Blocks != nil {

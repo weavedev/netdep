@@ -53,7 +53,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, 23, len(resC), "Expect 23 interesting call")
+	assert.Equal(t, 24, len(resC), "Expect 24 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
@@ -98,9 +98,9 @@ func TestCallInfo(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, "multiple_calls", res[8].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "25", res[12].Trace[0].PositionInFile, "Expected line number 25")
-	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[8].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, "multiple_calls", res[9].ServiceName, "Expected service name multiple_calls.go")
+	assert.Equal(t, "25", res[13].Trace[0].PositionInFile, "Expected line number 25")
+	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[9].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
 func TestWrappedNestedUnknown(t *testing.T) {
@@ -206,8 +206,9 @@ func TestGlobalVariableCall(t *testing.T) {
 	res, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, "global_variable", res[0].ServiceName, "Expected service name global_variable.go")
-	assert.Equal(t, "16", res[0].Trace[0].PositionInFile, "Expected line number 16")
+	assert.Equal(t, "17", res[0].Trace[0].PositionInFile, "Expected line number 16")
 	assert.Equal(t, "10", res[0].Trace[1].PositionInFile, "Expected line number 10")
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "https://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+	assert.Equal(t, "https://example2.com/endpoint", res[1].RequestLocation, "Expected correct URL \"http://example2.com/endpoint\"")
 }
