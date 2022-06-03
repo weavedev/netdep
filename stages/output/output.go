@@ -143,6 +143,8 @@ func SerializeAdjacencyList(adjacencyList AdjacencyList, pretty bool) (string, e
 	return string(output), err
 }
 
+// PrintAnnotationSuggestions prints suggestions to add annotations for the list of callanalyzer.CallTarget it's provided.
+// Intended to be used for unresolved targets.
 func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 	for _, target := range targets {
 		fmt.Print(target.FileName + ":" + target.PositionInFile + " couldn't be resolved. ")

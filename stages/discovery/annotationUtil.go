@@ -10,6 +10,8 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 )
 
+// replaceTargetsAnnotations replaces each unresolved callanalyzer.CallTarget with new a new target containing data
+// obtained from the annotations (if they exist).
 func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotations map[string]map[preprocessing.Position]string) error {
 	if annotations == nil {
 		return nil
@@ -44,6 +46,16 @@ func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotati
 	return nil
 }
 
+/*
+  resolveAnnotation populates the fields (RequestLocation or TargetSvc)
+  of a callanalyzer.CallTarget by extracting them from the annotation value string.
+
+  Annotation format is currently:
+
+  1) "//netdep:client url=... targetSvc=..."
+
+  2) "//netdep:endpoint url=..."
+*/
 func resolveAnnotation(ann string, target *callanalyzer.CallTarget) {
 	annType := strings.Split(ann, " ")[0]
 	annData := strings.Split(ann, " ")[1:]
@@ -58,8 +70,8 @@ func resolveAnnotation(ann string, target *callanalyzer.CallTarget) {
 				target.TargetSvc = strings.Split(param, "=")[1]
 			}
 		}
-	case "server":
-		// server type can have url=...
+	case "endpoint":
+		// endpoint type can have url=...
 		for _, param := range annData {
 			if strings.Split(param, "=")[0] == "url" {
 				target.RequestLocation = strings.Split(param, "=")[1]

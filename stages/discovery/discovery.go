@@ -61,6 +61,8 @@ func Discover(pkg *ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callana
 	}
 }
 
+// filterUnresolvedTargets filters both client and server targets and returns a list of unresolved targets which is later
+// passed on to the output stage to print annotation suggestions.
 func filterUnresolvedTargets(clientTargets *[]*callanalyzer.CallTarget, serverTargets *[]*callanalyzer.CallTarget) []*callanalyzer.CallTarget {
 	unresolvedTargets := make([]*callanalyzer.CallTarget, 0)
 
