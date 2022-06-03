@@ -50,7 +50,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, 19, len(resC), "Expect 19 interesting call")
+	assert.Equal(t, 24, len(resC), "Expect 24 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
@@ -95,9 +95,9 @@ func TestCallInfo(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "25", res[7].Trace[0].PositionInFile, "Expected line number 25")
-	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, "multiple_calls", res[8].ServiceName, "Expected service name multiple_calls.go")
+	assert.Equal(t, "25", res[12].Trace[0].PositionInFile, "Expected line number 25")
+	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[8].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
 func TestWrappedNestedUnknown(t *testing.T) {
@@ -110,6 +110,49 @@ func TestWrappedNestedUnknown(t *testing.T) {
 	res, _, _ := DiscoverAll(initial, &analyseConfig)
 
 	assert.Equal(t, "nested_unknown", res[0].ServiceName, "Expected service name nested_unknown.go")
+	assert.Equal(t, 4, len(res[0].Trace), "Trace should be of length 3")
+}
+
+func TestDiscoveryHandleFuncCallBack(t *testing.T) {
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_callback")
+	services, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
+	resC, resS, _ := DiscoverAll(services, nil)
+
+	assert.Equal(t, 1, len(resS), "Expect 1 interesting calls")
+	assert.Equal(t, 1, len(resC), "Expect 1 interesting calls")
+	assert.Equal(t, "net/http.HandleFunc", resS[0].MethodName, "Expect net/http.HandleFunc to be called")
+	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
+	assert.Equal(t, "https://example.com/", resC[0].RequestLocation, "Expect example.com")
+	assert.Equal(t, "/test", resS[0].RequestLocation, "Expect /test")
+}
+
+func TestDiscoveryHandleFuncCallBackAnon(t *testing.T) {
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_anon_callback")
+	services, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
+	resC, resS, _ := DiscoverAll(services, nil)
+
+	assert.Equal(t, 1, len(resS), "Expect 1 interesting calls")
+	assert.Equal(t, 1, len(resC), "Expect 1 interesting calls")
+	assert.Equal(t, "net/http.HandleFunc", resS[0].MethodName, "Expect net/http.HandleFunc to be called")
+	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
+	assert.Equal(t, "https://example.com/", resC[0].RequestLocation, "Expect example.com")
+	assert.Equal(t, "/test", resS[0].RequestLocation, "Expect /test")
+}
+
+func TestDiscoveryDependencyInCall(t *testing.T) {
+	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "dependency_in_call")
+	services, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
+	resC, resS, _ := DiscoverAll(services, nil)
+
+	assert.Equal(t, 0, len(resS), "Expect 0 interesting calls")
+	// TODO: False positive, should be 2. Will be fixed in another MR
+	// assert.Equal(t, 2, len(resC), "Expect 2 interesting calls")
+	assert.Equal(t, 3, len(resC), "Expect 3 interesting calls")
+	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
+	assert.Equal(t, "net/http.Get", resC[1].MethodName, "Expect net/http.Get to be called")
+	assert.Equal(t, "https://example.com", resC[0].RequestLocation, "Expect example.com")
+	assert.Equal(t, "", resC[1].RequestLocation, "Expected empty")
+	assert.Equal(t, false, resC[1].IsResolved, "Expected not to resolve")
 }
 
 func TestWrappedClientCall(t *testing.T) {

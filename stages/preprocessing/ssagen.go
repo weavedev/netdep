@@ -33,15 +33,30 @@ func LoadAndBuildPackages(projectRootDir string, svcPath string) ([]*ssa.Package
 		return nil, fmt.Errorf("no packages")
 	}
 
-	if packages.PrintErrors(loadedPackages) > 0 {
-		return nil, fmt.Errorf("packages contain errors")
+	nonErroredPackages, count := filterOutErroredPackages(loadedPackages)
+
+	if count < 1 {
+		return nil, fmt.Errorf("no usable packages found")
 	}
 
-	prog, pkgs := ssautil.AllPackages(loadedPackages, builderMode)
-	// prog has a reference to pkgs internally,
-	// and prog.Build() populates pkgs with necessary
-	// information
-	prog.Build()
+	program, processedPackages := ssautil.AllPackages(nonErroredPackages, builderMode)
 
-	return pkgs, nil
+	// Why we can build program but only return processedPackages:
+	// *ssa+Program has a reference to processedPackages. *ssa+Program.Build() populates processedPackages, too.
+	program.Build()
+
+	return processedPackages, nil
+}
+
+// filterOutErroredPackages removes errored packages from the list of analyzable packages
+func filterOutErroredPackages(loadedPackages []*packages.Package) ([]*packages.Package, int) {
+	nonErroredPackages := make([]*packages.Package, 0)
+	validPackageCount := 0
+	for _, loadedPackage := range loadedPackages {
+		if len(loadedPackage.Errors) == 0 {
+			nonErroredPackages = append(nonErroredPackages, loadedPackage)
+			validPackageCount++
+		}
+	}
+	return nonErroredPackages, validPackageCount
 }
