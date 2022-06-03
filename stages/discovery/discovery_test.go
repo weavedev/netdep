@@ -96,8 +96,8 @@ func TestCallInfo(t *testing.T) {
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, "multiple_calls", res[5].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "25", res[7].PositionInFile, "Expected line number 25")
-	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, "25", res[7].Trace[0].PositionInFile, "Expected line number 25")
+	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[7].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
 func TestWrappedNestedUnknown(t *testing.T) {
@@ -119,7 +119,10 @@ func TestWrappedClientCall(t *testing.T) {
 
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
 	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.
-	assert.Equal(t, "18", res[0].PositionInFile, "Expected line number 18")
+	assert.Equal(t, 3, len(res[0].Trace), "Trace should be of length 3")
+	assert.Equal(t, "28", res[0].Trace[0].PositionInFile, "Expected first call at line number 28")
+	assert.Equal(t, "14", res[0].Trace[1].PositionInFile, "Expected second call at line number 14")
+	assert.Equal(t, "18", res[0].Trace[2].PositionInFile, "Expected final call at line number 18")
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }
@@ -139,7 +142,7 @@ func TestGetEnvCall(t *testing.T) {
 	res, _, _ := DiscoverAll(initial, &config)
 
 	assert.Equal(t, "env_variable", res[0].ServiceName, "Expected service name env_variable.go")
-	assert.Equal(t, "11", res[0].PositionInFile, "Expected line number 11")
+	assert.Equal(t, "11", res[0].Trace[0].PositionInFile, "Expected line number 11")
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }

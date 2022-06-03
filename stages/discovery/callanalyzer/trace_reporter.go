@@ -6,8 +6,8 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-func PrintTraceToCall(trace []*ssa.Call, frame *Frame, config *AnalyserConfig) {
-	traces := len(trace)
+func PrintTraceToCall(frame *Frame, config *AnalyserConfig) {
+	traces := len(frame.visited)
 
 	// displayStartingIndex is used to limit the number of traces to log
 	// as defined by config.maxTraceDepth
@@ -18,8 +18,8 @@ func PrintTraceToCall(trace []*ssa.Call, frame *Frame, config *AnalyserConfig) {
 		displayStartingIndex = 0
 	}
 
-	for i, call := range trace[displayStartingIndex:] {
-		file, position := getPositionFromPos(call.Pos(), frame.pkg)
+	for i, call := range frame.visited[displayStartingIndex:] {
+		file, position := getPositionFromPos(call.Pos(), frame.pkg.Prog)
 		signature := ""
 		switch callee := call.Call.Value.(type) {
 		case *ssa.Function:
