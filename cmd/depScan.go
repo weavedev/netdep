@@ -23,10 +23,11 @@ import (
 )
 
 var (
-	projectDir   string
-	serviceDir   string
-	envVars      string
-	jsonFilename string
+	projectDir    string
+	serviceDir    string
+	envVars       string
+	jsonFilename  string
+	jsonOverwrite bool
 )
 
 // depScanCmd creates and returns a depScan command object
@@ -78,7 +79,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
-	cmd.Flags().StringVarP(&envVars, "json-filename", "j", "", "json output filename")
+	cmd.Flags().StringVarP(&jsonFilename, "json-filename", "j", "./netDeps.json", "json output filename")
+	cmd.Flags().BoolVarP(&jsonOverwrite, "json-overwrite", "o", false, "overwrite existing json file")
 	return cmd
 }
 
