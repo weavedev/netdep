@@ -91,30 +91,46 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 		{
 			RequestLocation: "http://Node2:80/URL_2",
 			ServiceName:     "Node1",
-			FileName:        "./node1/path/to/some/file.go",
-			PositionInFile:  "24",
-			IsResolved:      true,
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node1/path/to/some/file.go",
+					PositionInFile: "24",
+				},
+			},
+			IsResolved: true,
 		},
 		{
 			RequestLocation: "http://Node3:80/URL_3",
 			ServiceName:     "Node1",
-			FileName:        "./node1/path/to/some/other/file.go",
-			PositionInFile:  "36",
-			IsResolved:      true,
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node1/path/to/some/other/file.go",
+					PositionInFile: "36",
+				},
+			},
+			IsResolved: true,
 		},
 		{
 			RequestLocation: "http://Node3:80/URL_3",
 			ServiceName:     "Node2",
-			FileName:        "./node1/path/to/some/file.go",
-			PositionInFile:  "245",
-			IsResolved:      true,
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node1/path/to/some/file.go",
+					PositionInFile: "245",
+				},
+			},
+			IsResolved: true,
 		},
 		{
 			RequestLocation: "http://Node3:80/URL_3",
 			ServiceName:     "Node2",
-			FileName:        "./node2/path/to/some/other/file.go",
-			PositionInFile:  "436",
-			IsResolved:      true,
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node2/path/to/some/other/file.go",
+					PositionInFile: "436",
+				},
+			},
+			IsResolved: true,
 		},
 	}
 
@@ -156,23 +172,35 @@ func TestWithUnknownService(t *testing.T) {
 		{
 			RequestLocation: "http://Node2:80/URL_2",
 			ServiceName:     "Node1",
-			FileName:        "./node1/path/to/some/file.go",
-			PositionInFile:  "24",
-			IsResolved:      true,
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node1/path/to/some/file.go",
+					PositionInFile: "24",
+				},
+			},
+			IsResolved: true,
 		},
 		{
 			RequestLocation: "http://Node2:80/URL_2",
 			ServiceName:     "Node1",
-			FileName:        "./node1/path/to/some/other/file.go",
-			PositionInFile:  "436",
-			IsResolved:      true,
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node1/path/to/some/other/file.go",
+					PositionInFile: "436",
+				},
+			},
+			IsResolved: true,
 		},
 		{
 			RequestLocation: "http://Node3:80/URL_3",
 			ServiceName:     "Node1",
-			FileName:        "./node1/path/to/some/other_file.go",
-			PositionInFile:  "24",
-			IsResolved:      true,
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node1/path/to/some/other_file.go",
+					PositionInFile: "24",
+				},
+			},
+			IsResolved: true,
 		},
 	}
 
