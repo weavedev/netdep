@@ -161,8 +161,8 @@ func TestResolveAnnotationClientBoth(t *testing.T) {
 	assert.Equal(t, expectedTarget, target)
 }
 
-func TestResolveAnnotationServerUrl(t *testing.T) {
-	val := "server url=http://localhost:50/get"
+func TestResolveAnnotationEndpointUrl(t *testing.T) {
+	val := "endpoint url=http://localhost:50/get"
 
 	target := &callanalyzer.CallTarget{
 		MethodName:      "a",

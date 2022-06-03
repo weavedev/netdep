@@ -148,6 +148,6 @@ func SerializeAdjacencyList(adjacencyList AdjacencyList, pretty bool) (string, e
 func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 	for _, target := range targets {
 		fmt.Print(target.FileName + ":" + target.PositionInFile + " couldn't be resolved. ")
-		fmt.Println("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:server ...\"")
+		fmt.Println("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:endpoint ...\"")
 	}
 }
