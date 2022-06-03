@@ -18,7 +18,7 @@ func TestLoadAnnotations(t *testing.T) {
 	expected := make(map[string]map[Position]string)
 	expected["object_call"] = make(map[Position]string)
 	pos := Position{
-		Filename: path.Join(helpers.RootDir, "test", "sample", "http", "object_call", "object_call.go"),
+		Filename: path.Join("object_call", "object_call.go"),
 		Line:     14,
 	}
 	expected["object_call"][pos] = "client http://example.com/"

@@ -26,7 +26,7 @@ func LoadAnnotations(servicePath string, serviceName string, annotations map[str
 	annotations[serviceName] = make(map[Position]string)
 
 	for _, file := range files {
-		if file.Name()[len(file.Name())-3:] == ".go" {
+		if len(file.Name()) > 3 && file.Name()[len(file.Name())-3:] == ".go" {
 			// If the file is a .go file - parse it
 			err := parseComments(path.Join(servicePath, file.Name()), serviceName, annotations)
 			if err != nil {
@@ -59,7 +59,7 @@ func parseComments(path string, serviceName string, annotations map[string]map[P
 			if strings.HasPrefix(comment.Text, "//netdep:client") || strings.HasPrefix(comment.Text, "//netdep:endpoint") {
 				tokenPos := fs.Position(comment.Slash)
 				pos := Position{
-					Filename: tokenPos.Filename,
+					Filename: tokenPos.Filename[strings.LastIndex(tokenPos.Filename, "/"+serviceName+"/")+1:],
 					Line:     tokenPos.Line,
 				}
 				value := strings.Join(strings.Split(comment.Text, "netdep:")[1:], "")
