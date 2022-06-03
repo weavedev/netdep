@@ -1,4 +1,4 @@
-// Package stages
+// Package discovery
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
 package discovery

@@ -4,6 +4,7 @@ package discovery
 
 import (
 	"golang.org/x/tools/go/ssa"
+
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"

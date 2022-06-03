@@ -5,8 +5,9 @@ package output
 import (
 	"encoding/json"
 	"fmt"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"sort"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 )
 
 /*

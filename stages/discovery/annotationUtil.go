@@ -1,10 +1,13 @@
+// Package discovery defines discovery of clients calls and endpoints
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package discovery
 
 import (
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 	"strconv"
 	"strings"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 )
 
 func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotations map[string]map[preprocessing.Position]string) error {

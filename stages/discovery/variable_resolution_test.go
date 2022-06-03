@@ -1,3 +1,5 @@
+// Package discovery defines discovery of clients calls and endpoints
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package discovery
 
 import (

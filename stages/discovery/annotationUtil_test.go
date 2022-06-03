@@ -1,10 +1,14 @@
+// Package discovery defines discovery of clients calls and endpoints
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package discovery
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
+
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
-	"testing"
 )
 
 func TestReplaceTargetsAnnotations(t *testing.T) {
@@ -67,7 +71,7 @@ func TestReplaceTargetsAnnotationsNil(t *testing.T) {
 	}
 	targets := make([]*callanalyzer.CallTarget, 0)
 	targets = append(targets, target1)
-	
+
 	err := replaceTargetsAnnotations(&targets, nil)
 
 	assert.Nil(t, err)
