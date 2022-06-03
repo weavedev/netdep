@@ -106,7 +106,7 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	callTarget.ServiceName = frame.pkg.String()[strings.LastIndex(frame.pkg.String(), "/")+1:]
 
 	// add trace
-	for _, tracedCall := range frame.visited {
+	for _, tracedCall := range frame.trace {
 		filePath, position := getPositionFromPos(tracedCall.Pos(), frame.pkg.Prog)
 
 		newTrace := CallTargetTrace{
@@ -133,8 +133,8 @@ func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, confi
 	newFrame := *frame
 
 	// copy visited and append current call
-	copy(newFrame.visited, frame.visited)
-	newFrame.visited = append(newFrame.visited, call)
+	copy(newFrame.trace, frame.trace)
+	newFrame.trace = append(newFrame.trace, call)
 
 	// offset when function was resolved to an invocation and the first parameter does not exist
 	offset := len(fn.Params) - len(call.Call.Args)
@@ -168,6 +168,8 @@ func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, confi
 		return
 	}
 
+	//newFrame.visited[call] = true
+
 	// recurse into arguments if they are functions or calls themselves
 	analyseCallArguments(call, frame, config)
 
@@ -193,7 +195,7 @@ func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, confi
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
-	if frame.hasVisited(call) {
+	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
 		return
 	}
 
@@ -374,7 +376,8 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	baseFrame := Frame{
-		visited: make([]*ssa.Call, 0),
+		trace:   make([]*ssa.Call, 0),
+		visited: make(map[*ssa.Call]bool),
 		// Reference to the final list of all _targets of the entire package
 		pkg:    pkg,
 		params: make(map[*ssa.Parameter]*ssa.Value),

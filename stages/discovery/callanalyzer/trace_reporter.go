@@ -18,7 +18,7 @@ func PrintTraceToCall(frame *Frame, config *AnalyserConfig) {
 		displayStartingIndex = 0
 	}
 
-	for i, call := range frame.visited[displayStartingIndex:] {
+	for i, call := range frame.trace[displayStartingIndex:] {
 		file, position := getPositionFromPos(call.Pos(), frame.pkg.Prog)
 		signature := ""
 		switch callee := call.Call.Value.(type) {

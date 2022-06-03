@@ -4,8 +4,11 @@ import "golang.org/x/tools/go/ssa"
 
 // Frame is a struct for keeping track of the traversal packages while looking for interesting functions
 type Frame struct {
-	// visited is a set of blocks that have been visited.
-	visited []*ssa.Call
+	// trace is a list of previous calls.
+	trace []*ssa.Call
+	// visited is shared between frames and keeps track of which nodes have been visited
+	// to prevent repetitive visits.
+	visited map[*ssa.Call]bool
 	pkg     *ssa.Package
 
 	// params maps a parameter inside a function to a argument value given in another frame
@@ -16,12 +19,15 @@ type Frame struct {
 	targetsCollection *TargetsCollection
 }
 
-// hasVisited returns whether the block has already been visited.
-func (f Frame) hasVisited(instruction *ssa.Call) bool {
-	for _, instr := range f.visited {
-		if instr == instruction {
+// hasVisited returns whether the block has already been trace.
+func (f Frame) hasVisited(call *ssa.Call) bool {
+	_, visited := f.visited[call]
+
+	for _, called := range f.trace {
+		if called == call {
 			return true
 		}
 	}
-	return false
+
+	return visited
 }
