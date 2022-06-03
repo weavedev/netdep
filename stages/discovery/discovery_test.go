@@ -29,7 +29,7 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 		}
 
 		// discover calls
-		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config)
+		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config, nil)
 		if err != nil {
 			continue
 		}
@@ -57,7 +57,7 @@ func TestDiscovery(t *testing.T) {
 func TestDiscoveryBasicCall(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
-	resC, _, _ := DiscoverAll(initial, nil)
+	resC, _, _ := DiscoverAll(initial, nil, nil)
 
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
@@ -66,7 +66,7 @@ func TestDiscoveryBasicCall(t *testing.T) {
 func TestDiscoveryBasicHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
-	_, resS, _ := DiscoverAll(initial, nil)
+	_, resS, _ := DiscoverAll(initial, nil, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
 	assert.Equal(t, "net/http.Handle", resS[0].MethodName, "Expect net/http.Handle to be called")
@@ -75,7 +75,7 @@ func TestDiscoveryBasicHandle(t *testing.T) {
 func TestDiscoveryBasicHandleFunc(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handlefunc")
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
-	_, resS, _ := DiscoverAll(initial, nil)
+	_, resS, _ := DiscoverAll(initial, nil, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
 	assert.Equal(t, "net/http.HandleFunc", resS[0].MethodName, "Expect net/http.HandleFunc to be called")
@@ -84,7 +84,7 @@ func TestDiscoveryBasicHandleFunc(t *testing.T) {
 func TestDiscoveryGinHandle(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "gin_handle")))
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
-	_, resS, _ := DiscoverAll(initial, nil)
+	_, resS, _ := DiscoverAll(initial, nil, nil)
 
 	assert.Equal(t, 2, len(resS), "Expect 2 interesting calls")
 	assert.Equal(t, "(*github.com/gin-gonic/gin.RouterGroup).GET", resS[0].MethodName, "Expect (*github.com/gin-gonic/gin.RouterGroup).GET to be called")
@@ -103,7 +103,7 @@ func TestCallInfo(t *testing.T) {
 func TestWrappedClientCall(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
-	res, _, _ := DiscoverAll(initial, nil)
+	res, _, _ := DiscoverAll(initial, nil, nil)
 
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
 	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.
@@ -124,7 +124,7 @@ func TestGetEnvCall(t *testing.T) {
 
 	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
-	res, _, _ := DiscoverAll(initial, &config)
+	res, _, _ := DiscoverAll(initial, &config, nil)
 
 	assert.Equal(t, "env_variable", res[0].ServiceName, "Expected service name env_variable.go")
 	assert.Equal(t, "11", res[0].PositionInFile, "Expected line number 11")

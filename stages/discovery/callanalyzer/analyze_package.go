@@ -32,6 +32,8 @@ type CallTarget struct {
 	FileName string
 	// The line number in the file where the call is made
 	PositionInFile string
+	// Target service (in case the CallTarget is a client)
+	TargetSvc string
 }
 
 // SubstitutionConfig holds interesting calls to substitute,

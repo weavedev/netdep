@@ -154,6 +154,10 @@ func findTargetNodeName(call *callanalyzer.CallTarget, endpointMap map[string]st
 		return "", false
 	}
 
+	if call.TargetSvc != "" {
+		return call.TargetSvc, true
+	}
+
 	// TODO improve matching, compare URL
 	// TODO handle dynamic urls like "/_var"
 	targetServiceName, hasTarget := endpointMap[call.RequestLocation]

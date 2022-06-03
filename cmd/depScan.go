@@ -140,14 +140,14 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 		}
 		packageCount += len(packagesInService)
 
-		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
+		serviceName := strings.Split(serviceDir, "/")[len(strings.Split(serviceDir, "/"))-1]
 		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		// discover calls
-		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &config)
+		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &config, annotations)
 		if err != nil {
 			return nil, nil, err
 		}
