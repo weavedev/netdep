@@ -146,10 +146,8 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	switch fnCallType := call.Call.Value.(type) {
 	// TODO: handle other cases
 	case *ssa.Parameter:
-		parValue, _ := resolveParameter(fnCallType, frame)
-		if parValue != nil {
-			// TODO: refactor analyseCall to accept an adjusted call
-		}
+		// TODO: refactor analyseCall to accept an adjusted call
+		// parValue, _ := resolveParameter(fnCallType, frame)
 		return
 	case *ssa.Function:
 		wasInteresting := false
