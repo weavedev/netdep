@@ -17,7 +17,7 @@ func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotati
 		return nil
 	}
 
-	for i, callTarget := range *callTargets {
+	for _, callTarget := range *callTargets {
 		if !callTarget.IsResolved {
 			line, err := strconv.Atoi(callTarget.PositionInFile)
 			if err != nil {
@@ -29,17 +29,7 @@ func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotati
 			}
 
 			if ann, ex := annotations[callTarget.ServiceName][pos]; ex {
-				newTarget := &callanalyzer.CallTarget{
-					MethodName:      callTarget.MethodName,
-					RequestLocation: "",
-					IsResolved:      true,
-					ServiceName:     callTarget.ServiceName,
-					FileName:        callTarget.FileName,
-					PositionInFile:  callTarget.PositionInFile,
-					TargetSvc:       "",
-				}
-				resolveAnnotation(ann, newTarget)
-				(*callTargets)[i] = newTarget
+				resolveAnnotation(ann, callTarget)
 			}
 		}
 	}
@@ -65,8 +55,10 @@ func resolveAnnotation(ann string, target *callanalyzer.CallTarget) {
 		// client type can have url=... and targetSvc=...
 		for _, param := range annData {
 			if strings.Split(param, "=")[0] == "url" {
+				target.IsResolved = true
 				target.RequestLocation = strings.Split(param, "=")[1]
 			} else if strings.Split(param, "=")[0] == "targetSvc" {
+				target.IsResolved = true
 				target.TargetSvc = strings.Split(param, "=")[1]
 			}
 		}
@@ -74,6 +66,7 @@ func resolveAnnotation(ann string, target *callanalyzer.CallTarget) {
 		// endpoint type can have url=...
 		for _, param := range annData {
 			if strings.Split(param, "=")[0] == "url" {
+				target.IsResolved = true
 				target.RequestLocation = strings.Split(param, "=")[1]
 			}
 		}
