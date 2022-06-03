@@ -4,6 +4,8 @@ package output
 
 import (
 	"encoding/json"
+	"fmt"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"sort"
 )
 
@@ -138,4 +140,11 @@ func SerializeAdjacencyList(adjacencyList AdjacencyList, pretty bool) (string, e
 	}
 
 	return string(output), err
+}
+
+func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
+	for _, target := range targets {
+		fmt.Print(target.FileName + ":" + target.PositionInFile + " couldn't be resolved. ")
+		fmt.Println("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:server ...\"")
+	}
 }
