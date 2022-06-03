@@ -72,7 +72,12 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 
 // getPositionFromPos converts a token.Pos to a filename and line number
 func getPositionFromPos(pos token.Pos, program *ssa.Program) (string, string) {
-	filePath := program.Fset.File(pos).Name()
+	file := program.Fset.File(pos)
+	if file == nil {
+		return "", ""
+	}
+
+	filePath := file.Name()
 
 	base := 10
 	// take the position of the call within the file and convert to string
@@ -85,7 +90,10 @@ func getPositionFromPos(pos token.Pos, program *ssa.Program) (string, string) {
 func getFunctionQualifiers(fn *ssa.Function) (string, string) {
 	// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
 	// This is therefore not the grandparent package, but the *type.Package of the function
-	calledFunctionPackage := fn.Pkg.Pkg.Path() // e.g. net/http
+	calledFunctionPackage := ""
+	if fn.Package() != nil && fn.Package().Pkg != nil {
+		calledFunctionPackage = fn.Package().Pkg.Path() // e.g. net/http
+	}
 
 	return fn.RelString(nil), calledFunctionPackage
 }
@@ -113,6 +121,67 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	return callTarget
 }
 
+func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, config *AnalyserConfig) {
+	wasInteresting := false
+
+	// Qualified function name is: package + interface + function
+	// TODO: handle parameter equivalence to other interface
+	qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fn)
+
+	// The following creates a copy of 'frame'.
+	// This is the correct place for this because we are going to visit child blocks next.
+	newFrame := *frame
+
+	// copy visited and append current call
+	copy(newFrame.visited, frame.visited)
+	newFrame.visited = append(newFrame.visited, call)
+
+	// offset when function was resolved to an invocation and the first parameter does not exist
+	offset := len(fn.Params) - len(call.Call.Args)
+
+	// Keep track of given parameters for resolving
+	for i, par := range fn.Params[offset:] {
+		newFrame.params[par] = &call.Call.Args[i]
+	}
+
+	// Keep a reference to the parent frame
+	newFrame.parent = frame
+
+	_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+	if isInterestingClient {
+		// TODO: Resolve the arguments of the function call
+		handleInterestingClientCall(call, fn, config, &newFrame)
+		wasInteresting = true
+	}
+
+	_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+	if isInterestingServer {
+		// TODO: Resolve the arguments of the function call
+		handleInterestingServerCall(call, fn, config, &newFrame)
+		wasInteresting = true
+	}
+
+	_, isIgnored := config.ignoreList[functionPackage]
+
+	if isIgnored {
+		// Do not recurse into the packageName if it is ignored
+		return
+	}
+
+	// recurse into arguments if they are functions or calls themselves
+	analyseCallArguments(call, frame, config)
+
+	// at this point analyseCallArguments has been called so we can return
+	if wasInteresting {
+		return
+	}
+
+	// recurse into function blocks
+	if fn.Blocks != nil {
+		visitBlocks(fn.Blocks, &newFrame, config)
+	}
+}
+
 // analyseCall recursively traverses the SSA, with call being the starting point,
 // and using the environment specified in the frame
 // Variables are only resolved if the call is 'interesting'
@@ -128,82 +197,13 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		return
 	}
 
-	if call.Call.Method != nil {
-		// TODO: resolve a call to a method
-		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
-	}
+	fn := getFunctionFromCall(call, frame)
 
-	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
-	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
-	switch fnCallType := call.Call.Value.(type) {
-	// TODO: handle other cases
-	case *ssa.Parameter:
-		parValue, _ := resolveParameter(fnCallType, frame)
-		if parValue != nil {
-			// TODO: refactor analyseCall to accept an adjusted call
-			// return analyseCall(parValue, parFrame, config, targetsClient, targetsServer)
-		}
-		return
-	case *ssa.Function:
-		wasInteresting := false
-
-		// Qualified function name is: package + interface + function
-		// TODO: handle parameter equivalence to other interface
-		qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fnCallType)
-
-		// The following creates a copy of 'frame'.
-		// This is the correct place for this because we are going to visit child blocks next.
-		newFrame := *frame
-
-		// copy visited and append current call
-		copy(newFrame.visited, frame.visited)
-		newFrame.visited = append(newFrame.visited, call)
-
-		// Keep track of given parameters for resolving
-		for i, par := range fnCallType.Params {
-			newFrame.params[par] = &call.Call.Args[i]
-		}
-
-		// Keep a reference to the parent frame
-		newFrame.parent = frame
-
-		_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
-		if isInterestingClient {
-			// TODO: Resolve the arguments of the function call
-			handleInterestingClientCall(call, fnCallType, config, &newFrame)
-			wasInteresting = true
-		}
-
-		_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
-		if isInterestingServer {
-			// TODO: Resolve the arguments of the function call
-			handleInterestingServerCall(call, fnCallType, config, &newFrame)
-			wasInteresting = true
-		}
-
-		_, isIgnored := config.ignoreList[functionPackage]
-
-		if isIgnored {
-			// Do not recurse into the packageName if it is ignored
-			return
-		}
-
-		// recurse into arguments if they are functions or calls themselves
-		analyseCallArguments(call, frame, config)
-
-		// at this point analyseCallArguments has been called so we can return
-		if wasInteresting {
-			return
-		}
-
-		// recurse into function blocks
-		if fnCallType.Blocks != nil {
-			visitBlocks(fnCallType.Blocks, &newFrame, config)
-		}
-	default:
-		// Unsupported call type
+	if fn == nil {
 		return
 	}
+
+	analyzeCallToFunction(call, fn, frame, config)
 }
 
 // analyseCallArguments goes over the call arguments and recurses into them

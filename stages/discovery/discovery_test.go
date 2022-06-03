@@ -50,7 +50,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, 24, len(resC), "Expect 24 interesting call")
+	assert.Equal(t, 25, len(resC), "Expect 24 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
@@ -95,9 +95,9 @@ func TestCallInfo(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, "multiple_calls", res[8].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "25", res[12].Trace[0].PositionInFile, "Expected line number 25")
-	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[8].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, "multiple_calls", res[10].ServiceName, "Expected service name multiple_calls.go")
+	assert.Equal(t, "25", res[14].Trace[0].PositionInFile, "Expected line number 25")
+	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[10].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
 func TestWrappedNestedUnknown(t *testing.T) {
@@ -163,10 +163,22 @@ func TestWrappedClientCall(t *testing.T) {
 	assert.Equal(t, "wrapped_client", res[0].ServiceName, "Expected service name wrapped_client.go")
 	// TODO: this should fail in the future (should be 28), but it now takes the last in the list.
 	assert.Equal(t, 3, len(res[0].Trace), "Trace should be of length 3")
-	assert.Equal(t, "28", res[0].Trace[0].PositionInFile, "Expected first call at line number 28")
-	assert.Equal(t, "14", res[0].Trace[1].PositionInFile, "Expected second call at line number 14")
-	assert.Equal(t, "18", res[0].Trace[2].PositionInFile, "Expected final call at line number 18")
+	assert.Equal(t, "19", res[0].Trace[0].PositionInFile, "Expected first call at line number 28")
+	assert.Equal(t, "10", res[0].Trace[1].PositionInFile, "Expected second call at line number 14")
+	assert.Equal(t, "14", res[0].Trace[2].PositionInFile, "Expected final call at line number 18")
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
+	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+}
+
+func TestWrappedInterfaceCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "interface_call")
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	res, _, _ := DiscoverAll(initial, nil)
+
+	assert.Equal(t, "interface_call", res[0].ServiceName, "Expected service name wrapped_client.go")
+	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
+	// TODO: if we can manage request objects, this should be resolved!
+	assert.Equal(t, false, res[1].IsResolved, "Expected call to not (yet) be fully resolved")
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 }
 

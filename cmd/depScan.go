@@ -151,6 +151,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	packageCount := 0
 
 	for _, serviceDir := range services {
+		fmt.Printf("Analyzing: %s\n", serviceDir)
 		// load packages
 		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
@@ -173,6 +174,12 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		// append
 		allClientTargets = append(allClientTargets, clientCalls...)
 		allServerTargets = append(allServerTargets, serverCalls...)
+
+		clientSum := len(clientCalls)
+		targetSum := len(clientCalls)
+
+		fmt.Printf("Found: %d calls (%d,%d)\n", clientSum+targetSum, clientSum, targetSum)
+
 	}
 
 	if packageCount == 0 {
