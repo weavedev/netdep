@@ -130,8 +130,6 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 
 	packageCount := 0
 
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
-
 	for _, serviceDir := range services {
 		// load packages
 		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
@@ -145,6 +143,8 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 		if err != nil {
 			return nil, nil, err
 		}
+
+		config := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables, annotations)
 
 		// discover calls
 		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &config)

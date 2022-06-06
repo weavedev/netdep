@@ -122,7 +122,7 @@ func TestGetEnvCall(t *testing.T) {
 		},
 	}
 
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env, nil)
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, &config)
 

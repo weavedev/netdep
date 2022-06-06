@@ -166,6 +166,26 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	}
 }
 
+// getHostFromAnnotation returns the annotated host name for a service
+func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig) string {
+	// absolute file path
+	filePath := frame.pkg.Prog.Fset.File(call.Pos()).Name()
+	// split path and form absolute path to service directory
+	service := strings.Split(filePath, "\\")
+	service = service[:len(service)-1]
+	serviceName := strings.Join(service, "/")
+
+	annotations := config.annotations[serviceName]
+	// look for annotated hostname
+	for _, annotation := range annotations {
+		if strings.HasPrefix(annotation, "host") {
+			host := strings.Join(strings.Split(annotation, "host ")[1:], "")
+			return host
+		}
+	}
+	return ""
+}
+
 // handleInterestingServerCall collects the information about a supplied endpoint declaration
 // and adds this information to the targetsServer data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
@@ -193,6 +213,10 @@ func handleInterestingServerCall(call *ssa.Call, config *AnalyserConfig, package
 			callTarget.RequestLocation = strings.Join(variables, "")
 		}
 	}
+
+	host := getHostFromAnnotation(call, frame, config)
+	// join host and endpoint
+	callTarget.RequestLocation = host + callTarget.RequestLocation
 
 	// Additional information about the call
 	frame.targetsCollection.serverTargets = append(frame.targetsCollection.serverTargets, callTarget)
@@ -244,6 +268,8 @@ func handleInterestingClientCall(call *ssa.Call, config *AnalyserConfig, package
 		// TODO: parse the url
 		callTarget.RequestLocation = strings.Join(variables, "")
 	}
+	// fmt.Println("client")
+	// fmt.Println(callTarget)
 
 	frame.targetsCollection.clientTargets = append(frame.targetsCollection.clientTargets, callTarget)
 }
