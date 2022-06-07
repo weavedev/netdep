@@ -116,6 +116,8 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 			hasUnknown = true
 		}
 
+		callLocation := call.Trace[len(call.Trace)-1]
+
 		connectionEdge := &output.ConnectionEdge{
 			Call: output.NetworkCall{
 				// TODO add more details
@@ -123,7 +125,7 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 				URL:       call.RequestLocation,
 				Arguments: nil,
 				// TODO: handle stack trace?
-				Location: fmt.Sprintf("%s:%s", call.FileName, call.PositionInFile),
+				Location: fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
 			},
 			Source: sourceNode,
 			Target: targetNode,
