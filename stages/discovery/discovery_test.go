@@ -103,7 +103,7 @@ func TestCallInfo(t *testing.T) {
 func TestWrappedNestedUnknown(t *testing.T) {
 	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "nested_unknown")
 
-	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(nil, nil)
+	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
 	analyseConfig.SetVerbose(true)
 
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
@@ -180,7 +180,8 @@ func TestGetEnvCall(t *testing.T) {
 		},
 	}
 
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env, nil)
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
+	config.SetEnv(env)
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, &config)
 

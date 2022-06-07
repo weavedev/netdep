@@ -36,7 +36,7 @@ func Discover(pkg *ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callana
 	// The current output data structure. TODO: add additional fields
 
 	if config == nil {
-		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls(nil, nil)
+		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls()
 		// Analyse each package with the default config
 		return callanalyzer.AnalysePackageCalls(pkg, &defaultConf)
 	} else {

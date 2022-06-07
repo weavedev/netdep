@@ -7,7 +7,9 @@ package callanalyzer
 import (
 	"fmt"
 	"go/token"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -206,12 +208,12 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	}
 }
 
-// getHostFromAnnotation returns the annotated host name for a service
-func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig) string {
+// getHostFromAnnotation returns the resolved url using the annotated host name for a service
+func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig, target *CallTarget) string {
 	// absolute file path
 	filePath := frame.pkg.Prog.Fset.File(call.Pos()).Name()
 	// split path and form absolute path to service directory
-	service := strings.Split(filePath, "\\")
+	service := strings.Split(filePath, string(os.PathSeparator))
 	service = service[:len(service)-1]
 	serviceName := strings.Join(service, "/")
 
@@ -220,10 +222,15 @@ func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig)
 	for _, annotation := range annotations {
 		if strings.HasPrefix(annotation, "host") {
 			host := strings.Join(strings.Split(annotation, "host ")[1:], "")
-			return host
+			resolvedURL, err := url.Parse(host)
+			if err != nil {
+				return target.RequestLocation
+			}
+			resolvedURL.Path = path.Join(resolvedURL.Path, target.RequestLocation)
+			return resolvedURL.String()
 		}
 	}
-	return ""
+	return target.RequestLocation
 }
 
 // analyseCallArguments goes over the call arguments and recurses into them
@@ -270,9 +277,8 @@ func handleInterestingServerCall(call *ssa.Call, fn *ssa.Function, config *Analy
 		}
 	}
 
-	host := getHostFromAnnotation(call, frame, config)
-	// join host and endpoint
-	callTarget.RequestLocation = host + callTarget.RequestLocation
+	callTarget.RequestLocation = getHostFromAnnotation(call, frame, config, callTarget)
+
 	if !callTarget.IsResolved && config.verbose {
 		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 		PrintTraceToCall(frame, config)

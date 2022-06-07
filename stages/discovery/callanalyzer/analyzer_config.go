@@ -54,9 +54,17 @@ func (a *AnalyserConfig) SetVerbose(v bool) {
 	a.verbose = v
 }
 
+func (a *AnalyserConfig) SetEnv(envMap map[string]map[string]string) {
+	a.environment = envMap
+}
+
+func (a *AnalyserConfig) SetAnnotations(annotations map[string]map[preprocessing.Position]string) {
+	a.annotations = annotations
+}
+
 // DefaultConfigForFindingHTTPCalls returns the default config
 // for locating calls
-func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string, annotations map[string]map[preprocessing.Position]string) AnalyserConfig {
+func DefaultConfigForFindingHTTPCalls() AnalyserConfig {
 	return AnalyserConfig{
 		interestingCallsClient: map[string]InterestingCall{
 			"(*net/http.Client).Do":          {action: Output, interestingArgs: []int{0}},
@@ -82,10 +90,6 @@ func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string, 
 			"(*github.com/gin-gonic/gin.RouterGroup).OPTIONS": {action: Output, interestingArgs: []int{1}},
 			"(*github.com/gin-gonic/gin.Engine).Run":          {action: Output, interestingArgs: []int{1}},
 		},
-
-		environment: environment,
-
-		annotations: annotations,
 
 		substitutionCalls: map[string]InterestingCall{
 			"os.Getenv": {action: Substitute, interestingArgs: []int{0}}, // TODO: implement env var substitution

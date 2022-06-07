@@ -145,8 +145,10 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	annotations := make(map[string]map[preprocessing.Position]string)
 
-	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables, annotations)
+	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
 	analyseConfig.SetVerbose(config.Verbose)
+	analyseConfig.SetEnv(envVariables)
+	analyseConfig.SetAnnotations(annotations)
 
 	packageCount := 0
 
