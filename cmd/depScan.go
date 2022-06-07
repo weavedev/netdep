@@ -178,7 +178,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		clientSum := len(clientCalls)
 		targetSum := len(clientCalls)
 
-		fmt.Printf("Found: %d calls (%d,%d)\n", clientSum+targetSum, clientSum, targetSum)
+		fmt.Printf("Found: %d calls of which %d client call(s) and %d server call(s)\n", clientSum+targetSum, clientSum, targetSum)
 	}
 
 	if packageCount == 0 {
