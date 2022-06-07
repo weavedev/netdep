@@ -1,18 +1,20 @@
-// Package discovery defines discovery of clients calls and endpoints
-// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-package discovery
+/*
+Package callanalyzer defines call scanning methods
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+*/
+
+package callanalyzer
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 )
 
 func TestReplaceTargetsAnnotations(t *testing.T) {
-	target1 := &callanalyzer.CallTarget{
+	target1 := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "b",
 		IsResolved:      true,
@@ -21,7 +23,7 @@ func TestReplaceTargetsAnnotations(t *testing.T) {
 		PositionInFile:  "5",
 		TargetSvc:       "",
 	}
-	target2 := &callanalyzer.CallTarget{
+	target2 := &CallTarget{
 		MethodName:      "a1",
 		RequestLocation: "",
 		IsResolved:      false,
@@ -31,7 +33,7 @@ func TestReplaceTargetsAnnotations(t *testing.T) {
 		TargetSvc:       "",
 	}
 
-	targets := make([]*callanalyzer.CallTarget, 0)
+	targets := make([]*CallTarget, 0)
 	targets = append(targets, target1, target2)
 
 	annotations := make(map[string]map[preprocessing.Position]string)
@@ -44,7 +46,9 @@ func TestReplaceTargetsAnnotations(t *testing.T) {
 
 	annotations["c1"][pos] = "client url=http://localhost:50/get"
 
-	expectedTarget := &callanalyzer.CallTarget{
+	config := DefaultConfigForFindingHTTPCalls(nil, annotations)
+
+	expectedTarget := &CallTarget{
 		MethodName:      "a1",
 		RequestLocation: "http://localhost:50/get",
 		IsResolved:      true,
@@ -55,12 +59,12 @@ func TestReplaceTargetsAnnotations(t *testing.T) {
 	}
 
 	assert.NotEqual(t, expectedTarget, targets[1])
-	replaceTargetsAnnotations(&targets, annotations)
+	ReplaceTargetsAnnotations(&targets, &config)
 	assert.Equal(t, expectedTarget, targets[1])
 }
 
-func TestReplaceTargetsAnnotationsNil(t *testing.T) {
-	target1 := &callanalyzer.CallTarget{
+func TestReplaceTargetsAnnotationsConfigNil(t *testing.T) {
+	target1 := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "b",
 		IsResolved:      true,
@@ -69,10 +73,30 @@ func TestReplaceTargetsAnnotationsNil(t *testing.T) {
 		PositionInFile:  "5",
 		TargetSvc:       "",
 	}
-	targets := make([]*callanalyzer.CallTarget, 0)
+	targets := make([]*CallTarget, 0)
 	targets = append(targets, target1)
 
-	err := replaceTargetsAnnotations(&targets, nil)
+	err := ReplaceTargetsAnnotations(&targets, nil)
+
+	assert.Nil(t, err)
+}
+
+func TestReplaceTargetsAnnotationsAnnotationsNil(t *testing.T) {
+	target1 := &CallTarget{
+		MethodName:      "a",
+		RequestLocation: "b",
+		IsResolved:      true,
+		ServiceName:     "c",
+		FileName:        "d",
+		PositionInFile:  "5",
+		TargetSvc:       "",
+	}
+	targets := make([]*CallTarget, 0)
+	targets = append(targets, target1)
+
+	config := DefaultConfigForFindingHTTPCalls(nil, nil)
+
+	err := ReplaceTargetsAnnotations(&targets, &config)
 
 	assert.Nil(t, err)
 }
@@ -80,7 +104,7 @@ func TestReplaceTargetsAnnotationsNil(t *testing.T) {
 func TestResolveAnnotationClientUrl(t *testing.T) {
 	val := "client url=http://localhost:50/get"
 
-	target := &callanalyzer.CallTarget{
+	target := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "",
 		IsResolved:      true,
@@ -90,7 +114,7 @@ func TestResolveAnnotationClientUrl(t *testing.T) {
 		TargetSvc:       "",
 	}
 
-	expectedTarget := &callanalyzer.CallTarget{
+	expectedTarget := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "http://localhost:50/get",
 		IsResolved:      true,
@@ -108,7 +132,7 @@ func TestResolveAnnotationClientUrl(t *testing.T) {
 func TestResolveAnnotationClientTargetSvc(t *testing.T) {
 	val := "client targetSvc=service2"
 
-	target := &callanalyzer.CallTarget{
+	target := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "",
 		IsResolved:      true,
@@ -118,7 +142,7 @@ func TestResolveAnnotationClientTargetSvc(t *testing.T) {
 		TargetSvc:       "",
 	}
 
-	expectedTarget := &callanalyzer.CallTarget{
+	expectedTarget := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "",
 		IsResolved:      true,
@@ -136,7 +160,7 @@ func TestResolveAnnotationClientTargetSvc(t *testing.T) {
 func TestResolveAnnotationClientBoth(t *testing.T) {
 	val := "client url=http://localhost:50/get targetSvc=service2"
 
-	target := &callanalyzer.CallTarget{
+	target := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "",
 		IsResolved:      true,
@@ -146,7 +170,7 @@ func TestResolveAnnotationClientBoth(t *testing.T) {
 		TargetSvc:       "",
 	}
 
-	expectedTarget := &callanalyzer.CallTarget{
+	expectedTarget := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "http://localhost:50/get",
 		IsResolved:      true,
@@ -164,7 +188,7 @@ func TestResolveAnnotationClientBoth(t *testing.T) {
 func TestResolveAnnotationEndpointUrl(t *testing.T) {
 	val := "endpoint url=http://localhost:50/get"
 
-	target := &callanalyzer.CallTarget{
+	target := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "",
 		IsResolved:      true,
@@ -174,7 +198,7 @@ func TestResolveAnnotationEndpointUrl(t *testing.T) {
 		TargetSvc:       "",
 	}
 
-	expectedTarget := &callanalyzer.CallTarget{
+	expectedTarget := &CallTarget{
 		MethodName:      "a",
 		RequestLocation: "http://localhost:50/get",
 		IsResolved:      true,

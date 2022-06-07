@@ -1,5 +1,7 @@
 package callanalyzer
 
+import "lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
+
 // DiscoveryAction indicates what to do when encountering
 // a certain call. Used in interestingCalls
 type DiscoveryAction int64
@@ -33,6 +35,9 @@ type AnalyserConfig struct {
 	// environment: map[service name]map[variable name]value
 	environment map[string]map[string]string
 
+	// annotations: map of discovered annotations
+	annotations map[string]map[preprocessing.Position]string
+
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
 	maxTraversalDepth int
@@ -40,7 +45,7 @@ type AnalyserConfig struct {
 
 // DefaultConfigForFindingHTTPCalls returns the default config
 // for locating calls
-func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string) AnalyserConfig {
+func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string, annotations map[string]map[preprocessing.Position]string) AnalyserConfig {
 	return AnalyserConfig{
 		interestingCallsClient: map[string]InterestingCall{
 			"(*net/http.Client).Do":          {action: Output, interestingArgs: []int{0}},
@@ -68,6 +73,8 @@ func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string) 
 		},
 
 		environment: environment,
+
+		annotations: annotations,
 
 		substitutionCalls: map[string]InterestingCall{
 			"os.Getenv": {action: Substitute, interestingArgs: []int{0}}, // TODO: implement env var substitution

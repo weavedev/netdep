@@ -31,7 +31,7 @@ func TestEnvVarResolution(t *testing.T) {
 		},
 	}
 
-	configWithEnv := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+	configWithEnv := callanalyzer.DefaultConfigForFindingHTTPCalls(env, nil)
 	resC, resS := discoverAllServices(projDir, services, &configWithEnv)
 
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")

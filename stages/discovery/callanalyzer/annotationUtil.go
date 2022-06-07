@@ -1,19 +1,21 @@
-// Package discovery defines discovery of clients calls and endpoints
-// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-package discovery
+/*
+Package callanalyzer defines call scanning methods
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+*/
+
+package callanalyzer
 
 import (
 	"strconv"
 	"strings"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 )
 
-// replaceTargetsAnnotations replaces each unresolved callanalyzer.CallTarget with new a new target containing data
+// ReplaceTargetsAnnotations replaces each unresolved callanalyzer.CallTarget with new a new target containing data
 // obtained from the annotations (if they exist).
-func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotations map[string]map[preprocessing.Position]string) error {
-	if annotations == nil {
+func ReplaceTargetsAnnotations(callTargets *[]*CallTarget, config *AnalyserConfig) error {
+	if config == nil || config.annotations == nil {
 		return nil
 	}
 
@@ -28,7 +30,7 @@ func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotati
 				Line:     line - 1,
 			}
 
-			if ann, ex := annotations[callTarget.ServiceName][pos]; ex {
+			if ann, ex := config.annotations[callTarget.ServiceName][pos]; ex {
 				resolveAnnotation(ann, callTarget)
 			}
 		}
@@ -38,7 +40,7 @@ func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotati
 
 /*
   resolveAnnotation populates the fields (RequestLocation or TargetSvc)
-  of a callanalyzer.CallTarget by extracting them from the annotation value string.
+  of a CallTarget by extracting them from the annotation value string.
 
   Annotation format is currently:
 
@@ -46,7 +48,7 @@ func replaceTargetsAnnotations(callTargets *[]*callanalyzer.CallTarget, annotati
 
   2) "//netdep:endpoint url=..."
 */
-func resolveAnnotation(ann string, target *callanalyzer.CallTarget) {
+func resolveAnnotation(ann string, target *CallTarget) {
 	annType := strings.Split(ann, " ")[0]
 	annData := strings.Split(ann, " ")[1:]
 

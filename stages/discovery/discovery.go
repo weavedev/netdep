@@ -7,7 +7,6 @@ import (
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 )
 
 /*
@@ -16,7 +15,7 @@ Refer to the Project plan, chapter 5.3 for more information.
 */
 
 // DiscoverAll creates a combined list of all discovered calls in the given packages.
-func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig, annotations map[string]map[preprocessing.Position]string) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 
@@ -30,11 +29,11 @@ func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig, a
 		allServerTargets = append(allServerTargets, serverCalls...)
 	}
 
-	err := replaceTargetsAnnotations(&allClientTargets, annotations)
+	err := callanalyzer.ReplaceTargetsAnnotations(&allClientTargets, config)
 	if err != nil {
 		return nil, nil, err
 	}
-	err = replaceTargetsAnnotations(&allServerTargets, annotations)
+	err = callanalyzer.ReplaceTargetsAnnotations(&allServerTargets, config)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,7 +51,7 @@ func Discover(pkg *ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callana
 	// The current output data structure. TODO: add additional fields
 
 	if config == nil {
-		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls(nil)
+		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls(nil, nil)
 		// Analyse each package with the default config
 		return callanalyzer.AnalysePackageCalls(pkg, &defaultConf)
 	} else {
