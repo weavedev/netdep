@@ -23,5 +23,5 @@ func TestLoadPackagesError(t *testing.T) {
 	projDir := path.Join(helpers.RootDir, "test", "example", "svc")
 	_, err := LoadAndBuildPackages(projDir, projDir)
 
-	assert.Equal(t, "packages contain errors", err.Error())
+	assert.Equal(t, "no usable packages found", err.Error())
 }

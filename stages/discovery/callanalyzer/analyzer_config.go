@@ -14,6 +14,10 @@ const (
 // defaultMaxTraversalDepth is the default max traversal depth for the analyser
 const defaultMaxTraversalDepth = 16
 
+// defaultMaxTraceDepth defines the maximum number of calls reported
+// when verbosely printing unresolved call stack traces
+const defaultMaxTraceDepth = 8
+
 // InterestingCall holds information about a call that is to be outputted,
 // substituted or otherwise inspected (by the analyzer).
 type InterestingCall struct {
@@ -40,7 +44,14 @@ type AnalyserConfig struct {
 
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
+	verbose           bool
 	maxTraversalDepth int
+	maxTraceDepth     int
+}
+
+// SetVerbose is a setter for verbose
+func (a *AnalyserConfig) SetVerbose(v bool) {
+	a.verbose = v
 }
 
 // DefaultConfigForFindingHTTPCalls returns the default config
@@ -81,6 +92,8 @@ func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string, 
 		},
 
 		maxTraversalDepth: defaultMaxTraversalDepth,
+		maxTraceDepth:     defaultMaxTraceDepth,
+		verbose:           false,
 
 		ignoreList: map[string]bool{
 			"fmt":                  true,

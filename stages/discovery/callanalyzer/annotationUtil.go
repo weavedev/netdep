@@ -21,17 +21,17 @@ func ReplaceTargetsAnnotations(callTargets *[]*CallTarget, config *AnalyserConfi
 
 	for _, callTarget := range *callTargets {
 		if !callTarget.IsResolved {
-			line, err := strconv.Atoi(callTarget.PositionInFile)
+			line, err := strconv.Atoi(callTarget.Trace[0].PositionInFile)
 			if err != nil {
 				return err
 			}
 			pos := preprocessing.Position{
-				Filename: strings.ReplaceAll(callTarget.FileName, "\\", "/"),
+				Filename: callTarget.Trace[0].FileName,
 				Line:     line - 1,
 			}
 
 			if ann, ex := config.annotations[callTarget.ServiceName][pos]; ex {
-				resolveAnnotation(ann, callTarget)
+				ResolveAnnotation(ann, callTarget)
 			}
 		}
 	}
@@ -39,7 +39,7 @@ func ReplaceTargetsAnnotations(callTargets *[]*CallTarget, config *AnalyserConfi
 }
 
 /*
-  resolveAnnotation populates the fields (RequestLocation or TargetSvc)
+  ResolveAnnotation populates the fields (RequestLocation or TargetSvc)
   of a CallTarget by extracting them from the annotation value string.
 
   Annotation format is currently:
@@ -48,7 +48,7 @@ func ReplaceTargetsAnnotations(callTargets *[]*CallTarget, config *AnalyserConfi
 
   2) "//netdep:endpoint url=..."
 */
-func resolveAnnotation(ann string, target *CallTarget) {
+func ResolveAnnotation(ann string, target *CallTarget) {
 	annType := strings.Split(ann, " ")[0]
 	annData := strings.Split(ann, " ")[1:]
 
