@@ -28,7 +28,6 @@ var (
 	serviceDir   string
 	envVars      string
 	jsonFilename string
-	jsonForce    bool
 )
 
 // depScanCmd creates and returns a depScan command object
@@ -40,9 +39,7 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			jsonParentDir := path.Dir(jsonFilename)
-
-			ok, err := checkAllPaths(projectDir, serviceDir, envVars, jsonParentDir)
+			ok, err := checkSuppliedPaths()
 			if !ok {
 				return err
 			}
@@ -53,19 +50,27 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
-			fmt.Println("Successfully analysed, here is a list of dependencies:")
-
 			// generate output
 			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
 			adjacencyList := output.ConstructAdjacencyList(graph)
-			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
+			jsonString, err := output.SerializeAdjacencyList(adjacencyList, true)
 			if err != nil {
 				return err
 			}
 
-			// print output
-			// TODO: output to file
-			fmt.Println(JSON)
+			// Print the output
+			if jsonFilename != "" {
+				fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", jsonFilename)
+				err := os.WriteFile(jsonFilename, []byte(jsonString), 0o644)
+				if err != nil {
+					// Could not write to file, output to stdout
+					fmt.Println(jsonString)
+					return err
+				}
+			} else {
+				fmt.Println("Successfully analysed, here is the list of dependencies:")
+				fmt.Println(jsonString)
+			}
 
 			return nil
 		},
@@ -74,13 +79,11 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	cmd.Flags().StringVarP(&jsonFilename, "json-filename", "j", "./netDeps.json", "JSON output filename")
-	cmd.Flags().BoolVarP(&jsonForce, "json-overwrite", "f", false, "force-write JSON, overwriting file contents")
 	return cmd
 }
 
-// checkAllPaths verifies that all the specified directories exist before running the main logic
-func checkAllPaths(projectDir string, serviceDir string, envVars string, jsonParentDir string) (bool, error) {
-
+// checkSuppliedPaths verifies that all the specified directories exist before running the main logic
+func checkSuppliedPaths() (bool, error) {
 	if !pathOk(projectDir) {
 		return false, fmt.Errorf("invalid project directory specified: %s", projectDir)
 	}
@@ -89,15 +92,15 @@ func checkAllPaths(projectDir string, serviceDir string, envVars string, jsonPar
 		return false, fmt.Errorf("invalid service directory specified: %s", serviceDir)
 	}
 
-	// Given a correct project directory en service directory,
-	// apply our discovery algorithm to find all interesting calls
 	if !pathOk(envVars) && envVars != "" {
 		return false, fmt.Errorf("invalid environment variable file specified: %s", envVars)
 	}
+	jsonParentDir := path.Dir(jsonFilename)
 
 	if !pathOk(jsonParentDir) {
 		return false, fmt.Errorf("parent directory of json path does not exist: %s", jsonParentDir)
 	}
+
 	return true, nil
 }
 
@@ -195,13 +198,18 @@ func discoverAllCalls(svcDir string, projectDir string, envVars string) ([]*call
 
 	// TODO: make use of annotations in the matching stage
 	fmt.Println("Discovered annotations:")
+	anyHits := false
 	for k1, serMap := range annotations {
 		for k2, val := range serMap {
+			anyHits = true
 			fmt.Println("Service name: " + k1)
 			fmt.Print("Position: " + k2.Filename + ":")
 			fmt.Println(k2.Line)
 			fmt.Println("Value: " + val)
 		}
+	}
+	if !anyHits {
+		fmt.Println("[Discovered none]")
 	}
 
 	return allClientTargets, allServerTargets, err
