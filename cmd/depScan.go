@@ -87,7 +87,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "toggle logging trace of unknown variables")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
-	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "./netDeps.json", "output filename such as ./deps.json")
+	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "", "output filename such as ./deps.json")
 	return cmd
 }
 
@@ -230,6 +230,10 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	packageCount := 0
 
 	for _, serviceDir := range *services {
+		if config.Verbose {
+			fmt.Println("Analysing service " + serviceDir)
+		}
+
 		// load packages
 		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 		if err != nil {

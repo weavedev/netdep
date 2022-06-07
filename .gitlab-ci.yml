@@ -9,9 +9,15 @@ compile-job:
   stage: build
   script:
   - go build
+  rules:
+    - when: always
 
 lint-job:
   image: golangci/golangci-lint:v1.45
+  rules:
+    - if: $CI_COMMIT_BRANCH !~ "dev|main"
+      when: never
+    - if: $CI_COMMIT_BRANCH =~ "dev|main"
   stage: test
   script:
     # Use default .golangci.yml file from the image if one is not present in the project root.
@@ -24,6 +30,10 @@ lint-job:
   allow_failure: true
 
 test-job:
+  rules:
+    - if: $CI_COMMIT_BRANCH !~ "dev|main"
+      when: never
+    - if: $CI_COMMIT_BRANCH =~ "dev|main"
   stage: test
   script:
   - go test ./... -coverprofile=cov.out -v
@@ -38,10 +48,9 @@ test-job:
 pages:
   stage: deploy
   script:
-    - rm -rf public
-    - ls -la
-    - mkdir -p public && cp cov.html public/
-    - ls -la ./public
+    - rm -f public/cov.html
+    - mkdir -p public
+    - cp cov.html public/
   artifacts:
     paths:
       - public
