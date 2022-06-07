@@ -53,10 +53,10 @@ func getCallFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Function {
 	return call.StaticCallee()
 }
 
-func getFunctionFromCall(call *ssa.Call, frame *Frame) *ssa.Function {
-	if call.Call.IsInvoke() {
-		return getInvokedFunctionFromCall(&call.Call, frame)
+func getFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Function {
+	if call.IsInvoke() {
+		return getInvokedFunctionFromCall(call, frame)
 	} else {
-		return getCallFunctionFromCall(&call.Call, frame)
+		return getCallFunctionFromCall(call, frame)
 	}
 }

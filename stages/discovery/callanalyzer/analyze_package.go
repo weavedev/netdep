@@ -121,7 +121,7 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	return callTarget
 }
 
-func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, config *AnalyserConfig) {
+func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig) {
 	wasInteresting := false
 
 	// Qualified function name is: package + interface + function
@@ -132,16 +132,16 @@ func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, confi
 	// This is the correct place for this because we are going to visit child blocks next.
 	newFrame := *frame
 
-	// copy visited and append current call
+	// copy trace and append current call
 	copy(newFrame.trace, frame.trace)
 	newFrame.trace = append(newFrame.trace, call)
 
 	// offset when function was resolved to an invocation and the first parameter does not exist
-	offset := len(fn.Params) - len(call.Call.Args)
+	offset := len(fn.Params) - len(call.Args)
 
 	// Keep track of given parameters for resolving
 	for i, par := range fn.Params[offset:] {
-		newFrame.params[par] = &call.Call.Args[i]
+		newFrame.params[par] = &call.Args[i]
 	}
 
 	// Keep a reference to the parent frame
@@ -168,8 +168,6 @@ func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, confi
 		return
 	}
 
-	//newFrame.visited[call] = true
-
 	// recurse into arguments if they are functions or calls themselves
 	analyseCallArguments(call, frame, config)
 
@@ -194,7 +192,7 @@ func analyzeCallToFunction(call *ssa.Call, fn *ssa.Function, frame *Frame, confi
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
+func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) {
 	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
 		return
 	}
@@ -212,13 +210,11 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 // given that they potentially contain another block of code. That is possible in two cases:
 // 1. argument is a function. For example, a callback.
 // 2. argument is another call. For example. http.Get(getEndpoint(smth))
-func analyseCallArguments(call *ssa.Call, fr *Frame, config *AnalyserConfig) {
-	for _, argument := range call.Call.Args {
-		switch arg := argument.(type) {
-		case *ssa.Call:
-			analyseCall(arg, fr, config)
-		case *ssa.Function:
-			visitBlocks(arg.Blocks, fr, config)
+func analyseCallArguments(call *ssa.CallCommon, fr *Frame, config *AnalyserConfig) {
+	for _, argument := range call.Args {
+		// visit function as argument
+		if functionArg, ok := argument.(*ssa.Function); ok {
+			visitBlocks(functionArg.Blocks, fr, config)
 		}
 	}
 }
@@ -226,7 +222,7 @@ func analyseCallArguments(call *ssa.Call, fr *Frame, config *AnalyserConfig) {
 // handleInterestingServerCall collects the information about a supplied endpoint declaration
 // and adds this information to the targetsServer data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
-func handleInterestingServerCall(call *ssa.Call, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
+func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
 	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if interestingStuffServer.action != Output {
@@ -237,16 +233,16 @@ func handleInterestingServerCall(call *ssa.Call, fn *ssa.Function, config *Analy
 
 	callTarget := getCallInformation(frame, fn)
 
-	if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
+	if call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 		if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
-			variables, callTarget.IsResolved = resolveGinAddrSlice(call.Call.Args[1])
+			variables, callTarget.IsResolved = resolveGinAddrSlice(call.Args[1])
 			// TODO: parse the url
 			callTarget.RequestLocation = strings.Join(variables, "")
 		} else {
 			// Since the environment can vary on a per-service basis,
 			// a substConfig is created for the specific service
 			substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-			variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
+			variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
 			// TODO: parse the url
 			callTarget.RequestLocation = strings.Join(variables, "")
 		}
@@ -285,7 +281,7 @@ func defaultCallTarget(packageName, functionName string) *CallTarget {
 // handleInterestingServerCall collects the information about a supplied http client call
 // and adds this information to the targetClient data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
-func handleInterestingClientCall(call *ssa.Call, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
+func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
 	interestingStuffClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 
@@ -299,11 +295,11 @@ func handleInterestingClientCall(call *ssa.Call, fn *ssa.Function, config *Analy
 	// callTarget holds all the details of the interesting call
 	callTarget := getCallInformation(frame, fn)
 
-	if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
+	if call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
 		// Since the environment can vary on a per-service basis,
 		// a substConfig is created for the specific service
 		substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-		variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
+		variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
 		// TODO: parse the url
 		callTarget.RequestLocation = strings.Join(variables, "")
 	}
@@ -332,7 +328,11 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case *ssa.Call:
-			analyseCall(instruction, fr, config)
+			analyseCall(&instruction.Call, fr, config)
+		case *ssa.Go:
+			analyseCall(&instruction.Call, fr, config)
+		case *ssa.Defer:
+			analyseCall(&instruction.Call, fr, config)
 		default:
 			continue
 		}
@@ -347,9 +347,6 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
-	if len(fr.visited) > config.maxTraversalDepth {
-		return
-	}
 	for _, block := range blocks {
 		analyseInstructionsOfBlock(block, fr, config)
 	}
@@ -364,6 +361,11 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
 func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
+
+	if pkg == nil {
+		return nil, nil, fmt.Errorf("no package given")
+	}
+
 	mainFunction := findFunctionInPackage(pkg, "main")
 
 	// TODO: look for the init function will be useful if we want to know
@@ -376,8 +378,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	baseFrame := Frame{
-		trace:   make([]*ssa.Call, 0),
-		visited: make(map[*ssa.Call]bool),
+		trace: make([]*ssa.CallCommon, 0),
 		// Reference to the final list of all _targets of the entire package
 		pkg:    pkg,
 		params: make(map[*ssa.Parameter]*ssa.Value),
