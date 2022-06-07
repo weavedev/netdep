@@ -74,19 +74,9 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
-			// Print the output
-			if jsonFilename != "" {
-				fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", jsonFilename)
-				const filePerm = 0o600
-				err := os.WriteFile(jsonFilename, []byte(jsonString), filePerm)
-				if err != nil {
-					// Could not write to file, output to stdout
-					fmt.Println(jsonString)
-					return err
-				}
-			} else {
-				fmt.Println("Successfully analysed, here is the list of dependencies:")
-				fmt.Println(jsonString)
+			_, err = printOutput(jsonString)
+			if err != nil {
+				return err
 			}
 
 			return nil
@@ -98,6 +88,24 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	cmd.Flags().StringVarP(&jsonFilename, "json-filename", "j", "./netDeps.json", "JSON output filename")
 	return cmd
+}
+
+// printOutput writes the output to the target file (btw stdout is also a file on UNIX)
+func printOutput(jsonString string) (bool, error) {
+	if jsonFilename != "" {
+		fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", jsonFilename)
+		const filePerm = 0o600
+		err := os.WriteFile(jsonFilename, []byte(jsonString), filePerm)
+		if err != nil {
+			// Could not write to file, output to stdout
+			fmt.Println(jsonString)
+			return false, err
+		}
+	} else {
+		fmt.Println("Successfully analysed, here is the list of dependencies:")
+		fmt.Println(jsonString)
+	}
+	return true, nil
 }
 
 // checkSuppliedPaths verifies that all the specified directories exist before running the main logic
