@@ -41,6 +41,7 @@ go run main.go depScan -p "./some/project/dir" -s "./some/service/dir"
 | `-p, --project-directory` | The path to the project directory. Must be a valid path.                               | `./`     |
 | `-s --service-directory`  | The path to the services inside the project. Must be a valid path.                     | `./svc/` |
 | `-j --json-filename`      | Filename of the target JSON file. By default or when empty, it is outputted to stdout. | ``       |
+| `-v --verbose`            | Toggle printing stack traces of unknown variables.                                     | `false`  |
 
 ## Documentation
 
