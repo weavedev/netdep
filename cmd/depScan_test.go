@@ -77,7 +77,7 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 // TODO: Good weather tests currently stackoverflow,
 // as there is no base case implemented. Uncomment these
 // tests after merging with dev.
-func TestExecuteDepScanExampleServices(t *testing.T) {
+func TestExecuteDepScanExampleServicesVerbose(t *testing.T) {
 	runDepScanCmd := depScanCmd()
 
 	projDir := path.Join(helpers.RootDir, "test", "example")
@@ -86,6 +86,7 @@ func TestExecuteDepScanExampleServices(t *testing.T) {
 	runDepScanCmd.SetArgs([]string{
 		"-p", projDir,
 		"-s", svcDir,
+		"-v",
 	})
 
 	err := runDepScanCmd.Execute()
