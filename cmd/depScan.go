@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
@@ -23,11 +24,11 @@ import (
 )
 
 var (
-	projectDir    string
-	serviceDir    string
-	envVars       string
-	jsonFilename  string
-	jsonOverwrite bool
+	projectDir   string
+	serviceDir   string
+	envVars      string
+	jsonFilename string
+	jsonForce    bool
 )
 
 // depScanCmd creates and returns a depScan command object
@@ -39,21 +40,27 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Path validation
-			if ex, err := pathExists(projectDir); !ex || err != nil {
+
+			if !pathOk(projectDir) {
 				return fmt.Errorf("invalid project directory specified: %s", projectDir)
 			}
-			if ex, err := pathExists(serviceDir); !ex || err != nil {
+
+			if !pathOk(serviceDir) {
 				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
 			}
 
 			// Given a correct project directory en service directory,
 			// apply our discovery algorithm to find all interesting calls
-			if ex, err := pathExists(envVars); !ex && envVars != "" || err != nil {
+			if !pathOk(envVars) && envVars != "" {
 				return fmt.Errorf("invalid environment variable file specified: %s", envVars)
 			}
 
-			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
+			jsonParentDir := path.Dir(jsonFilename)
+			if !pathOk(jsonParentDir) {
+				return fmt.Errorf("parent directory of json path does not exist: %s", jsonParentDir)
+			}
+
+			// Call our main functionality logic from here and supply both project dir and service dir
 			clientCalls, serverCalls, err := discoverAllCalls(serviceDir, projectDir, envVars)
 			if err != nil {
 				return err
@@ -79,9 +86,16 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&projectDir, "project-directory", "p", "./", "project directory")
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
-	cmd.Flags().StringVarP(&jsonFilename, "json-filename", "j", "./netDeps.json", "json output filename")
-	cmd.Flags().BoolVarP(&jsonOverwrite, "json-overwrite", "o", false, "overwrite existing json file")
+	cmd.Flags().StringVarP(&jsonFilename, "json-filename", "j", "./netDeps.json", "JSON output filename")
+	cmd.Flags().BoolVarP(&jsonForce, "json-overwrite", "f", false, "force-write JSON, overwriting file contents")
 	return cmd
+}
+
+func pathOk(dir string) bool {
+	if ex, err := pathExists(projectDir); !ex || err != nil {
+		return false
+	}
+	return true
 }
 
 // init initialises the depScan command and adds it as a subcommand of the root
