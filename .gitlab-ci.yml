@@ -49,7 +49,7 @@ pages:
   stage: deploy
   script:
     - rm public/cov.html
-    - rm public
+    - mkdir -p public
     - cp cov.html public/
   artifacts:
     paths:
