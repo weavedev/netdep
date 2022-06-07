@@ -7,26 +7,20 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
-)
-
-var (
-	projectDir string
-	serviceDir string
-	verbose    bool
-	envVars    string
 )
 
 // RunConfig defines the parameters for a depScan command run
@@ -39,6 +33,15 @@ type RunConfig struct {
 
 // depScanCmd creates and returns a depScan command object
 func depScanCmd() *cobra.Command {
+	// Variables that are supplied as command-line args
+	var (
+		projectDir     string
+		serviceDir     string
+		envVars        string
+		outputFilename string
+		verbose        bool
+	)
+
 	cmd := &cobra.Command{
 		Use:   "depScan",
 		Short: "Scan and report dependencies between microservices",
@@ -46,12 +49,9 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Path validation
-			if ex, err := pathExists(projectDir); !ex || err != nil {
-				return fmt.Errorf("invalid project directory specified: %s", projectDir)
-			}
-			if ex, err := pathExists(serviceDir); !ex || err != nil {
-				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
+			ok, err := areInputPathsValid(projectDir, serviceDir, envVars, outputFilename)
+			if !ok {
+				return err
 			}
 
 			config := RunConfig{
@@ -67,19 +67,18 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
-			fmt.Println("Successfully analysed, here is a list of dependencies:")
-
 			// generate output
 			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
 			adjacencyList := output.ConstructAdjacencyList(graph)
-			JSON, err := output.SerializeAdjacencyList(adjacencyList, true)
+			jsonString, err := output.SerializeAdjacencyList(adjacencyList, true)
 			if err != nil {
 				return err
 			}
 
-			// print output
-			// TODO: output to file
-			fmt.Println(JSON)
+			err = printOutput(outputFilename, jsonString)
+			if err != nil {
+				return err
+			}
 
 			return nil
 		},
@@ -88,7 +87,57 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "toggle logging trace of unknown variables")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
+	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "./netDeps.json", "output filename such as ./deps.json")
 	return cmd
+}
+
+// printOutput writes the output to the target file (btw stdout is also a file on UNIX)
+func printOutput(targetFileName, jsonString string) error {
+	if targetFileName != "" {
+		const filePerm = 0o600
+		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
+		if err == nil {
+			fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
+		} else {
+			// Could not write to file, output to stdout
+			fmt.Println(jsonString)
+			return err
+		}
+	} else {
+		fmt.Println("Successfully analysed, here is the list of dependencies:")
+		fmt.Println(jsonString)
+	}
+	return nil
+}
+
+// areInputPathsValid verifies that all the specified directories exist before running the main logic
+func areInputPathsValid(projectDir, serviceDir, envVars, outputFilename string) (bool, error) {
+	if !pathOk(projectDir) {
+		return false, fmt.Errorf("invalid project directory specified: %s", projectDir)
+	}
+
+	if !pathOk(serviceDir) {
+		return false, fmt.Errorf("invalid service directory specified: %s", serviceDir)
+	}
+
+	if !pathOk(envVars) && envVars != "" {
+		return false, fmt.Errorf("invalid environment variable file specified: %s", envVars)
+	}
+	jsonParentDir := path.Dir(outputFilename)
+
+	if !pathOk(jsonParentDir) {
+		return false, fmt.Errorf("parent directory of json path does not exist: %s", jsonParentDir)
+	}
+
+	return true, nil
+}
+
+// pathOk checks whether the specified directory dir exists
+func pathOk(dir string) bool {
+	if ex, err := pathExists(dir); !ex || err != nil {
+		return false
+	}
+	return true
 }
 
 // init initialises the depScan command and adds it as a subcommand of the root
@@ -141,35 +190,63 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		return nil, nil, err
 	}
 
+	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
+	analyserConfig.SetVerbose(config.Verbose)
+	analyserConfig.SetEnv(envVariables)
+
+	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if config.Verbose {
+		fmt.Println("Discovered annotations:")
+		anyHits := false
+		for k1, serMap := range annotations {
+			for k2, val := range serMap {
+				anyHits = true
+				fmt.Println("Service name: " + k1)
+				fmt.Print("Position: " + k2.Filename + ":")
+				fmt.Println(k2.Line)
+				fmt.Println("Value: " + val)
+			}
+		}
+		if !anyHits {
+			fmt.Println("[Discovered none]")
+		}
+	}
+
+	return allClientTargets, allServerTargets, err
+}
+
+// processEachService preprocesses and analyses each of the services using RunConfig and callanalyzer.AnalyserConfig
+func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[preprocessing.Position]string, error) {
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	annotations := make(map[string]map[preprocessing.Position]string)
 
-	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
-	analyseConfig.SetVerbose(config.Verbose)
-	analyseConfig.SetEnv(envVariables)
-	analyseConfig.SetAnnotations(annotations)
+	analyserConfig.SetAnnotations(annotations)
 
 	packageCount := 0
 
-	for _, serviceDir := range services {
+	for _, serviceDir := range *services {
 		// load packages
-		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
+		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		packageCount += len(packagesInService)
 
 		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
 		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		// discover calls
-		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &analyseConfig)
+		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		// append
@@ -178,23 +255,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	}
 
 	if packageCount == 0 {
-		return nil, nil, fmt.Errorf("no service to analyse were found")
+		return nil, nil, nil, fmt.Errorf("no service to analyse were found")
 	}
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// TODO: make use of annotations in the matching stage
-	fmt.Println("Discovered annotations:")
-	for k1, serMap := range annotations {
-		for k2, val := range serMap {
-			fmt.Println("Service name: " + k1)
-			fmt.Print("Position: " + k2.Filename + ":")
-			fmt.Println(k2.Line)
-			fmt.Println("Value: " + val)
-		}
-	}
-
-	return allClientTargets, allServerTargets, err
+	return allClientTargets, allServerTargets, annotations, nil
 }
