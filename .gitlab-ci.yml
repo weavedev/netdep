@@ -48,7 +48,7 @@ test-job:
 pages:
   stage: deploy
   script:
-    - rm public/cov.html
+    - rm -f public/cov.html
     - mkdir -p public
     - cp cov.html public/
   artifacts:
