@@ -23,14 +23,6 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
-var (
-	projectDir   string
-	serviceDir   string
-	envVars      string
-	jsonFilename string
-	verbose      bool
-)
-
 // RunConfig defines the parameters for a depScan command run
 type RunConfig struct {
 	ProjectDir string
@@ -41,6 +33,15 @@ type RunConfig struct {
 
 // depScanCmd creates and returns a depScan command object
 func depScanCmd() *cobra.Command {
+	// Variables that are supplied as command-line args
+	var (
+		projectDir     string
+		serviceDir     string
+		envVars        string
+		outputFilename string
+		verbose        bool
+	)
+
 	cmd := &cobra.Command{
 		Use:   "depScan",
 		Short: "Scan and report dependencies between microservices",
@@ -48,7 +49,7 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ok, err := checkSuppliedPaths()
+			ok, err := checkSuppliedPaths(projectDir, serviceDir, envVars, outputFilename)
 			if !ok {
 				return err
 			}
@@ -74,7 +75,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
-			_, err = printOutput(jsonString)
+			_, err = printOutput(outputFilename, jsonString)
 			if err != nil {
 				return err
 			}
@@ -86,16 +87,16 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "toggle logging trace of unknown variables")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
-	cmd.Flags().StringVarP(&jsonFilename, "json-filename", "j", "./netDeps.json", "JSON output filename")
+	cmd.Flags().StringVarP(&outputFilename, "json-filename", "o", "./netDeps.json", "(JSON) output filename")
 	return cmd
 }
 
 // printOutput writes the output to the target file (btw stdout is also a file on UNIX)
-func printOutput(jsonString string) (bool, error) {
-	if jsonFilename != "" {
-		fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", jsonFilename)
+func printOutput(targetFileName, jsonString string) (bool, error) {
+	if targetFileName != "" {
+		fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
 		const filePerm = 0o600
-		err := os.WriteFile(jsonFilename, []byte(jsonString), filePerm)
+		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
 		if err != nil {
 			// Could not write to file, output to stdout
 			fmt.Println(jsonString)
@@ -109,7 +110,7 @@ func printOutput(jsonString string) (bool, error) {
 }
 
 // checkSuppliedPaths verifies that all the specified directories exist before running the main logic
-func checkSuppliedPaths() (bool, error) {
+func checkSuppliedPaths(projectDir, serviceDir, envVars, outputFilename string) (bool, error) {
 	if !pathOk(projectDir) {
 		return false, fmt.Errorf("invalid project directory specified: %s", projectDir)
 	}
@@ -121,7 +122,7 @@ func checkSuppliedPaths() (bool, error) {
 	if !pathOk(envVars) && envVars != "" {
 		return false, fmt.Errorf("invalid environment variable file specified: %s", envVars)
 	}
-	jsonParentDir := path.Dir(jsonFilename)
+	jsonParentDir := path.Dir(outputFilename)
 
 	if !pathOk(jsonParentDir) {
 		return false, fmt.Errorf("parent directory of json path does not exist: %s", jsonParentDir)
@@ -130,6 +131,7 @@ func checkSuppliedPaths() (bool, error) {
 	return true, nil
 }
 
+// pathOk checks whether the specified directory dir exists
 func pathOk(dir string) bool {
 	if ex, err := pathExists(dir); !ex || err != nil {
 		return false
@@ -198,7 +200,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 
 	for _, serviceDir := range services {
 		// load packages
-		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
+		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 		if err != nil {
 			return nil, nil, err
 		}
