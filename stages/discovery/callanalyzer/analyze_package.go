@@ -228,6 +228,8 @@ func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig,
 	// look for annotated hostname
 	for _, annotation := range annotations {
 		if strings.HasPrefix(annotation, "host") {
+			// if annotation is incorrectly formatted (eg. "hostsomething") the split will return ""
+			// and the url will not be substituted from annotation
 			host := strings.Join(strings.Split(annotation, "host ")[1:], "")
 			resolvedURL, err := url.Parse(host)
 			if err != nil {
