@@ -40,24 +40,11 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if !pathOk(projectDir) {
-				return fmt.Errorf("invalid project directory specified: %s", projectDir)
-			}
-
-			if !pathOk(serviceDir) {
-				return fmt.Errorf("invalid service directory specified: %s", serviceDir)
-			}
-
-			// Given a correct project directory en service directory,
-			// apply our discovery algorithm to find all interesting calls
-			if !pathOk(envVars) && envVars != "" {
-				return fmt.Errorf("invalid environment variable file specified: %s", envVars)
-			}
-
 			jsonParentDir := path.Dir(jsonFilename)
-			if !pathOk(jsonParentDir) {
-				return fmt.Errorf("parent directory of json path does not exist: %s", jsonParentDir)
+
+			ok, err := checkAllPaths(projectDir, serviceDir, envVars, jsonParentDir)
+			if !ok {
+				return err
 			}
 
 			// Call our main functionality logic from here and supply both project dir and service dir
@@ -91,8 +78,31 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	return cmd
 }
 
+// checkAllPaths verifies that all the specified directories exist before running the main logic
+func checkAllPaths(projectDir string, serviceDir string, envVars string, jsonParentDir string) (bool, error) {
+
+	if !pathOk(projectDir) {
+		return false, fmt.Errorf("invalid project directory specified: %s", projectDir)
+	}
+
+	if !pathOk(serviceDir) {
+		return false, fmt.Errorf("invalid service directory specified: %s", serviceDir)
+	}
+
+	// Given a correct project directory en service directory,
+	// apply our discovery algorithm to find all interesting calls
+	if !pathOk(envVars) && envVars != "" {
+		return false, fmt.Errorf("invalid environment variable file specified: %s", envVars)
+	}
+
+	if !pathOk(jsonParentDir) {
+		return false, fmt.Errorf("parent directory of json path does not exist: %s", jsonParentDir)
+	}
+	return true, nil
+}
+
 func pathOk(dir string) bool {
-	if ex, err := pathExists(projectDir); !ex || err != nil {
+	if ex, err := pathExists(dir); !ex || err != nil {
 		return false
 	}
 	return true
