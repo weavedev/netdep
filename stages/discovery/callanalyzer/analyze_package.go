@@ -72,7 +72,12 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 
 // getPositionFromPos converts a token.Pos to a filename and line number
 func getPositionFromPos(pos token.Pos, program *ssa.Program) (string, string) {
-	filePath := program.Fset.File(pos).Name()
+	file := program.Fset.File(pos)
+	if file == nil {
+		return "", ""
+	}
+
+	filePath := file.Name()
 
 	base := 10
 	// take the position of the call within the file and convert to string
@@ -85,7 +90,10 @@ func getPositionFromPos(pos token.Pos, program *ssa.Program) (string, string) {
 func getFunctionQualifiers(fn *ssa.Function) (string, string) {
 	// .Pkg returns an obj of type *ssa.Package, whose .Pkg returns one of *type.Package
 	// This is therefore not the grandparent package, but the *type.Package of the function
-	calledFunctionPackage := fn.Pkg.Pkg.Path() // e.g. net/http
+	calledFunctionPackage := ""
+	if fn.Package() != nil && fn.Package().Pkg != nil {
+		calledFunctionPackage = fn.Package().Pkg.Path() // e.g. net/http
+	}
 
 	return fn.RelString(nil), calledFunctionPackage
 }
@@ -98,7 +106,7 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	callTarget.ServiceName = frame.pkg.String()[strings.LastIndex(frame.pkg.String(), "/")+1:]
 
 	// add trace
-	for _, tracedCall := range frame.visited {
+	for _, tracedCall := range frame.trace {
 		filePath, position := getPositionFromPos(tracedCall.Pos(), frame.pkg.Prog)
 
 		newTrace := CallTargetTrace{
@@ -124,13 +132,13 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
-	if frame.hasVisited(call) {
+	// prevent infinite recursion
+	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
 		return
 	}
 
 	if call.Call.Method != nil {
 		// TODO: resolve a call to a method
-		// fn := frame.pkg.Prog.LookupMethod(call.Call.Method.Type(), call.Call.Method.Pkg(), call.Call.Method.Name())
 	}
 
 	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
@@ -138,11 +146,8 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	switch fnCallType := call.Call.Value.(type) {
 	// TODO: handle other cases
 	case *ssa.Parameter:
-		parValue, _ := resolveParameter(fnCallType, frame)
-		if parValue != nil {
-			// TODO: refactor analyseCall to accept an adjusted call
-			// return analyseCall(parValue, parFrame, config, targetsClient, targetsServer)
-		}
+		// TODO: refactor analyseCall to accept an adjusted call
+		// parValue, _ := resolveParameter(fnCallType, frame)
 		return
 	case *ssa.Function:
 		wasInteresting := false
@@ -155,9 +160,9 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
 
-		// copy visited and append current call
-		copy(newFrame.visited, frame.visited)
-		newFrame.visited = append(newFrame.visited, call)
+		// copy stack trace and append current call
+		copy(newFrame.trace, frame.trace)
+		newFrame.trace = append(newFrame.trace, call)
 
 		// Keep track of given parameters for resolving
 		for i, par := range fnCallType.Params {
@@ -196,6 +201,8 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 			return
 		}
 
+		newFrame.visited[call] = true
+
 		// recurse into function blocks
 		if fnCallType.Blocks != nil {
 			visitBlocks(fnCallType.Blocks, &newFrame, config)
@@ -212,11 +219,9 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 // 2. argument is another call. For example. http.Get(getEndpoint(smth))
 func analyseCallArguments(call *ssa.Call, fr *Frame, config *AnalyserConfig) {
 	for _, argument := range call.Call.Args {
-		switch arg := argument.(type) {
-		case *ssa.Call:
-			analyseCall(arg, fr, config)
-		case *ssa.Function:
-			visitBlocks(arg.Blocks, fr, config)
+		// visit function as argument
+		if functionArg, ok := argument.(*ssa.Function); ok {
+			visitBlocks(functionArg.Blocks, fr, config)
 		}
 	}
 }
@@ -331,6 +336,17 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 		switch instruction := instr.(type) {
 		case *ssa.Call:
 			analyseCall(instruction, fr, config)
+		case *ssa.Store:
+			// for a store to a value
+			if global, ok := instruction.Addr.(*ssa.Global); ok {
+				// TODO: structure this in a way that doesn't corrupt the value
+				// When recursing. Value might not correspond to actual value!
+
+				if _, ok := fr.globals[global]; ok {
+					// only save package globals!
+					fr.globals[global] = &instruction.Val
+				}
+			}
 		default:
 			continue
 		}
@@ -345,9 +361,6 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
-	if len(fr.visited) > config.maxTraversalDepth {
-		return
-	}
 	for _, block := range blocks {
 		analyseInstructionsOfBlock(block, fr, config)
 	}
@@ -362,11 +375,12 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
 func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
-	mainFunction := findFunctionInPackage(pkg, "main")
+	if pkg == nil {
+		return nil, nil, fmt.Errorf("no package given %v", pkg)
+	}
 
-	// TODO: look for the init function will be useful if we want to know
-	// the values of global file-scoped variables
-	// initFunction := findFunctionInPackage(pkg, "init")
+	mainFunction := findFunctionInPackage(pkg, "main")
+	initFunction := findFunctionInPackage(pkg, "init")
 
 	// Find the main function
 	if mainFunction == nil {
@@ -374,16 +388,35 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	baseFrame := Frame{
-		visited: make([]*ssa.Call, 0),
+		trace: make([]*ssa.Call, 0),
 		// Reference to the final list of all _targets of the entire package
-		pkg:    pkg,
-		params: make(map[*ssa.Parameter]*ssa.Value),
+		pkg:     pkg,
+		visited: make(map[*ssa.Call]bool),
+		params:  make(map[*ssa.Parameter]*ssa.Value),
+		globals: make(map[*ssa.Global]*ssa.Value),
+		// for the init function we should only pass once
+		// as we don't expect to find a functional call in the setup
+		singlePass: true,
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{
 			make([]*CallTarget, 0),
 			make([]*CallTarget, 0),
 		},
 	}
+
+	// setup basic references to global variables
+	for _, m := range pkg.Members {
+		if globalPointer, ok := m.(*ssa.Global); ok {
+			baseFrame.globals[globalPointer] = nil
+		}
+	}
+
+	// Visit the init function for globals
+	visitBlocks(initFunction.Blocks, &baseFrame, config)
+
+	// rest visited
+	baseFrame.visited = make(map[*ssa.Call]bool)
+	baseFrame.singlePass = false
 
 	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)

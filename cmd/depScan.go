@@ -227,6 +227,10 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	packageCount := 0
 
 	for _, serviceDir := range *services {
+		if config.Verbose {
+			fmt.Println("Analysing service " + serviceDir)
+		}
+
 		// load packages
 		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 		if err != nil {

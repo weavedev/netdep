@@ -4,6 +4,7 @@
 package discovery
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -23,11 +24,13 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 	// for each service
 	for _, serviceDir := range services {
 		// load packages
+		fmt.Println("Building service " + serviceDir)
 		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
 			continue
 		}
 
+		fmt.Println("Discovering service " + serviceDir)
 		// discover calls
 		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config)
 		if err != nil {
@@ -50,7 +53,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, 24, len(resC), "Expect 24 interesting call")
+	assert.Equal(t, 25, len(resC), "Expect 25 interesting call")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
 
@@ -95,9 +98,9 @@ func TestCallInfo(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	assert.Equal(t, "multiple_calls", res[8].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "25", res[12].Trace[0].PositionInFile, "Expected line number 25")
-	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[8].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, "multiple_calls", res[9].ServiceName, "Expected service name multiple_calls.go")
+	assert.Equal(t, "25", res[13].Trace[0].PositionInFile, "Expected line number 25")
+	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[9].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
 func TestWrappedNestedUnknown(t *testing.T) {
@@ -145,9 +148,7 @@ func TestDiscoveryDependencyInCall(t *testing.T) {
 	resC, resS, _ := DiscoverAll(services, nil)
 
 	assert.Equal(t, 0, len(resS), "Expect 0 interesting calls")
-	// TODO: False positive, should be 2. Will be fixed in another MR
-	// assert.Equal(t, 2, len(resC), "Expect 2 interesting calls")
-	assert.Equal(t, 3, len(resC), "Expect 3 interesting calls")
+	assert.Equal(t, 2, len(resC), "Expect 2 interesting calls")
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 	assert.Equal(t, "net/http.Get", resC[1].MethodName, "Expect net/http.Get to be called")
 	assert.Equal(t, "https://example.com", resC[0].RequestLocation, "Expect example.com")
@@ -188,4 +189,26 @@ func TestGetEnvCall(t *testing.T) {
 	assert.Equal(t, "11", res[0].Trace[0].PositionInFile, "Expected line number 11")
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+}
+
+func TestGinHandleCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
+
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	DiscoverAll(initial, nil)
+}
+
+// TestGlobalVariableCall inspects a call with a global variable as argument
+func TestGlobalVariableCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "global_variable")
+
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	res, _, _ := DiscoverAll(initial, nil)
+
+	assert.Equal(t, "global_variable", res[0].ServiceName, "Expected service name global_variable.go")
+	assert.Equal(t, "17", res[0].Trace[0].PositionInFile, "Expected line number 16")
+	assert.Equal(t, "10", res[0].Trace[1].PositionInFile, "Expected line number 10")
+	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
+	assert.Equal(t, "https://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+	assert.Equal(t, "https://example2.com/endpoint", res[1].RequestLocation, "Expected correct URL \"http://example2.com/endpoint\"")
 }
