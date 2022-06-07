@@ -38,10 +38,9 @@ test-job:
 pages:
   stage: deploy
   script:
-    - rm -rf public
-    - ls -la
-    - mkdir -p public && cp cov.html public/
-    - ls -la ./public
+    - rm public/cov.html
+    - rm public
+    - cp cov.html public/
   artifacts:
     paths:
       - public
