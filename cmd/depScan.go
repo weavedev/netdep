@@ -145,6 +145,9 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	annotations := make(map[string]map[preprocessing.Position]string)
 
+	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables, annotations)
+	analyseConfig.SetVerbose(config.Verbose)
+
 	packageCount := 0
 
 	for _, serviceDir := range services {
@@ -160,9 +163,6 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		if err != nil {
 			return nil, nil, err
 		}
-
-		analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables, annotations)
-		analyseConfig.SetVerbose(config.Verbose)
 
 		// discover calls
 		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &analyseConfig)
