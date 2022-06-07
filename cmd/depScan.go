@@ -231,20 +231,21 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		return nil, nil, err
 	}
 
-	// TODO: make use of annotations in the matching stage
-	fmt.Println("Discovered annotations:")
-	anyHits := false
-	for k1, serMap := range annotations {
-		for k2, val := range serMap {
-			anyHits = true
-			fmt.Println("Service name: " + k1)
-			fmt.Print("Position: " + k2.Filename + ":")
-			fmt.Println(k2.Line)
-			fmt.Println("Value: " + val)
+	if config.Verbose {
+		fmt.Println("Discovered annotations:")
+		anyHits := false
+		for k1, serMap := range annotations {
+			for k2, val := range serMap {
+				anyHits = true
+				fmt.Println("Service name: " + k1)
+				fmt.Print("Position: " + k2.Filename + ":")
+				fmt.Println(k2.Line)
+				fmt.Println("Value: " + val)
+			}
 		}
-	}
-	if !anyHits {
-		fmt.Println("[Discovered none]")
+		if !anyHits {
+			fmt.Println("[Discovered none]")
+		}
 	}
 
 	return allClientTargets, allServerTargets, err
