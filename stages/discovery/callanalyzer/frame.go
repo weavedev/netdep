@@ -4,7 +4,7 @@ import "golang.org/x/tools/go/ssa"
 
 // Frame is a struct for keeping track of the traversal packages while looking for interesting functions
 type Frame struct {
-	// trace is a list of previous calls.
+	// trace is a stack trace of previous calls.
 	trace []*ssa.Call
 	// visited is shared between frames and keeps track of which nodes have been visited
 	// to prevent repetitive visits.

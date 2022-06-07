@@ -160,7 +160,7 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 		// This is the correct place for this because we are going to visit child blocks next.
 		newFrame := *frame
 
-		// copy visited and append current call
+		// copy stack trace and append current call
 		copy(newFrame.trace, frame.trace)
 		newFrame.trace = append(newFrame.trace, call)
 
