@@ -10,12 +10,12 @@ import (
 	"path"
 	"strings"
 
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
@@ -190,44 +190,10 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		return nil, nil, err
 	}
 
-	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
-	analyseConfig.SetVerbose(config.Verbose)
+	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
+	analyserConfig.SetVerbose(config.Verbose)
 
-	allClientTargets := make([]*callanalyzer.CallTarget, 0)
-	allServerTargets := make([]*callanalyzer.CallTarget, 0)
-	annotations := make(map[string]map[preprocessing.Position]string)
-
-	packageCount := 0
-
-	for _, serviceDir := range services {
-		// load packages
-		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
-		if err != nil {
-			return nil, nil, err
-		}
-		packageCount += len(packagesInService)
-
-		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
-		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// discover calls
-		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, &analyseConfig)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// append
-		allClientTargets = append(allClientTargets, clientCalls...)
-		allServerTargets = append(allServerTargets, serverCalls...)
-	}
-
-	if packageCount == 0 {
-		return nil, nil, fmt.Errorf("no service to analyse were found")
-	}
-
+	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -250,4 +216,43 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	}
 
 	return allClientTargets, allServerTargets, err
+}
+
+// processEachService preprocesses and analyses each of the services using RunConfig and callanalyzer.AnalyserConfig
+func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[preprocessing.Position]string, error) {
+	allClientTargets := make([]*callanalyzer.CallTarget, 0)
+	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+	annotations := make(map[string]map[preprocessing.Position]string)
+
+	packageCount := 0
+
+	for _, serviceDir := range *services {
+		// load packages
+		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		packageCount += len(packagesInService)
+
+		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
+		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		// discover calls
+		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		// append
+		allClientTargets = append(allClientTargets, clientCalls...)
+		allServerTargets = append(allServerTargets, serverCalls...)
+	}
+
+	if packageCount == 0 {
+		return nil, nil, nil, fmt.Errorf("no service to analyse were found")
+	}
+	return allClientTargets, allServerTargets, annotations, nil
 }
