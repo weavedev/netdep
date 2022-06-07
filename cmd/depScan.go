@@ -49,7 +49,7 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ok, err := checkSuppliedPaths(projectDir, serviceDir, envVars, outputFilename)
+			ok, err := areInputPathsValid(projectDir, serviceDir, envVars, outputFilename)
 			if !ok {
 				return err
 			}
@@ -87,7 +87,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&serviceDir, "service-directory", "s", "./svc", "service directory")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "toggle logging trace of unknown variables")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
-	cmd.Flags().StringVarP(&outputFilename, "json-filename", "o", "./netDeps.json", "(JSON) output filename")
+	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "./netDeps.json", "output filename such as ./deps.json")
 	return cmd
 }
 
@@ -109,8 +109,8 @@ func printOutput(targetFileName, jsonString string) (bool, error) {
 	return true, nil
 }
 
-// checkSuppliedPaths verifies that all the specified directories exist before running the main logic
-func checkSuppliedPaths(projectDir, serviceDir, envVars, outputFilename string) (bool, error) {
+// areInputPathsValid verifies that all the specified directories exist before running the main logic
+func areInputPathsValid(projectDir, serviceDir, envVars, outputFilename string) (bool, error) {
 	if !pathOk(projectDir) {
 		return false, fmt.Errorf("invalid project directory specified: %s", projectDir)
 	}
