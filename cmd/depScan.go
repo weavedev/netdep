@@ -75,7 +75,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
-			_, err = printOutput(outputFilename, jsonString)
+			err = printOutput(outputFilename, jsonString)
 			if err != nil {
 				return err
 			}
@@ -92,7 +92,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 }
 
 // printOutput writes the output to the target file (btw stdout is also a file on UNIX)
-func printOutput(targetFileName, jsonString string) (bool, error) {
+func printOutput(targetFileName, jsonString string) error {
 	if targetFileName != "" {
 		const filePerm = 0o600
 		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
@@ -101,13 +101,13 @@ func printOutput(targetFileName, jsonString string) (bool, error) {
 		} else {
 			// Could not write to file, output to stdout
 			fmt.Println(jsonString)
-			return false, err
+			return err
 		}
 	} else {
 		fmt.Println("Successfully analysed, here is the list of dependencies:")
 		fmt.Println(jsonString)
 	}
-	return true, nil
+	return nil
 }
 
 // areInputPathsValid verifies that all the specified directories exist before running the main logic

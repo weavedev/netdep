@@ -167,6 +167,6 @@ func TestExecuteDepScanEnvFileWrongFormat(t *testing.T) {
 }
 
 func TestOutputToInvalidFile(t *testing.T) {
-	_, err := printOutput("/../badPath/", "{\"key\": \"dummyJSON\"}")
+	err := printOutput("/../badPath/", "{\"key\": \"dummyJSON\"}")
 	assert.NotNil(t, err)
 }
