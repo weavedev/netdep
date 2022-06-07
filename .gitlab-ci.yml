@@ -9,6 +9,8 @@ compile-job:
   stage: build
   script:
   - go build
+  rules:
+    - when: always
 
 lint-job:
   image: golangci/golangci-lint:v1.45
