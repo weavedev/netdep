@@ -5,7 +5,7 @@ package preprocessing
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 // FindServices takes a directory which contains services
@@ -21,7 +21,7 @@ func FindServices(servicesDir string) ([]string, error) {
 
 	for _, file := range files {
 		if file.IsDir() {
-			servicePath := path.Join(servicesDir, file.Name())
+			servicePath := filepath.Join(servicesDir, file.Name())
 			packagesToAnalyze = append(packagesToAnalyze, servicePath)
 		}
 	}

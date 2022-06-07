@@ -158,7 +158,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		}
 		packageCount += len(packagesInService)
 
-		serviceName := strings.Split(serviceDir, "/")[len(strings.Split(serviceDir, "/"))-1]
+		serviceName := strings.Split(serviceDir, string(os.PathSeparator))[len(strings.Split(serviceDir, string(os.PathSeparator)))-1]
 		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
 			return nil, nil, err
