@@ -165,3 +165,8 @@ func TestExecuteDepScanEnvFileWrongFormat(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "the file cannot be parsed", err.Error())
 }
+
+func TestOutputToInvalidFile(t *testing.T) {
+	_, err := printOutput("/../badPath/", "{\"key\": \"dummyJSON\"}")
+	assert.NotNil(t, err)
+}

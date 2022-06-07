@@ -94,10 +94,11 @@ Output is an adjacency list of service dependencies in a JSON format`,
 // printOutput writes the output to the target file (btw stdout is also a file on UNIX)
 func printOutput(targetFileName, jsonString string) (bool, error) {
 	if targetFileName != "" {
-		fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
 		const filePerm = 0o600
 		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
-		if err != nil {
+		if err == nil {
+			fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
+		} else {
 			// Could not write to file, output to stdout
 			fmt.Println(jsonString)
 			return false, err
