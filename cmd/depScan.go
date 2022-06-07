@@ -62,7 +62,6 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
 			clientCalls, serverCalls, err := discoverAllCalls(config)
-
 			if err != nil {
 				return err
 			}
@@ -78,7 +77,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			// Print the output
 			if jsonFilename != "" {
 				fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", jsonFilename)
-				err := os.WriteFile(jsonFilename, []byte(jsonString), 0o644)
+				const filePerm = 0o600
+				err := os.WriteFile(jsonFilename, []byte(jsonString), filePerm)
 				if err != nil {
 					// Could not write to file, output to stdout
 					fmt.Println(jsonString)
