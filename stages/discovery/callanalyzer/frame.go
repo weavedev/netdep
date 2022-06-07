@@ -17,10 +17,22 @@ type Frame struct {
 	// parent is necessary to recursively resolve variables (in different scopes)
 	parent            *Frame
 	targetsCollection *TargetsCollection
+	// singlePass defines if we should check visited or trace for performance
+	singlePass bool
 }
 
 // hasVisited returns whether the block has already been trace.
 func (f Frame) hasVisited(call *ssa.Call) bool {
-	_, visited := f.visited[call]
-	return visited
+	if f.singlePass {
+		_, visited := f.visited[call]
+		return visited
+	} else {
+		for _, callee := range f.trace {
+			if callee == call {
+				return true
+			}
+		}
+
+		return false
+	}
 }

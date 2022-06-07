@@ -219,11 +219,9 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 // 2. argument is another call. For example. http.Get(getEndpoint(smth))
 func analyseCallArguments(call *ssa.Call, fr *Frame, config *AnalyserConfig) {
 	for _, argument := range call.Call.Args {
-		switch arg := argument.(type) {
-		case *ssa.Call:
-			analyseCall(arg, fr, config)
-		case *ssa.Function:
-			visitBlocks(arg.Blocks, fr, config)
+		// visit function as argument
+		if functionArg, ok := argument.(*ssa.Function); ok {
+			visitBlocks(functionArg.Blocks, fr, config)
 		}
 	}
 }
@@ -377,6 +375,10 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
 func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
+	if pkg == nil {
+		return nil, nil, fmt.Errorf("no package given %v", pkg)
+	}
+
 	mainFunction := findFunctionInPackage(pkg, "main")
 	initFunction := findFunctionInPackage(pkg, "init")
 
@@ -392,6 +394,9 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 		visited: make(map[*ssa.Call]bool),
 		params:  make(map[*ssa.Parameter]*ssa.Value),
 		globals: make(map[*ssa.Global]*ssa.Value),
+		// for the init function we should only pass once
+		// as we don't expect to find a functional call in the setup
+		singlePass: true,
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{
 			make([]*CallTarget, 0),
@@ -411,6 +416,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 
 	// rest visited
 	baseFrame.visited = make(map[*ssa.Call]bool)
+	baseFrame.singlePass = false
 
 	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)

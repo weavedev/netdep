@@ -7,7 +7,7 @@ import (
 )
 
 func PrintTraceToCall(frame *Frame, config *AnalyserConfig) {
-	traces := len(frame.visited)
+	traces := len(frame.trace)
 
 	// displayStartingIndex is used to limit the number of traces to log
 	// as defined by config.maxTraceDepth

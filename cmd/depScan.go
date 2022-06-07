@@ -151,6 +151,10 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	packageCount := 0
 
 	for _, serviceDir := range services {
+		if config.Verbose {
+			fmt.Println("Analysing service " + serviceDir)
+		}
+
 		// load packages
 		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
