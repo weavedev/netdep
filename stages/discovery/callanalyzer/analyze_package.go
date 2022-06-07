@@ -361,7 +361,6 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
 func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
-
 	if pkg == nil {
 		return nil, nil, fmt.Errorf("no package given")
 	}

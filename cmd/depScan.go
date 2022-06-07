@@ -151,7 +151,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	packageCount := 0
 
 	for _, serviceDir := range services {
-		fmt.Printf("Analyzing: %s\n", serviceDir)
+		fmt.Printf("Analysing: %s\n", serviceDir)
 		// load packages
 		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
@@ -179,7 +179,6 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		targetSum := len(clientCalls)
 
 		fmt.Printf("Found: %d calls (%d,%d)\n", clientSum+targetSum, clientSum, targetSum)
-
 	}
 
 	if packageCount == 0 {
@@ -188,17 +187,6 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 
 	if err != nil {
 		return nil, nil, err
-	}
-
-	// TODO: make use of annotations in the matching stage
-	fmt.Println("Discovered annotations:")
-	for k1, serMap := range annotations {
-		for k2, val := range serMap {
-			fmt.Println("Service name: " + k1)
-			fmt.Print("Position: " + k2.Filename + ":")
-			fmt.Println(k2.Line)
-			fmt.Println("Value: " + val)
-		}
 	}
 
 	return allClientTargets, allServerTargets, err

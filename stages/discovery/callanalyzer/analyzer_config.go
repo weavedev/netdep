@@ -61,7 +61,7 @@ func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string) 
 			"(*net/http.Client).Head": {action: Output, interestingArgs: []int{1}},
 			"net/http.Get":            {action: Output, interestingArgs: []int{0, 1}},
 			"net/http.Post":           {action: Output, interestingArgs: []int{0, 1}},
-			//"net/http.NewRequestWithContext": {action: Output, interestingArgs: []int{2}},
+			// "net/http.NewRequestWithContext": {action: Output, interestingArgs: []int{2}},
 			// "net/http.NewRequest":  ...
 		},
 

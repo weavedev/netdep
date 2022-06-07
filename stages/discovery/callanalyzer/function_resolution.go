@@ -2,6 +2,7 @@ package callanalyzer
 
 import (
 	"go/types"
+
 	"golang.org/x/tools/go/ssa"
 )
 
@@ -26,7 +27,7 @@ func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Functio
 	case *ssa.MakeInterface:
 		methodType = expr.X.Type()
 	default:
-		//methodType = expr.Type()
+		// methodType = expr.Type()
 		methodType = call.Method.Type()
 	}
 
