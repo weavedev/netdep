@@ -72,6 +72,10 @@ func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
 
 // getPositionFromPos converts a token.Pos to a filename and line number
 func getPositionFromPos(pos token.Pos, program *ssa.Program) (string, string) {
+	if program == nil {
+		return "", ""
+	}
+	
 	file := program.Fset.File(pos)
 	if file == nil {
 		return "", ""

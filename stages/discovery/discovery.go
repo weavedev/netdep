@@ -15,24 +15,33 @@ Refer to the Project plan, chapter 5.3 for more information.
 
 // DiscoverAll creates a combined list of all discovered calls in the given packages.
 func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
-	allClientTargets := make([]*callanalyzer.CallTarget, 0)
-	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+	//allClientTargets := make([]*callanalyzer.CallTarget, 0)
+	//allServerTargets := make([]*callanalyzer.CallTarget, 0)
 
-	for _, pkg := range packages {
-		if pkg == nil {
-			continue
-		}
+	analyzeConfig := config
 
-		clientCalls, serverCalls, err := Discover(pkg, config)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		allClientTargets = append(allClientTargets, clientCalls...)
-		allServerTargets = append(allServerTargets, serverCalls...)
+	if analyzeConfig == nil {
+		newConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(nil)
+		analyzeConfig = &newConfig
 	}
 
-	return allClientTargets, allServerTargets, nil
+	return callanalyzer.AnalyzeUsingCallGraph(packages, analyzeConfig)
+
+	//for _, pkg := range packages {
+	//	if pkg == nil {
+	//		continue
+	//	}
+	//
+	//	clientCalls, serverCalls, err := Discover(pkg, analyzeConfig)
+	//	if err != nil {
+	//		return nil, nil, err
+	//	}
+	//
+	//	allClientTargets = append(allClientTargets, clientCalls...)
+	//	allServerTargets = append(allServerTargets, serverCalls...)
+	//}
+	//
+	//return allClientTargets, allServerTargets, nil
 }
 
 // Discover finds client and server calls in the given packages
