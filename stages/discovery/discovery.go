@@ -20,6 +20,10 @@ func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) (
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 
 	for _, pkg := range packages {
+		if pkg == nil {
+			continue
+		}
+
 		clientCalls, serverCalls, err := Discover(pkg, config)
 		if err != nil {
 			return nil, nil, err
@@ -51,7 +55,7 @@ func Discover(pkg *ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callana
 	// The current output data structure. TODO: add additional fields
 
 	if config == nil {
-		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls(nil, nil)
+		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls()
 		// Analyse each package with the default config
 		return callanalyzer.AnalysePackageCalls(pkg, &defaultConf)
 	} else {

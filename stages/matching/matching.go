@@ -69,6 +69,7 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 			endpointURL := fmt.Sprintf("http://%s%s%s", call.ServiceName, port, call.RequestLocation)
 			endpointMap[endpointURL] = call.ServiceName
 		}
+		endpointMap[call.RequestLocation] = call.ServiceName
 	}
 
 	return endpointMap

@@ -77,7 +77,7 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 // TODO: Good weather tests currently stackoverflow,
 // as there is no base case implemented. Uncomment these
 // tests after merging with dev.
-func TestExecuteDepScanExampleServices(t *testing.T) {
+func TestExecuteDepScanExampleServicesVerbose(t *testing.T) {
 	runDepScanCmd := depScanCmd()
 
 	projDir := filepath.Join(helpers.RootDir, "test", "example")
@@ -86,6 +86,7 @@ func TestExecuteDepScanExampleServices(t *testing.T) {
 	runDepScanCmd.SetArgs([]string{
 		"-p", projDir,
 		"-s", svcDir,
+		"-v",
 	})
 
 	err := runDepScanCmd.Execute()
@@ -164,4 +165,9 @@ func TestExecuteDepScanEnvFileWrongFormat(t *testing.T) {
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
 	assert.Equal(t, "the file cannot be parsed", err.Error())
+}
+
+func TestOutputToInvalidFile(t *testing.T) {
+	err := printOutput("/../badPath/", "{\"key\": \"dummyJSON\"}")
+	assert.NotNil(t, err)
 }

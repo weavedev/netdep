@@ -53,7 +53,8 @@ func TestReplaceTargetsAnnotations(t *testing.T) {
 
 	annotations["c1"][pos] = "client url=http://localhost:50/get"
 
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls(nil, annotations)
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
+	config.SetAnnotations(annotations)
 
 	expectedTarget := &callanalyzer.CallTarget{
 		MethodName:      "a1",
@@ -113,7 +114,7 @@ func TestReplaceTargetsAnnotationsAnnotationsNil(t *testing.T) {
 	targets := make([]*callanalyzer.CallTarget, 0)
 	targets = append(targets, target1)
 
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls(nil, nil)
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
 
 	err := callanalyzer.ReplaceTargetsAnnotations(&targets, &config)
 

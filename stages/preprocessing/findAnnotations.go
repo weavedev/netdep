@@ -56,7 +56,7 @@ func parseComments(path string, serviceName string, annotations map[string]map[P
 
 	for _, commentGroup := range f.Comments {
 		for _, comment := range commentGroup.List {
-			if strings.HasPrefix(comment.Text, "//netdep:client") || strings.HasPrefix(comment.Text, "//netdep:endpoint") {
+			if strings.HasPrefix(comment.Text, "//netdep:") {
 				tokenPos := fs.Position(comment.Slash)
 				pos := Position{
 					Filename: tokenPos.Filename[strings.LastIndex(tokenPos.Filename, string(os.PathSeparator)+serviceName+string(os.PathSeparator))+1:],

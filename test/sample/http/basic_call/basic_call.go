@@ -7,5 +7,5 @@ import (
 
 // target: GET example.com
 func main() {
-	http.Get("https://example.com/")
+	http.Get("http://basic_handle:8080/count")
 }
