@@ -37,6 +37,8 @@ type CallTarget struct {
 	IsResolved bool
 	// The name of the service in which the call is made
 	ServiceName string
+	// Target service (in case the CallTarget is a client)
+	TargetSvc string
 	// Trace defines a stack trace for the call
 	Trace []CallTargetTrace
 }

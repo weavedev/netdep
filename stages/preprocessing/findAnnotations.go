@@ -6,7 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -26,15 +26,15 @@ func LoadAnnotations(servicePath string, serviceName string, annotations map[str
 	annotations[serviceName] = make(map[Position]string)
 
 	for _, file := range files {
-		if file.Name()[len(file.Name())-3:] == ".go" {
+		if filepath.Ext(file.Name()) == ".go" {
 			// If the file is a .go file - parse it
-			err := parseComments(path.Join(servicePath, file.Name()), serviceName, annotations)
+			err := parseComments(filepath.Join(servicePath, file.Name()), serviceName, annotations)
 			if err != nil {
 				return err
 			}
 		} else if file.IsDir() {
 			// If the file is a directory - recursively look for .go files inside it
-			err := LoadAnnotations(path.Join(servicePath, file.Name()), serviceName, annotations)
+			err := LoadAnnotations(filepath.Join(servicePath, file.Name()), serviceName, annotations)
 			if err != nil {
 				return err
 			}
@@ -59,7 +59,7 @@ func parseComments(path string, serviceName string, annotations map[string]map[P
 			if strings.HasPrefix(comment.Text, "//netdep:") {
 				tokenPos := fs.Position(comment.Slash)
 				pos := Position{
-					Filename: tokenPos.Filename,
+					Filename: tokenPos.Filename[strings.LastIndex(tokenPos.Filename, string(os.PathSeparator)+serviceName+string(os.PathSeparator))+1:],
 					Line:     tokenPos.Line,
 				}
 				value := strings.Join(strings.Split(comment.Text, "netdep:")[1:], "")
