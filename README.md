@@ -33,6 +33,14 @@ or if you want more control you can use the options as defined below, for exampl
 go run main.go depScan -p "./some/project/dir" -s "./some/service/dir"
 ```
 
+#### Annotation format
+User can add annotations as comments in their project before running the tool on it. Currently, the tool supports 3 types of annotations:
+3) Annotations for host name definition. Example:
+```go
+http.Handle("/count", th)
+http.ListenAndServe(":8080", nil)
+//netdep:host http://basic_handle:8080
+```
 ### Options
 
 | Argument                  | Description                                                                               | Default  |

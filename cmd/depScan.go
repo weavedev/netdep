@@ -190,8 +190,9 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		return nil, nil, err
 	}
 
-	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
+	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
 	analyserConfig.SetVerbose(config.Verbose)
+	analyserConfig.SetEnv(envVariables)
 
 	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig)
 	if err != nil {
@@ -223,6 +224,8 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	annotations := make(map[string]map[preprocessing.Position]string)
+
+	analyserConfig.SetAnnotations(annotations)
 
 	packageCount := 0
 

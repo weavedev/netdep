@@ -7,7 +7,9 @@ package callanalyzer
 import (
 	"fmt"
 	"go/token"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -213,6 +215,33 @@ func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
 	}
 }
 
+// getHostFromAnnotation returns the resolved url using the annotated host name for a service
+func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig, target *CallTarget) string {
+	// absolute file path
+	filePath := frame.pkg.Prog.Fset.File(call.Pos()).Name()
+	// split path and form absolute path to service directory
+	service := strings.Split(filePath, string(os.PathSeparator))
+	service = service[:len(service)-1]
+	serviceName := strings.Join(service, "/")
+
+	annotations := config.annotations[serviceName]
+	// look for annotated hostname
+	for _, annotation := range annotations {
+		if strings.HasPrefix(annotation, "host") {
+			// if annotation is incorrectly formatted (eg. "hostsomething") the split will return ""
+			// and the url will not be substituted from annotation
+			host := strings.Join(strings.Split(annotation, "host ")[1:], "")
+			resolvedURL, err := url.Parse(host)
+			if err != nil {
+				return target.RequestLocation
+			}
+			resolvedURL.Path = path.Join(resolvedURL.Path, target.RequestLocation)
+			return resolvedURL.String()
+		}
+	}
+	return target.RequestLocation
+}
+
 // analyseCallArguments goes over the call arguments and recurses into them
 // given that they potentially contain another block of code. That is possible in two cases:
 // 1. argument is a function. For example, a callback.
@@ -254,6 +283,8 @@ func handleInterestingServerCall(call *ssa.Call, fn *ssa.Function, config *Analy
 			callTarget.RequestLocation = strings.Join(variables, "")
 		}
 	}
+
+	callTarget.RequestLocation = getHostFromAnnotation(call, frame, config, callTarget)
 
 	if !callTarget.IsResolved && config.verbose {
 		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)

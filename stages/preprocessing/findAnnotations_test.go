@@ -31,3 +31,18 @@ func TestLoadAnnotationsInvalidPath(t *testing.T) {
 	err := LoadAnnotations("invalidPath", "serviceName", m)
 	assert.NotNil(t, err)
 }
+
+func TestLoadHostAnnotations(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "basic_handle")))
+	ann := make(map[string]map[Position]string)
+	LoadAnnotations(svcDir, "basic_handle", ann)
+	expected := make(map[string]map[Position]string)
+	expected["basic_handle"] = make(map[Position]string)
+	pos := Position{
+		Filename: path.Join(helpers.RootDir, "test", "sample", "http", "basic_handle", "basic_handle.go"),
+		Line:     25,
+	}
+	expected["basic_handle"][pos] = "host http://basic_handle:8080"
+
+	assert.Equal(t, expected, ann)
+}
