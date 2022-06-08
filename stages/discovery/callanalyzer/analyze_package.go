@@ -176,6 +176,8 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 		return
 	}
 
+	frame.visited[call] = true
+
 	// recurse into function blocks
 	if fn.Blocks != nil {
 		visitBlocks(fn.Blocks, &newFrame, config)
@@ -333,6 +335,17 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 			analyseCall(&instruction.Call, fr, config)
 		case *ssa.Defer:
 			analyseCall(&instruction.Call, fr, config)
+		case *ssa.Store:
+			// for a store to a value
+			if global, ok := instruction.Addr.(*ssa.Global); ok {
+				// TODO: structure this in a way that doesn't corrupt the value
+				// When recursing. Value might not correspond to actual value!
+
+				if _, ok := fr.globals[global]; ok {
+					// only save package globals!
+					fr.globals[global] = &instruction.Val
+				}
+			}
 		default:
 			continue
 		}
@@ -362,14 +375,11 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 // List of pointers to callTargets, or an error if something went wrong.
 func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
 	if pkg == nil {
-		return nil, nil, fmt.Errorf("no package given")
+		return nil, nil, fmt.Errorf("no package given %v", pkg)
 	}
 
 	mainFunction := findFunctionInPackage(pkg, "main")
-
-	// TODO: look for the init function will be useful if we want to know
-	// the values of global file-scoped variables
-	// initFunction := findFunctionInPackage(pkg, "init")
+	initFunction := findFunctionInPackage(pkg, "init")
 
 	// Find the main function
 	if mainFunction == nil {
@@ -379,14 +389,33 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	baseFrame := Frame{
 		trace: make([]*ssa.CallCommon, 0),
 		// Reference to the final list of all _targets of the entire package
-		pkg:    pkg,
-		params: make(map[*ssa.Parameter]*ssa.Value),
+		pkg:     pkg,
+		visited: make(map[*ssa.CallCommon]bool),
+		params:  make(map[*ssa.Parameter]*ssa.Value),
+		globals: make(map[*ssa.Global]*ssa.Value),
+		// for the init function we should only pass once
+		// as we don't expect to find a functional call in the setup
+		singlePass: true,
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{
 			make([]*CallTarget, 0),
 			make([]*CallTarget, 0),
 		},
 	}
+
+	// setup basic references to global variables
+	for _, m := range pkg.Members {
+		if globalPointer, ok := m.(*ssa.Global); ok {
+			baseFrame.globals[globalPointer] = nil
+		}
+	}
+
+	// Visit the init function for globals
+	visitBlocks(initFunction.Blocks, &baseFrame, config)
+
+	// rest visited
+	baseFrame.visited = make(map[*ssa.CallCommon]bool)
+	baseFrame.singlePass = false
 
 	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)

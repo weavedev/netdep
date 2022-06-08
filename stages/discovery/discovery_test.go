@@ -24,11 +24,13 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 	// for each service
 	for _, serviceDir := range services {
 		// load packages
+		fmt.Println("Building service " + serviceDir)
 		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
 			continue
 		}
 
+		fmt.Println("Discovering service " + serviceDir)
 		// discover calls
 		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config)
 		if err != nil {
@@ -51,7 +53,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	expectedCount := 22
+	expectedCount := 24
 	assert.Equal(t, expectedCount, len(resC), fmt.Sprintf("Expect %d interesting call", expectedCount))
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
@@ -98,7 +100,7 @@ func TestCallInfo(t *testing.T) {
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
 	assert.Equal(t, "multiple_calls", res[10].ServiceName, "Expected service name multiple_calls.go")
-	assert.Equal(t, "26", res[14].Trace[0].PositionInFile, "Expected line number 26")
+	assert.Equal(t, "27", res[14].Trace[0].PositionInFile, "Expected line number 27")
 	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[10].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
@@ -198,4 +200,26 @@ func TestGetEnvCall(t *testing.T) {
 	assert.Equal(t, "11", res[0].Trace[0].PositionInFile, "Expected line number 11")
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "http://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+}
+
+func TestGinHandleCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
+
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	DiscoverAll(initial, nil)
+}
+
+// TestGlobalVariableCall inspects a call with a global variable as argument
+func TestGlobalVariableCall(t *testing.T) {
+	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "global_variable")
+
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	res, _, _ := DiscoverAll(initial, nil)
+
+	assert.Equal(t, "global_variable", res[0].ServiceName, "Expected service name global_variable.go")
+	assert.Equal(t, "17", res[0].Trace[0].PositionInFile, "Expected line number 16")
+	assert.Equal(t, "10", res[0].Trace[1].PositionInFile, "Expected line number 10")
+	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
+	assert.Equal(t, "https://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
+	assert.Equal(t, "https://example2.com/endpoint", res[1].RequestLocation, "Expected correct URL \"http://example2.com/endpoint\"")
 }
