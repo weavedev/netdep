@@ -4,7 +4,7 @@
 package main
 
 import (
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/cmd"
+	"lab.weave.nl/internships/tud-2022/netDep/cmd"
 )
 
 func main() {

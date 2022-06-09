@@ -1,6 +1,6 @@
 package callanalyzer
 
-import "lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
+import "lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
 
 // DiscoveryAction indicates what to do when encountering
 // a certain call. Used in interestingCalls
