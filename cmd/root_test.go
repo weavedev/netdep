@@ -27,7 +27,7 @@ func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
 
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "invalid service directory specified: invalid", err.Error())
+	assert.Equal(t, "invalid service directory: invalid", err.Error())
 }
 
 func TestExecuteDepScanNoServicePackages(t *testing.T) {
