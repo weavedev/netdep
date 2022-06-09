@@ -31,8 +31,18 @@ type RunConfig struct {
 	Verbose    bool
 }
 
-// depScanCmd creates and returns a depScan command object
-func depScanCmd() *cobra.Command {
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
+func Execute() {
+	err := netDepCmd().Execute()
+	if err != nil {
+		os.Exit(1)
+		return
+	}
+}
+
+// netDepCmd creates and returns a depScan command object
+func netDepCmd() *cobra.Command {
 	// Variables that are supplied as command-line args
 	var (
 		projectDir     string
@@ -43,7 +53,7 @@ func depScanCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "depScan",
+		Use:   "netDep",
 		Short: "Scan and report dependencies between microservices",
 		Long: `Outputs network-communication-based dependencies of services within a microservice architecture Golang project.
 Output is an adjacency list of service dependencies in a JSON format`,
@@ -117,7 +127,7 @@ func areInputPathsValid(projectDir, serviceDir, envVars, outputFilename string) 
 	}
 
 	if !pathOk(serviceDir) {
-		return false, fmt.Errorf("invalid service directory specified: %s", serviceDir)
+		return false, fmt.Errorf("invalid service directory: %s", serviceDir)
 	}
 
 	if !pathOk(envVars) && envVars != "" {
@@ -142,8 +152,8 @@ func pathOk(dir string) bool {
 
 // init initialises the depScan command and adds it as a subcommand of the root
 // func init() {
-// depScanCmd := depScanCmd()
-// rootCmd.AddCommand(depScanCmd)
+// netDepCmd := netDepCmd()
+// rootCmd.AddCommand(netDepCmd)
 // }
 
 // pathExists determines whether a given path is valid by checking if it exists
