@@ -244,7 +244,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
 		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
-			fmt.Println("Errors parsing service:")
+			fmt.Println("Errors parsing annotations:")
 			fmt.Println(err)
 			continue
 			//return nil, nil, nil, err
@@ -253,7 +253,9 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		// discover calls
 		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)
 		if err != nil {
-			return nil, nil, nil, err
+			fmt.Println("Errors disovering:")
+			fmt.Println(err)
+			continue
 		}
 
 		// append

@@ -9,15 +9,17 @@ import (
 	"strings"
 )
 
-func getCallTarget(trace []*ssa.CallCommon, pkg *ssa.Package) *CallTarget {
-	rootCall := trace[len(trace)-1]
-
-	if rootCall == nil {
+func getCallTarget(trace []CalledFunction) *CallTarget {
+	if len(trace) == 0 {
+		return nil
+	}
+	rootCall := trace[0]
+	if rootCall.call == nil || rootCall.function == nil {
 		return nil
 	}
 
-	rootFn := rootCall.StaticCallee()
-	MethodName, packageName := getFunctionQualifiers(rootFn)
+	pkg := rootCall.function.Pkg
+	MethodName, packageName := getFunctionQualifiers(rootCall.function)
 
 	target := CallTarget{
 		packageName:     packageName,
@@ -30,11 +32,11 @@ func getCallTarget(trace []*ssa.CallCommon, pkg *ssa.Package) *CallTarget {
 
 	// add trace
 	for _, tracedCall := range trace {
-		if tracedCall == nil {
+		if tracedCall.call == nil {
 			continue
 		}
 
-		filePath, position := getPositionFromPos(tracedCall.Pos(), pkg.Prog)
+		filePath, position := getPositionFromPos(tracedCall.call.Pos(), pkg.Prog)
 
 		newTrace := CallTargetTrace{
 			// split package name and take the last item to get the service name
@@ -48,10 +50,15 @@ func getCallTarget(trace []*ssa.CallCommon, pkg *ssa.Package) *CallTarget {
 	return &target
 }
 
+type CalledFunction struct {
+	call     *ssa.CallCommon
+	function *ssa.Function
+}
+
 // GraphFrame is a struct for keeping track of the traversal packages while looking for interesting functions
 type GraphFrame struct {
 	// trace is a stack trace of previous calls.
-	trace []*ssa.CallCommon
+	trace []CalledFunction
 	// visited is shared between frames and keeps track of which nodes have been visited
 	// to prevent repetitive visits.
 	visited           map[int]bool
@@ -59,20 +66,6 @@ type GraphFrame struct {
 	parent            *Frame
 	config            *AnalyserConfig
 	targetsCollection *TargetsCollection
-}
-
-func (f GraphFrame) hasVisited(call *ssa.CallCommon, node *callgraph.Node) bool {
-	if _, ok := f.visited[node.ID]; ok {
-		return true
-	}
-
-	for _, callee := range f.trace {
-		if callee == call {
-			return true
-		}
-	}
-
-	return false
 }
 
 func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
@@ -115,7 +108,7 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 	fmt.Printf("Finding nodes (%d)...\n", len(cg.Nodes))
 
 	baseFrame := GraphFrame{
-		trace:   make([]*ssa.CallCommon, 0),
+		trace:   make([]CalledFunction, 0),
 		visited: make(map[int]bool),
 		program: pkgs[0].Prog,
 		parent:  nil,
@@ -132,7 +125,17 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 		}
 	}
 
-	fmt.Printf("%d, %d found\n", len(baseFrame.targetsCollection.clientTargets), len(baseFrame.targetsCollection.serverTargets))
+	count := 0
+	interestingCount := 0
+	for _, v := range baseFrame.visited {
+		count++
+		if v {
+			interestingCount++
+		}
+	}
+
+	fmt.Printf("%d, %d found (%d/%d)\n", len(baseFrame.targetsCollection.clientTargets), len(baseFrame.targetsCollection.serverTargets), interestingCount, count)
+
 	return baseFrame.targetsCollection.clientTargets, baseFrame.targetsCollection.serverTargets, nil
 }
 
@@ -148,9 +151,13 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
 		outNode := edge.Callee
 
 		// TODO: improve get call
-		var call *ssa.CallCommon = nil
+		called := CalledFunction{
+			call:     nil,
+			function: outNode.Func,
+		}
+
 		if edge.Site != nil {
-			call = edge.Site.Common()
+			called.call = edge.Site.Common()
 		}
 
 		isInterestingVisit, wasVisited := frame.visited[outNode.ID]
@@ -158,7 +165,7 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
 			continue
 		}
 
-		frame.visited[outNode.ID] = false
+		frame.visited[outNode.ID] = true
 		// check for interesting call
 		outFunc := outNode.Func
 
@@ -179,21 +186,21 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
 		_, isInterestingClient := frame.config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		_, isInterestingServer := frame.config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 
+		newFrame := *frame
+		copy(newFrame.trace, frame.trace)
+		newFrame.trace = append(newFrame.trace, called)
+
 		if isInterestingClient || isInterestingServer {
-			frame.trace = append(frame.trace, call)
-			callTarget := getCallTarget(frame.trace, outFunc.Pkg)
+			callTarget := getCallTarget(newFrame.trace)
 			if isInterestingClient {
 				frame.targetsCollection.clientTargets = append(frame.targetsCollection.clientTargets, callTarget)
 			} else {
 				frame.targetsCollection.serverTargets = append(frame.targetsCollection.serverTargets, callTarget)
 			}
 
+			frame.visited[outNode.ID] = true
 			continue
 		}
-
-		newFrame := *frame
-		copy(newFrame.trace, frame.trace)
-		newFrame.trace = append(newFrame.trace, call)
 
 		found := uniquePaths(outNode, &newFrame)
 		frame.visited[outNode.ID] = found
