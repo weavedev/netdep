@@ -141,10 +141,10 @@ func pathOk(dir string) bool {
 }
 
 // init initialises the depScan command and adds it as a subcommand of the root
-func init() {
-	depScanCmd := depScanCmd()
-	rootCmd.AddCommand(depScanCmd)
-}
+// func init() {
+// depScanCmd := depScanCmd()
+// rootCmd.AddCommand(depScanCmd)
+// }
 
 // pathExists determines whether a given path is valid by checking if it exists
 func pathExists(path string) (bool, error) {
