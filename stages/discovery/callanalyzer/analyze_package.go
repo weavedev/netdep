@@ -75,7 +75,7 @@ func getPositionFromPos(pos token.Pos, program *ssa.Program) (string, string) {
 	if program == nil {
 		return "", ""
 	}
-	
+
 	file := program.Fset.File(pos)
 	if file == nil {
 		return "", ""

@@ -99,11 +99,18 @@ func DefaultConfigForFindingHTTPCalls(environment map[string]map[string]string) 
 			"errors":               true,
 			"runtime":              true,
 			"math/bits":            true,
+			"math":                 true,
 			"internal/reflectlite": true,
 			"sync":                 true,
 			"syscall":              true,
-			"unicode":              true,
 			"time":                 true,
+			"encoding/base64":      true,
+			"sync/atomic":          true,
+			"internal/poll":        true,
+			"log":                  true,
+			"regexp":               true,
+			"unicode":              true,
+
 			// TODO: expand ignoreList
 		},
 	}

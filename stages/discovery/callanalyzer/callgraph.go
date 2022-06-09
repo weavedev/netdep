@@ -11,7 +11,12 @@ import (
 )
 
 func getCallTarget(trace []*ssa.CallCommon, pkg *ssa.Package) *CallTarget {
-	rootCall := trace[0]
+	rootCall := trace[len(trace)-1]
+
+	if rootCall == nil {
+		return nil
+	}
+
 	rootFn := rootCall.StaticCallee()
 	MethodName, packageName := getFunctionQualifiers(rootFn)
 
@@ -44,6 +49,33 @@ func getCallTarget(trace []*ssa.CallCommon, pkg *ssa.Package) *CallTarget {
 	return &target
 }
 
+// GraphFrame is a struct for keeping track of the traversal packages while looking for interesting functions
+type GraphFrame struct {
+	// trace is a stack trace of previous calls.
+	trace []*ssa.CallCommon
+	// visited is shared between frames and keeps track of which nodes have been visited
+	// to prevent repetitive visits.
+	visited           map[int]bool
+	program           *ssa.Program
+	parent            *Frame
+	config            *AnalyserConfig
+	targetsCollection *TargetsCollection
+}
+
+func (f GraphFrame) hasVisited(call *ssa.CallCommon, node *callgraph.Node) bool {
+	if _, ok := f.visited[node.ID]; ok {
+		return true
+	}
+
+	for _, callee := range f.trace {
+		if callee == call {
+			return true
+		}
+	}
+
+	return false
+}
+
 func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
 	mains := ssautil.MainPackages(pkgs)
 
@@ -65,115 +97,83 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 	cg := ptares.CallGraph
 	cg.DeleteSyntheticNodes()
 
-	allClientTargets := make([]*CallTarget, 0)
-	allServerTargets := make([]*CallTarget, 0)
-
 	fmt.Printf("Finding nodes (%d)...\n", len(cg.Nodes))
 
-	markedPaths := make(map[int]bool)
-	markPaths(cg.Root, markedPaths)
-	fmt.Printf("Marked %d nodes.\n", len(markedPaths))
+	baseFrame := GraphFrame{
+		trace:   make([]*ssa.CallCommon, 0),
+		visited: make(map[int]bool),
+		program: pkgs[0].Prog,
+		parent:  nil,
+		config:  config,
+		targetsCollection: &TargetsCollection{
+			make([]*CallTarget, 0),
+			make([]*CallTarget, 0),
+		},
+	}
 
-	for _, node := range cg.Nodes {
-		qualifiedFunctionNameOfTarget := node.Func.RelString(nil)
-
-		_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
-		_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
-
-		if !isInterestingClient && !isInterestingServer {
-			continue
-		}
-		fmt.Println("found: " + qualifiedFunctionNameOfTarget)
-		traces := getUniquePaths(node, cg.Root, markedPaths)
-		fmt.Println(len(traces))
-
-		//callgraph.PathSearch()
-
-		for _, trace := range traces {
-			callRoot := trace[len(trace)-1]
-			call := getCallTarget(trace, callRoot.StaticCallee().Pkg)
-
-			if call == nil {
-				continue
-			}
-
-			if isInterestingClient {
-				allClientTargets = append(allClientTargets, call)
-			} else {
-				allServerTargets = append(allServerTargets, call)
-			}
+	for _, edge := range cg.Root.Out {
+		if edge.Callee.Func.Name() == "main" {
+			uniquePaths(edge.Callee, &baseFrame)
 		}
 	}
 
-	return allClientTargets, allServerTargets, nil
+	fmt.Printf("%d, %d found\n", len(baseFrame.targetsCollection.clientTargets), len(baseFrame.targetsCollection.serverTargets))
+	return baseFrame.targetsCollection.clientTargets, baseFrame.targetsCollection.serverTargets, nil
 }
 
-func markPaths(start *callgraph.Node, visited map[int]bool) {
-	visited[start.ID] = true
+func uniquePaths(node *callgraph.Node, frame *GraphFrame) {
+	//fmt.Printf("Scanning %s, %d (%d)\n", node.String(), len(node.Out), len(frame.trace))
+	for _, edge := range node.Out {
+		outNode := edge.Callee
 
-	for _, edge := range start.Out {
-		if visited[edge.Callee.ID] {
-			continue
-		}
-
-		markPaths(edge.Callee, visited)
-	}
-
-	return
-}
-
-func getUniquePaths(start *callgraph.Node, end *callgraph.Node, marked map[int]bool) [][]*ssa.CallCommon {
-	visited := make(map[int]bool)
-	visited[start.ID] = true
-
-	foundPaths := uniquePaths(start, end, visited, marked)
-	return foundPaths
-}
-
-func uniquePaths(node *callgraph.Node, root *callgraph.Node, visited map[int]bool, marked map[int]bool) [][]*ssa.CallCommon {
-	output := make([][]*ssa.CallCommon, 0)
-
-	for _, edge := range node.In {
-		inNode := edge.Caller
-		if visited[inNode.ID] || !marked[inNode.ID] {
-			continue
-		}
-
+		// TODO: improve get call
 		var call *ssa.CallCommon = nil
 		if edge.Site != nil {
 			call = edge.Site.Common()
 		}
 
-		if inNode.ID == root.ID {
-			newList := make([]*ssa.CallCommon, 0, 1)
-			output = append(output, newList)
+		if frame.hasVisited(call, outNode) {
 			continue
 		}
 
-		newVisited := make(map[int]bool, len(visited)+1)
-		for k, _ := range visited {
-			newVisited[k] = true
-		}
+		// check for interesting call
+		outFunc := outNode.Func
 
-		newVisited[inNode.ID] = true
+		qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(outFunc)
 
-		newPaths := uniquePaths(inNode, root, newVisited, marked)
-
-		if newPaths == nil {
+		// check ignored
+		_, isIgnored := frame.config.ignoreList[functionPackage]
+		if isIgnored {
 			continue
 		}
 
-		for _, pth := range newPaths {
-			newList := make([]*ssa.CallCommon, 0)
-			newList = append(newList, call)
-			newList = append(newList, pth...)
-			output = append(output, newList)
+		_, isInterestingClient := frame.config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+		_, isInterestingServer := frame.config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+
+		if isInterestingClient || isInterestingServer {
+			frame.trace = append(frame.trace, call)
+			callTarget := getCallTarget(frame.trace, outFunc.Pkg)
+			if isInterestingClient {
+				frame.targetsCollection.clientTargets = append(frame.targetsCollection.clientTargets, callTarget)
+			} else {
+				frame.targetsCollection.serverTargets = append(frame.targetsCollection.serverTargets, callTarget)
+			}
+
+			continue
 		}
-	}
 
-	if len(output) == 0 {
-		return nil
-	}
+		newFrame := *frame
 
-	return output
+		//newVisited := make(map[int]bool)
+		//for k, _ := range frame.visited {
+		//	newVisited[k] = true
+		//}
+
+		newFrame.visited[outNode.ID] = true
+		//newFrame.visited = newVisited
+		copy(newFrame.trace, frame.trace)
+		newFrame.trace = append(newFrame.trace, call)
+
+		uniquePaths(outNode, &newFrame)
+	}
 }
