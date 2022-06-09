@@ -234,14 +234,20 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		// load packages
 		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 		if err != nil {
-			return nil, nil, nil, err
+			fmt.Println("Errors parsing service:")
+			fmt.Println(err)
+			continue
+			//return nil, nil, nil, err
 		}
 		packageCount += len(packagesInService)
 
 		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
 		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
-			return nil, nil, nil, err
+			fmt.Println("Errors parsing service:")
+			fmt.Println(err)
+			continue
+			//return nil, nil, nil, err
 		}
 
 		// discover calls

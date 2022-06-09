@@ -5,7 +5,6 @@ import (
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/pointer"
 	"golang.org/x/tools/go/ssa"
-	"golang.org/x/tools/go/ssa/ssautil"
 	"os"
 	"strings"
 )
@@ -77,7 +76,23 @@ func (f GraphFrame) hasVisited(call *ssa.CallCommon, node *callgraph.Node) bool 
 }
 
 func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
-	mains := ssautil.MainPackages(pkgs)
+	if pkgs == nil || len(pkgs) == 0 {
+		return nil, nil, fmt.Errorf("no packages given")
+	}
+
+	var mains []*ssa.Package
+	for _, pkg := range pkgs {
+		if pkg == nil || pkg.Pkg == nil {
+			if pkg != nil {
+				fmt.Println("No package for " + pkg.String())
+			}
+			continue
+		}
+
+		if pkg.Pkg.Name() == "main" && pkg.Func("main") != nil {
+			mains = append(mains, pkg)
+		}
+	}
 
 	ptConfig := &pointer.Config{
 		Mains:          mains,
@@ -121,8 +136,14 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 	return baseFrame.targetsCollection.clientTargets, baseFrame.targetsCollection.serverTargets, nil
 }
 
-func uniquePaths(node *callgraph.Node, frame *GraphFrame) {
+func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
 	//fmt.Printf("Scanning %s, %d (%d)\n", node.String(), len(node.Out), len(frame.trace))
+	if len(frame.trace) > frame.config.maxTraversalDepth {
+		return false
+	}
+
+	foundInteresting := false
+
 	for _, edge := range node.Out {
 		outNode := edge.Callee
 
@@ -132,10 +153,12 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) {
 			call = edge.Site.Common()
 		}
 
-		if frame.hasVisited(call, outNode) {
+		isInterestingVisit, wasVisited := frame.visited[outNode.ID]
+		if wasVisited && !isInterestingVisit {
 			continue
 		}
 
+		frame.visited[outNode.ID] = false
 		// check for interesting call
 		outFunc := outNode.Func
 
@@ -143,6 +166,12 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) {
 
 		// check ignored
 		_, isIgnored := frame.config.ignoreList[functionPackage]
+		if isIgnored {
+			continue
+		}
+
+		rootPackage := strings.Split(functionPackage, "/")[0]
+		_, isIgnored = frame.config.ignoreList[rootPackage]
 		if isIgnored {
 			continue
 		}
@@ -163,17 +192,16 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) {
 		}
 
 		newFrame := *frame
-
-		//newVisited := make(map[int]bool)
-		//for k, _ := range frame.visited {
-		//	newVisited[k] = true
-		//}
-
-		newFrame.visited[outNode.ID] = true
-		//newFrame.visited = newVisited
 		copy(newFrame.trace, frame.trace)
 		newFrame.trace = append(newFrame.trace, call)
 
-		uniquePaths(outNode, &newFrame)
+		found := uniquePaths(outNode, &newFrame)
+		frame.visited[outNode.ID] = found
+
+		if found {
+			foundInteresting = true
+		}
 	}
+
+	return foundInteresting
 }
