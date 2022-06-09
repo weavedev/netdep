@@ -36,6 +36,8 @@ type RunConfig struct {
 func Execute() {
 	err := netDepCmd().Execute()
 	if err != nil {
+		// Debugging failing pipelines
+		println(fmt.Errorf(err.Error()))
 		os.Exit(1)
 		return
 	}
