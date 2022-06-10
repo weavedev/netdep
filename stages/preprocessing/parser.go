@@ -12,7 +12,7 @@ import (
 // parseComments parses the given file with a parser.ParseComments mode, filters out
 // the comments which don't contain a substring "netdep:client" or "netdep:endpoint", generates an Annotation for
 // every remaining comment and returns a list of them.
-func parseComments(path string, serviceName string, annotations map[string]map[Position]string) error {
+func parseComments(path string, serviceName string, annotations map[string]map[callanalyzer.Position]string) error {
 	fs := token.NewFileSet()
 	f, err := parser.ParseFile(fs, path, nil, parser.ParseComments)
 	if err != nil {
@@ -23,7 +23,7 @@ func parseComments(path string, serviceName string, annotations map[string]map[P
 		for _, comment := range commentGroup.List {
 			if strings.HasPrefix(comment.Text, "//netdep:") {
 				tokenPos := fs.Position(comment.Slash)
-				pos := Position{
+				pos := callanalyzer.Position{
 					Filename: tokenPos.Filename,
 					Line:     tokenPos.Line,
 				}

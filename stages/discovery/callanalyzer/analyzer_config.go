@@ -1,7 +1,5 @@
 package callanalyzer
 
-import "lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
-
 // DiscoveryAction indicates what to do when encountering
 // a certain call. Used in interestingCalls
 type DiscoveryAction int64
@@ -25,6 +23,11 @@ type InterestingCall struct {
 	interestingArgs []int
 }
 
+type Position struct {
+	Filename string
+	Line     int
+}
+
 // AnalyserConfig holds the properties to adjust the analyser's behaviour for different use cases
 type AnalyserConfig struct {
 	// interestingCallsClient is a map from target to action that is to be taken when encountering the target.
@@ -40,7 +43,7 @@ type AnalyserConfig struct {
 	environment map[string]map[string]string
 
 	// annotations: map of discovered annotations
-	annotations map[string]map[preprocessing.Position]string
+	annotations map[string]map[Position]string
 
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
@@ -58,7 +61,7 @@ func (a *AnalyserConfig) SetEnv(envMap map[string]map[string]string) {
 	a.environment = envMap
 }
 
-func (a *AnalyserConfig) SetAnnotations(annotations map[string]map[preprocessing.Position]string) {
+func (a *AnalyserConfig) SetAnnotations(annotations map[string]map[Position]string) {
 	a.annotations = annotations
 }
 

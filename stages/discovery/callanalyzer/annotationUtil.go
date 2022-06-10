@@ -8,8 +8,6 @@ package callanalyzer
 import (
 	"strconv"
 	"strings"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 )
 
 // ReplaceTargetsAnnotations replaces each unresolved callanalyzer.CallTarget with new a new target containing data
@@ -25,7 +23,7 @@ func ReplaceTargetsAnnotations(callTargets *[]*CallTarget, config *AnalyserConfi
 			if err != nil {
 				return err
 			}
-			pos := preprocessing.Position{
+			pos := Position{
 				Filename: callTarget.Trace[0].FileName,
 				Line:     line - 1,
 			}

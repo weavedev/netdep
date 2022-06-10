@@ -8,8 +8,6 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/stretchr/testify/assert"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 )
 
 func TestReplaceTargetsAnnotations(t *testing.T) {
@@ -43,10 +41,10 @@ func TestReplaceTargetsAnnotations(t *testing.T) {
 	targets := make([]*callanalyzer.CallTarget, 0)
 	targets = append(targets, target1, target2)
 
-	annotations := make(map[string]map[preprocessing.Position]string)
-	annotations["c1"] = make(map[preprocessing.Position]string)
+	annotations := make(map[string]map[callanalyzer.Position]string)
+	annotations["c1"] = make(map[callanalyzer.Position]string)
 
-	pos := preprocessing.Position{
+	pos := callanalyzer.Position{
 		Filename: "d1",
 		Line:     5,
 	}

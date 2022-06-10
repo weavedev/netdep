@@ -3,6 +3,7 @@
 package preprocessing
 
 import (
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"path/filepath"
 	"testing"
 
@@ -13,11 +14,11 @@ import (
 
 func TestLoadAnnotations(t *testing.T) {
 	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "object_call")
-	ann := make(map[string]map[Position]string)
+	ann := make(map[string]map[callanalyzer.Position]string)
 	LoadAnnotations(svcDir, "object_call", ann)
-	expected := make(map[string]map[Position]string)
-	expected["object_call"] = make(map[Position]string)
-	pos := Position{
+	expected := make(map[string]map[callanalyzer.Position]string)
+	expected["object_call"] = make(map[callanalyzer.Position]string)
+	pos := callanalyzer.Position{
 		Filename: filepath.Join("object_call", "object_call.go"),
 		Line:     14,
 	}
@@ -27,18 +28,18 @@ func TestLoadAnnotations(t *testing.T) {
 }
 
 func TestLoadAnnotationsInvalidPath(t *testing.T) {
-	m := make(map[string]map[Position]string)
+	m := make(map[string]map[callanalyzer.Position]string)
 	err := LoadAnnotations("invalidPath", "serviceName", m)
 	assert.NotNil(t, err)
 }
 
 func TestLoadHostAnnotations(t *testing.T) {
 	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
-	ann := make(map[string]map[Position]string)
+	ann := make(map[string]map[callanalyzer.Position]string)
 	LoadAnnotations(svcDir, "basic_handle", ann)
-	expected := make(map[string]map[Position]string)
-	expected["basic_handle"] = make(map[Position]string)
-	pos := Position{
+	expected := make(map[string]map[callanalyzer.Position]string)
+	expected["basic_handle"] = make(map[callanalyzer.Position]string)
+	pos := callanalyzer.Position{
 		Filename: filepath.Join("basic_handle", "basic_handle.go"),
 		Line:     25,
 	}

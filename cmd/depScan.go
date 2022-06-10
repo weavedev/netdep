@@ -190,6 +190,9 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	}
 
 	internalCalls, serverTargets, err := preprocessing.FindServiceCalls(config.ServiceCallsDir)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// resolve environment values
 	// TODO: Integrate the envVariables into discovery
@@ -228,10 +231,10 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 }
 
 // processEachService preprocesses and analyses each of the services using RunConfig and callanalyzer.AnalyserConfig
-func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig, internalCalls map[preprocessing.IntCall]string, serverTargets *[]*callanalyzer.CallTarget) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[preprocessing.Position]string, error) {
+func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig, internalCalls map[preprocessing.IntCall]string, serverTargets *[]*callanalyzer.CallTarget) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[callanalyzer.Position]string, error) {
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
-	annotations := make(map[string]map[preprocessing.Position]string)
+	annotations := make(map[string]map[callanalyzer.Position]string)
 
 	analyserConfig.SetAnnotations(annotations)
 
