@@ -29,6 +29,7 @@ type NetworkCall struct {
 type ServiceNode struct {
 	ServiceName string `json:"serviceName"`
 	IsUnknown   bool   `json:"isUnknown"`
+	IsUsed      bool   `json:"isUsed"`
 }
 
 // ConnectionEdge represents a directed edge in the output graph
@@ -149,5 +150,14 @@ func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 	for _, target := range targets {
 		fmt.Print(target.Trace[0].FileName + ":" + target.Trace[0].PositionInFile + " couldn't be resolved. ")
 		fmt.Println("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:endpoint ...\"")
+	}
+}
+
+func PrintUnusedServices(services []*ServiceNode) {
+	fmt.Println("Unused services:")
+	for _, service := range services {
+		if !service.IsUsed {
+			fmt.Println(service.ServiceName)
+		}
 	}
 }

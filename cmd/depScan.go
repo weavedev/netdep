@@ -75,7 +75,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
-			err = printOutput(outputFilename, jsonString)
+			err = printOutput(outputFilename, jsonString, graph.Nodes)
 			if err != nil {
 				return err
 			}
@@ -92,7 +92,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 }
 
 // printOutput writes the output to the target file (btw stdout is also a file on UNIX)
-func printOutput(targetFileName, jsonString string) error {
+func printOutput(targetFileName, jsonString string, services []*output.ServiceNode) error {
 	if targetFileName != "" {
 		const filePerm = 0o600
 		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
@@ -106,6 +106,7 @@ func printOutput(targetFileName, jsonString string) error {
 	} else {
 		fmt.Println("Successfully analysed, here is the list of dependencies:")
 		fmt.Println(jsonString)
+		output.PrintUnusedServices(services)
 	}
 	return nil
 }

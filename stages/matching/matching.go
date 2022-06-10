@@ -80,6 +80,7 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 	UnknownService := &output.ServiceNode{
 		ServiceName: "UnknownService",
 		IsUnknown:   true,
+		IsUsed:      true,
 	}
 
 	edges := make([]*output.ConnectionEdge, 0)
@@ -91,12 +92,14 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 	// This order is guaranteed because calls is an array
 	for _, call := range calls {
 		sourceNode := serviceMap[call.ServiceName]
+		sourceNode.IsUsed = true
 		targetServiceName, isResolved := findTargetNodeName(call, endpointMap)
 
 		var targetNode *output.ServiceNode
 
 		if target, ok := serviceMap[targetServiceName]; ok && isResolved {
 			targetNode = target
+			targetNode.IsUsed = true
 			// Set target to UnknownService if not found
 			// There are 3 possibilities for this scenario:
 			// 1. endpoint definition of call.RequestLocation wasn't resolved correctly.
