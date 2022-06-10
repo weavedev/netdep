@@ -14,14 +14,17 @@ func CreateSmallTestGraph() output.NodeGraph {
 	node1 := output.ServiceNode{
 		ServiceName: "Node1",
 		IsUnknown:   false,
+		IsUsed:      true,
 	}
 	node2 := output.ServiceNode{
 		ServiceName: "Node2",
 		IsUnknown:   false,
+		IsUsed:      true,
 	}
 	node3 := output.ServiceNode{
 		ServiceName: "Node3",
 		IsUnknown:   false,
+		IsUsed:      true,
 	}
 
 	edge12 := output.ConnectionEdge{
@@ -215,11 +218,13 @@ func TestWithUnknownService(t *testing.T) {
 	node1 := output.ServiceNode{
 		ServiceName: "Node1",
 		IsUnknown:   false,
+		IsUsed:      true,
 	}
 
 	unknownService := output.ServiceNode{
 		ServiceName: "UnknownService",
 		IsUnknown:   true,
+		IsUsed:      true,
 	}
 
 	edge12a := output.ConnectionEdge{
