@@ -263,7 +263,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		allServerTargets = append(allServerTargets, serverCalls...)
 
 		clientSum := len(clientCalls)
-		targetSum := len(clientCalls)
+		targetSum := len(serverCalls)
 
 		fmt.Printf("Found: %d calls of which %d client call(s) and %d server call(s)\n", clientSum+targetSum, clientSum, targetSum)
 	}

@@ -53,7 +53,7 @@ func TestDiscovery(t *testing.T) {
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
-	expectedCount := 24
+	expectedCount := 17
 	assert.Equal(t, expectedCount, len(resC), fmt.Sprintf("Expect %d interesting call", expectedCount))
 	assert.Equal(t, "net/http.Get", resC[0].MethodName, "Expect net/http.Get to be called")
 }
@@ -114,7 +114,7 @@ func TestWrappedNestedUnknown(t *testing.T) {
 	res, _, _ := DiscoverAll(initial, &analyseConfig)
 
 	assert.Equal(t, "nested_unknown", res[0].ServiceName, "Expected service name nested_unknown.go")
-	assert.Equal(t, 4, len(res), "Should resolve should be of length 3")
+	assert.Equal(t, 2, len(res), "Should resolve should be of length 3")
 }
 
 func TestDiscoveryHandleFuncCallBack(t *testing.T) {
