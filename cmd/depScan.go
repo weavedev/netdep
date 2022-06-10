@@ -19,8 +19,6 @@ import (
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
 )
 
 // RunConfig defines the parameters for a depScan command run
@@ -163,7 +161,7 @@ func resolveEnvironmentValues(path string) (map[string]map[string]string, error)
 	if path == "" {
 		return nil, nil
 	}
-	return stages.MapEnvVars(path)
+	return preprocessing.IndexEnvironmentVariables(path)
 }
 
 // discoverAllCalls calls the correct stages for loading, building,

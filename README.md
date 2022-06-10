@@ -73,14 +73,15 @@ service-1\main.go:24 couldn't be resolved. Add an annotation above it in the for
 
 ### Options
 
-| Argument                  | Description                                                                               | Default  |
-|:--------------------------|:------------------------------------------------------------------------------------------|:---------|
-| `-h, --help`              | Print help                                                                                |          |
-| `-p, --project-directory` | The path to the project directory. Must be a valid path.                                  | `./`     |
-| `-s --service-directory`  | The path to the services inside the project. Must be a valid path.                        | `./svc/` |
-| `-o --output-filename`    | Output filename such as ./deps.json. By default or when empty, it is outputted to stdout. | ``       |
-| `-v --verbose`            | Toggle printing stack traces of unknown variables.                                        | `false`  |
-
+| Argument                     | Description                                                                               | Default  |
+|:-----------------------------|:------------------------------------------------------------------------------------------|:---------|
+| `-h, --help`                 | Print help                                                                                |          |
+| `-p, --project-directory`    | The path to the project directory. Must be a valid path.                                  | `./`     |
+| `-s --service-directory`     | The path to the services inside the project. Must be a valid path.                        | `./svc/` |
+| `-e --environment-variables` | The path to the file containing environment variables. Must be a valid path.              | ``       |
+| `-o --output-filename`       | Output filename such as ./deps.json. By default or when empty, it is outputted to stdout. | ``       |
+| `-v --verbose`               | Toggle printing stack traces of unknown variables.                                        | `false`  |
+ 
 ## Documentation
 
 Documentation can be found in
