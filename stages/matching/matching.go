@@ -68,6 +68,9 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 			// register request
 			endpointURL := fmt.Sprintf("http://%s%s%s", call.ServiceName, port, call.RequestLocation)
 			endpointMap[endpointURL] = call.ServiceName
+		} else if call.PackageName == "servicecalls" {
+			endpointURL := call.RequestLocation
+			endpointMap[endpointURL] = call.ServiceName
 		}
 	}
 
@@ -107,6 +110,12 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 			targetNode = UnknownService
 		}
 
+		// In case of servicecalls scanning some services use the methods in module or proto definitions which
+		// Make the tool think that it's a self reference. This is a clear case of false positives.
+		if targetNode.ServiceName == sourceNode.ServiceName {
+			continue
+		}
+
 		// If at least one unknown target has been found,
 		// add it to a list of nodes.
 		if targetNode == UnknownService && !hasUnknown {
@@ -116,12 +125,26 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 
 		callLocation := call.Trace[len(call.Trace)-1]
 
+		// Default values
+		protocol := "HTTP"
+		url := call.RequestLocation
+		methodName := ""
+
+		// If the call was discovered via servicecalls package scanning
+		// Edit the values with the servicecalls specific data
+		if call.PackageName == "servicecalls" {
+			protocol = call.PackageName
+			url = ""
+			methodName = call.RequestLocation
+		}
+
 		connectionEdge := &output.ConnectionEdge{
 			Call: output.NetworkCall{
 				// TODO add more details
-				Protocol:  "HTTP",
-				URL:       call.RequestLocation,
-				Arguments: nil,
+				Protocol:   protocol,
+				URL:        url,
+				Arguments:  nil,
+				MethodName: methodName,
 				// TODO: handle stack trace?
 				Location: fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
 			},

@@ -1,38 +1,31 @@
-// Package preprocessing defines preprocessing of a given Go project directory
-// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package preprocessing
 
 import (
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-type Position struct {
-	Filename string
-	Line     int
-}
-
-// LoadAnnotations scans all the files of a given service directory and returns a list of
+// LoadServiceCalls scans all the files of a given service directory and returns a list of
 // Annotation from the comments in the format "//netdep: ..." that it discovers.
-func LoadAnnotations(servicePath string, serviceName string, annotations map[string]map[Position]string) error {
+func LoadServiceCalls(servicePath string, serviceName string, internalCalls map[IntCall]string, clientTargets *[]*callanalyzer.CallTarget) error {
 	files, err := os.ReadDir(servicePath)
 	if err != nil {
 		return err
 	}
 
-	annotations[serviceName] = make(map[Position]string)
-
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".go" && !strings.HasSuffix(file.Name(), "_test.go") && !strings.HasSuffix(file.Name(), "pb.go") {
 			// If the file is a .go file - parse it
-			err := parseComments(filepath.Join(servicePath, file.Name()), serviceName, annotations)
+			currClientTargets, err := parseMethods(filepath.Join(servicePath, file.Name()), internalCalls, serviceName)
 			if err != nil {
 				return err
 			}
+			*clientTargets = append(*clientTargets, *currClientTargets...)
 		} else if file.IsDir() {
 			// If the file is a directory - recursively look for .go files inside it
-			err := LoadAnnotations(filepath.Join(servicePath, file.Name()), serviceName, annotations)
+			err := LoadServiceCalls(filepath.Join(servicePath, file.Name()), serviceName, internalCalls, clientTargets)
 			if err != nil {
 				return err
 			}

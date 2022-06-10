@@ -6,11 +6,11 @@ package cmd
 
 import (
 	"fmt"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
@@ -25,21 +25,25 @@ import (
 
 // RunConfig defines the parameters for a depScan command run
 type RunConfig struct {
-	ProjectDir string
-	ServiceDir string
-	EnvFile    string
-	Verbose    bool
+	ProjectDir       string
+	ServiceDir       string
+	EnvFile          string
+	Verbose          bool
+	ServiceCallsDir  string
+	OnlyServiceCalls bool
 }
 
 // depScanCmd creates and returns a depScan command object
 func depScanCmd() *cobra.Command {
 	// Variables that are supplied as command-line args
 	var (
-		projectDir     string
-		serviceDir     string
-		envVars        string
-		outputFilename string
-		verbose        bool
+		projectDir       string
+		serviceDir       string
+		envVars          string
+		outputFilename   string
+		verbose          bool
+		serviceCallsDir  string
+		onlyServiceCalls bool
 	)
 
 	cmd := &cobra.Command{
@@ -49,16 +53,18 @@ func depScanCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ok, err := areInputPathsValid(projectDir, serviceDir, envVars, outputFilename)
+			ok, err := areInputPathsValid(projectDir, serviceDir, serviceCallsDir, envVars, outputFilename)
 			if !ok {
 				return err
 			}
 
 			config := RunConfig{
-				ProjectDir: projectDir,
-				ServiceDir: serviceDir,
-				Verbose:    verbose,
-				EnvFile:    envVars,
+				ProjectDir:       projectDir,
+				ServiceDir:       serviceDir,
+				Verbose:          verbose,
+				EnvFile:          envVars,
+				ServiceCallsDir:  serviceCallsDir,
+				OnlyServiceCalls: onlyServiceCalls,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
@@ -88,6 +94,9 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "toggle logging trace of unknown variables")
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "", "output filename such as ./deps.json")
+	cmd.Flags().StringVarP(&serviceCallsDir, "servicecalls-directory", "c", "", "servicecalls package directory")
+	cmd.Flags().BoolVar(&onlyServiceCalls, "only-servicecalls", false, "only scan the servicecalls")
+
 	return cmd
 }
 
@@ -111,7 +120,7 @@ func printOutput(targetFileName, jsonString string) error {
 }
 
 // areInputPathsValid verifies that all the specified directories exist before running the main logic
-func areInputPathsValid(projectDir, serviceDir, envVars, outputFilename string) (bool, error) {
+func areInputPathsValid(projectDir, serviceDir, serviceCallsDir, envVars, outputFilename string) (bool, error) {
 	if !pathOk(projectDir) {
 		return false, fmt.Errorf("invalid project directory specified: %s", projectDir)
 	}
@@ -120,10 +129,14 @@ func areInputPathsValid(projectDir, serviceDir, envVars, outputFilename string) 
 		return false, fmt.Errorf("invalid service directory specified: %s", serviceDir)
 	}
 
+	if !pathOk(serviceCallsDir) && serviceCallsDir != "" {
+		return false, fmt.Errorf("invalid servicecalls directory specified: %s", serviceCallsDir)
+	}
+
 	if !pathOk(envVars) && envVars != "" {
 		return false, fmt.Errorf("invalid environment variable file specified: %s", envVars)
 	}
-	jsonParentDir := path.Dir(outputFilename)
+	jsonParentDir := filepath.Dir(outputFilename)
 
 	if !pathOk(jsonParentDir) {
 		return false, fmt.Errorf("parent directory of json path does not exist: %s", jsonParentDir)
@@ -169,12 +182,6 @@ func resolveEnvironmentValues(path string) (map[string]map[string]string, error)
 // discoverAllCalls calls the correct stages for loading, building,
 // filtering and discovering all client and server calls.
 func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
-	// Given a correct project directory en service directory,
-	// apply our discovery algorithm to find all interesting calls
-	if ex, err := pathExists(config.EnvFile); !ex && config.EnvFile != "" || err != nil {
-		return nil, nil, fmt.Errorf("invalid environment variable file specified: %s", config.EnvFile)
-	}
-
 	// Filtering
 	services, err := preprocessing.FindServices(config.ServiceDir)
 	fmt.Printf("Starting to analyse %d services.\n", len(services))
@@ -182,6 +189,8 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	if err != nil {
 		return nil, nil, err
 	}
+
+	internalCalls, serverTargets, err := preprocessing.FindServiceCalls(config.ServiceCallsDir)
 
 	// resolve environment values
 	// TODO: Integrate the envVariables into discovery
@@ -193,7 +202,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
 	analyserConfig.SetVerbose(config.Verbose)
 
-	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig)
+	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig, internalCalls, serverTargets)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -219,44 +228,62 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 }
 
 // processEachService preprocesses and analyses each of the services using RunConfig and callanalyzer.AnalyserConfig
-func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[preprocessing.Position]string, error) {
+func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig, internalCalls map[preprocessing.IntCall]string, serverTargets *[]*callanalyzer.CallTarget) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[preprocessing.Position]string, error) {
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	annotations := make(map[string]map[preprocessing.Position]string)
 
 	packageCount := 0
 
+	allServerTargets = append(allServerTargets, *serverTargets...)
+	internalClientTargets := make([]*callanalyzer.CallTarget, 0)
+
 	for _, serviceDir := range *services {
+		serviceName := strings.Split(serviceDir, string(os.PathSeparator))[len(strings.Split(serviceDir, string(os.PathSeparator)))-1]
+
 		if config.Verbose {
 			fmt.Println("Analysing service " + serviceDir)
 		}
 
-		// load packages
-		packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		packageCount += len(packagesInService)
-
-		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
-		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
+		err := preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		// discover calls
-		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)
-		if err != nil {
-			return nil, nil, nil, err
+		// There are some interesting internal calls so the tool should parse all methods
+		if len(internalCalls) != 0 {
+			err = preprocessing.LoadServiceCalls(serviceDir, serviceName, internalCalls, &internalClientTargets)
+			if err != nil {
+				return nil, nil, nil, err
+			}
 		}
 
-		// append
-		allClientTargets = append(allClientTargets, clientCalls...)
-		allServerTargets = append(allServerTargets, serverCalls...)
+		// Load and build packages and proceed with discovery if the user
+		// Didn't ask for scanning of only servicecalls package
+		if !config.OnlyServiceCalls {
+			// load packages
+			packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			packageCount += len(packagesInService)
+
+			// discover calls
+			clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			// append
+			allClientTargets = append(allClientTargets, clientCalls...)
+			allServerTargets = append(allServerTargets, serverCalls...)
+		}
 	}
+	allClientTargets = append(allClientTargets, internalClientTargets...)
 
-	if packageCount == 0 {
+	if !config.OnlyServiceCalls && packageCount == 0 {
 		return nil, nil, nil, fmt.Errorf("no service to analyse were found")
 	}
+
 	return allClientTargets, allServerTargets, annotations, nil
 }

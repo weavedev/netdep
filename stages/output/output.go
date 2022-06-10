@@ -16,10 +16,11 @@ Refer to the Project plan, chapter 5.4 for more information.
 
 // NetworkCall represents a call that can be made in the network
 type NetworkCall struct {
-	Protocol  string   `json:"protocol"`
-	URL       string   `json:"url"`
-	Arguments []string `json:"arguments"`
-	Location  string   `json:"location"`
+	Protocol   string   `json:"protocol"`
+	URL        string   `json:"url,omitempty"`
+	MethodName string   `json:"methodName,omitempty"`
+	Arguments  []string `json:"arguments,omitempty"`
+	Location   string   `json:"location"`
 }
 
 // ServiceNode represents a node in the output graph, which is a Service
