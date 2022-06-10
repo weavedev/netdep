@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +16,6 @@ import (
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
-
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
 
@@ -199,8 +198,9 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		return nil, nil, err
 	}
 
-	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(envVariables)
+	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
 	analyserConfig.SetVerbose(config.Verbose)
+	analyserConfig.SetEnv(envVariables)
 
 	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig, internalCalls, serverTargets)
 	if err != nil {
@@ -232,6 +232,8 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	annotations := make(map[string]map[preprocessing.Position]string)
+
+	analyserConfig.SetAnnotations(annotations)
 
 	packageCount := 0
 
@@ -284,6 +286,5 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	if !config.OnlyServiceCalls && packageCount == 0 {
 		return nil, nil, nil, fmt.Errorf("no service to analyse were found")
 	}
-
 	return allClientTargets, allServerTargets, annotations, nil
 }

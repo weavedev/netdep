@@ -1,4 +1,4 @@
-// Package stages
+// Package discovery
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 
 package discovery
@@ -6,7 +6,7 @@ package discovery
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -49,7 +49,7 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 A test for the sample implementation of the resolution method
 */
 func TestDiscovery(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http")
 	services, _ := preprocessing.FindServices(svcDir)
 	resC, _ := discoverAllServices(helpers.RootDir, services, nil)
 
@@ -58,7 +58,7 @@ func TestDiscovery(t *testing.T) {
 }
 
 func TestDiscoveryBasicCall(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
+	projDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	resC, _, _ := DiscoverAll(initial, nil)
 
@@ -67,7 +67,7 @@ func TestDiscoveryBasicCall(t *testing.T) {
 }
 
 func TestDiscoveryBasicHandle(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
+	projDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "basic_handle")
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
@@ -76,7 +76,7 @@ func TestDiscoveryBasicHandle(t *testing.T) {
 }
 
 func TestDiscoveryBasicHandleFunc(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_handlefunc")
+	projDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "basic_handlefunc")
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
@@ -85,7 +85,7 @@ func TestDiscoveryBasicHandleFunc(t *testing.T) {
 }
 
 func TestDiscoveryGinHandle(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, path.Join("test/sample", path.Join("http", "gin_handle")))
+	projDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
 	initial, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	_, resS, _ := DiscoverAll(initial, nil)
 
@@ -94,7 +94,7 @@ func TestDiscoveryGinHandle(t *testing.T) {
 }
 
 func TestCallInfo(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http")
 	services, _ := preprocessing.FindServices(svcDir)
 	res, _ := discoverAllServices(helpers.RootDir, services, nil)
 
@@ -104,9 +104,9 @@ func TestCallInfo(t *testing.T) {
 }
 
 func TestWrappedNestedUnknown(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "nested_unknown")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "nested_unknown")
 
-	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls(nil)
+	analyseConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
 	analyseConfig.SetVerbose(true)
 
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
@@ -117,7 +117,7 @@ func TestWrappedNestedUnknown(t *testing.T) {
 }
 
 func TestDiscoveryHandleFuncCallBack(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_callback")
+	projDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_callback")
 	services, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	resC, resS, _ := DiscoverAll(services, nil)
 
@@ -130,7 +130,7 @@ func TestDiscoveryHandleFuncCallBack(t *testing.T) {
 }
 
 func TestDiscoveryHandleFuncCallBackAnon(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_anon_callback")
+	projDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "handlefunc_anon_callback")
 	services, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	resC, resS, _ := DiscoverAll(services, nil)
 
@@ -143,7 +143,7 @@ func TestDiscoveryHandleFuncCallBackAnon(t *testing.T) {
 }
 
 func TestDiscoveryDependencyInCall(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "sample", "http", "dependency_in_call")
+	projDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "dependency_in_call")
 	services, _ := preprocessing.LoadAndBuildPackages(projDir, projDir)
 	resC, resS, _ := DiscoverAll(services, nil)
 
@@ -157,7 +157,7 @@ func TestDiscoveryDependencyInCall(t *testing.T) {
 }
 
 func TestWrappedClientCall(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "wrapped_client")
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, nil)
 
@@ -172,7 +172,7 @@ func TestWrappedClientCall(t *testing.T) {
 }
 
 func TestGetEnvCall(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "env_variable")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "env_variable")
 
 	destinationURL := "http://example.com/endpoint"
 	env := map[string]map[string]string{
@@ -181,7 +181,8 @@ func TestGetEnvCall(t *testing.T) {
 		},
 	}
 
-	config := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+	config := callanalyzer.DefaultConfigForFindingHTTPCalls()
+	config.SetEnv(env)
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, &config)
 
@@ -192,7 +193,7 @@ func TestGetEnvCall(t *testing.T) {
 }
 
 func TestGinHandleCall(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
 
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	DiscoverAll(initial, nil)
@@ -200,7 +201,7 @@ func TestGinHandleCall(t *testing.T) {
 
 // TestGlobalVariableCall inspects a call with a global variable as argument
 func TestGlobalVariableCall(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "global_variable")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "global_variable")
 
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, nil)

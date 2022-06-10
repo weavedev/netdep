@@ -33,6 +33,44 @@ or if you want more control you can use the options as defined below, for exampl
 go run main.go depScan -p "./some/project/dir" -s "./some/service/dir"
 ```
 
+### Annotations
+
+The tool supports code annotations. This is necessary, because it might fail to resolve some of the variables due to complexity of the code or lack of support.
+
+#### Annotation format
+
+User can add annotations as comments in their project before running the tool on it. Currently, the tool supports 3 types of annotations:
+1) Annotations for client calls. Example:
+```go
+//netdep:client url=http://example.com/ targetSvc=service-2
+c.Do(req)
+```
+Both `url` and `targetSvc` can be specified, but any one is also enough.
+2) Annotations for endpoint definitions. Example:
+```go
+//netdep:endpoint url=http://example.com/ping
+r.GET("/ping", func(c *gin.Context) {
+    c.JSON(200, gin.H{
+    "message": "pong",
+    })
+})
+```
+3) Annotations for host name definition. Example:
+```go
+http.Handle("/count", th)
+http.ListenAndServe(":8080", nil)
+//netdep:host http://basic_handle:8080
+```
+
+#### Annotation suggestions
+
+An annotation suggestion will be printed for all unresolved targets. 
+
+Suggestion output example:
+```sh
+service-1\main.go:24 couldn't be resolved. Add an annotation above it in the format "//netdep:client ..." or "//netdep:endpoint ..."
+```
+
 ### Options
 
 | Argument                  | Description                                                                               | Default  |

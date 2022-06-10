@@ -72,6 +72,7 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 			endpointURL := call.RequestLocation
 			endpointMap[endpointURL] = call.ServiceName
 		}
+		endpointMap[call.RequestLocation] = call.ServiceName
 	}
 
 	return endpointMap
@@ -177,6 +178,10 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 func findTargetNodeName(call *callanalyzer.CallTarget, endpointMap map[string]string) (string, bool) {
 	if !call.IsResolved {
 		return "", false
+	}
+
+	if call.TargetSvc != "" {
+		return call.TargetSvc, true
 	}
 
 	// TODO improve matching, compare URL
