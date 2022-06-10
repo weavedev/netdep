@@ -4,6 +4,7 @@ package matching
 
 import (
 	"fmt"
+	"go/token"
 	"sort"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
@@ -74,6 +75,42 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 	return endpointMap
 }
 
+func populateTraceMap(calls []*callanalyzer.CallTarget, traceMap map[token.Pos]int) {
+	for _, target := range calls {
+		for _, call := range target.Trace {
+			if _, ok := traceMap[call.Pos]; !ok {
+				traceMap[call.Pos] = 1
+			} else {
+				traceMap[call.Pos]++
+			}
+		}
+	}
+}
+
+func getRelevantCallLocation(calls []callanalyzer.CallTargetTrace, traceMap map[token.Pos]int) []string {
+	ret := make([]string, 0)
+	min := -1
+	for _, call := range calls {
+		//if !call.Internal {
+		//	break
+		//}
+		n, _ := traceMap[call.Pos]
+
+		if min == -1 || n < min {
+			ret = make([]string, 0)
+			min = n
+		}
+
+		if n > min {
+			continue
+		}
+		
+		ret = append(ret, fmt.Sprintf("%s:%s", call.FileName, call.PositionInFile))
+	}
+
+	return ret
+}
+
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
 func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) output.NodeGraph {
 	UnknownService := &output.ServiceNode{
@@ -81,10 +118,14 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 		IsUnknown:   true,
 	}
 
+	traceMap := map[token.Pos]int{}
 	edges := make([]*output.ConnectionEdge, 0)
 	serviceMap, nodes := createEmptyNodes(calls, endpoints)
 	endpointMap := createEndpointMap(endpoints)
 	hasUnknown := false
+
+	populateTraceMap(calls, traceMap)
+	populateTraceMap(endpoints, traceMap)
 
 	// Add edges (eg. matching)
 	// This order is guaranteed because calls is an array
@@ -114,7 +155,7 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 			hasUnknown = true
 		}
 
-		callLocation := call.Trace[len(call.Trace)-1]
+		callLocations := getRelevantCallLocation(call.Trace, traceMap)
 
 		connectionEdge := &output.ConnectionEdge{
 			Call: output.NetworkCall{
@@ -123,7 +164,7 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 				URL:       call.RequestLocation,
 				Arguments: nil,
 				// TODO: handle stack trace?
-				Location: fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
+				Locations: callLocations,
 			},
 			Source: sourceNode,
 			Target: targetNode,

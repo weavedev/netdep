@@ -15,6 +15,8 @@ import (
 )
 
 type CallTargetTrace struct {
+	Internal bool
+	Pos      token.Pos
 	// The name of the file in which the call is made
 	FileName string
 	// The line number in the file where the call is made
@@ -113,10 +115,13 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	for _, tracedCall := range frame.trace {
 		filePath, position := getPositionFromPos(tracedCall.Pos(), frame.pkg.Prog)
 
+		Internal := strings.Contains(filePath, string(os.PathSeparator)+callTarget.ServiceName+string(os.PathSeparator))
+
 		newTrace := CallTargetTrace{
 			// split package name and take the last item to get the service name
 			FileName:       filePath[strings.LastIndex(filePath, string(os.PathSeparator)+callTarget.ServiceName+string(os.PathSeparator))+1:],
 			PositionInFile: position,
+			Internal:       Internal,
 		}
 
 		callTarget.Trace = append(callTarget.Trace, newTrace)

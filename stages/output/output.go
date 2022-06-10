@@ -19,7 +19,7 @@ type NetworkCall struct {
 	Protocol  string   `json:"protocol"`
 	URL       string   `json:"url"`
 	Arguments []string `json:"arguments"`
-	Location  string   `json:"location"`
+	Locations []string `json:"locations"`
 }
 
 // ServiceNode represents a node in the output graph, which is a Service

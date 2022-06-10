@@ -11,13 +11,29 @@ import (
 	"strings"
 )
 
+// DiscoverFrame is a struct for keeping track of the traversal packages while looking for interesting functions
+type DiscoverFrame struct {
+	// trace is a stack trace of previous calls.
+	trace []*callgraph.Edge
+	// visited is shared between frames and keeps track of which nodes have been visited
+	// to prevent repetitive visits.
+	visited       map[int]bool
+	globals       map[*ssa.Global]*ssa.Value
+	program       *ssa.Program
+	parent        *Frame
+	config        *AnalyserConfig
+	result        *pointer.Result
+	clientTargets []*CallTarget
+	serverTargets []*CallTarget
+}
+
 // resolveValue Resolves a supplied ssa.Value, only in the cases that are supported by the tool:
 // - string concatenation (see BinOp),
 // - string literal
 // - call to os.GetEnv
 // - other InterestingCalls with the action Substitute.
 // It also returns a bool which indicates whether the variable was resolved.
-func resolveArgValue(value *ssa.Value, trace []*callgraph.Edge) (string, bool) {
+func resolveArgValue(value *ssa.Value, trace []*callgraph.Edge, frame *DiscoverFrame) (string, bool) {
 	if value == nil {
 		return "unknown: the give value is null", false
 	}
@@ -38,25 +54,25 @@ func resolveArgValue(value *ssa.Value, trace []*callgraph.Edge) (string, bool) {
 		}
 		if paramIndex > -1 && traceLength > 1 {
 			previousCall := trace[traceLength-2].Site.Common()
-			return resolveArgValue(&previousCall.Args[paramIndex], trace[:traceLength-1])
+			return resolveArgValue(&previousCall.Args[paramIndex], trace[:traceLength-1], frame)
 		}
 
 		return "unknown: the parameter was not resolved", false
 	case *ssa.Global:
-		//if globalValue, ok := fr.globals[val]; ok {
-		//	return resolveValue(globalValue, fr, substConf)
-		//}
+		if p, ok := frame.result.Queries[val]; ok {
+			return p.String(), true
+		}
 
 		return "unknown: the global was not resolved", false
 
 	case *ssa.UnOp:
-		return resolveArgValue(&val.X, trace)
+		return resolveArgValue(&val.X, trace, frame)
 
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveArgValue(&val.X, trace)
-			right, isRightResolved := resolveArgValue(&val.Y, trace)
+			left, isLeftResolved := resolveArgValue(&val.X, trace, frame)
+			right, isRightResolved := resolveArgValue(&val.Y, trace, frame)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -66,12 +82,15 @@ func resolveArgValue(value *ssa.Value, trace []*callgraph.Edge) (string, bool) {
 			return "unknown: only ADD binary operation is supported", false
 		}
 	case *ssa.Const:
-		switch val.Value.Kind() { //nolint:exhaustive
-		case constant.String:
-			return constant.StringVal(val.Value), true
-		default:
-			return "unknown: not a string constant", false
+		if val.Value != nil {
+			switch val.Value.Kind() { //nolint:exhaustive
+			case constant.String:
+				return constant.StringVal(val.Value), true
+			default:
+				return "unknown: not a string constant", false
+			}
 		}
+		return "unknown: not a string constant", false
 	//case *ssa.Call:
 	//	return handleSubstitutableCall(val, substConf)
 	default:
@@ -79,7 +98,7 @@ func resolveArgValue(value *ssa.Value, trace []*callgraph.Edge) (string, bool) {
 	}
 }
 
-func resolveParameterOfCall(trace []*callgraph.Edge, positions []int) ([]string, bool) {
+func resolveParameterOfCall(trace []*callgraph.Edge, positions []int, frame *DiscoverFrame) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
 	wasResolved := true
 
@@ -93,7 +112,7 @@ func resolveParameterOfCall(trace []*callgraph.Edge, positions []int) ([]string,
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveArgValue(&parameters[idx], trace)
+			variable, isResolved := resolveArgValue(&parameters[idx], trace, frame)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
@@ -105,18 +124,18 @@ func resolveParameterOfCall(trace []*callgraph.Edge, positions []int) ([]string,
 	return stringParameters, wasResolved
 }
 
-func getCallTarget(trace []*callgraph.Edge, interest InterestingCall) *CallTarget {
+func getCallTarget(trace []*callgraph.Edge, interest InterestingCall, frame *DiscoverFrame) *CallTarget {
 	if len(trace) == 0 {
 		return nil
 	}
 	rootCall := trace[0]
-	finalCall := trace[len(trace)-1]
+	targetCall := trace[len(trace)-1]
 
 	pkg := rootCall.Caller.Func.Pkg
 	program := pkg.Prog
-	MethodName, packageName := getFunctionQualifiers(finalCall.Callee.Func)
+	MethodName, packageName := getFunctionQualifiers(targetCall.Callee.Func)
 
-	variables, IsResolved := resolveParameterOfCall(trace, interest.interestingArgs)
+	variables, IsResolved := resolveParameterOfCall(trace, interest.interestingArgs, frame)
 
 	target := CallTarget{
 		packageName:     packageName,
@@ -133,31 +152,25 @@ func getCallTarget(trace []*callgraph.Edge, interest InterestingCall) *CallTarge
 			continue
 		}
 
-		filePath, position := getPositionFromPos(tracedCall.Callee.Func.Pos(), program)
+		call := tracedCall.Site.Common()
+		pos := call.Pos()
+
+		filePath, position := getPositionFromPos(pos, program)
+
+		Internal := strings.Contains(filePath, string(os.PathSeparator)+target.ServiceName+string(os.PathSeparator))
 
 		newTrace := CallTargetTrace{
 			// split package name and take the last item to get the service name
-			FileName:       filePath[strings.LastIndex(filePath, string(os.PathSeparator))+1:],
+			FileName:       filePath[strings.LastIndex(filePath, string(os.PathSeparator)+target.ServiceName+string(os.PathSeparator))+1:],
 			PositionInFile: position,
+			Pos:            pos,
+			Internal:       Internal,
 		}
 
 		target.Trace = append(target.Trace, newTrace)
 	}
 
 	return &target
-}
-
-// GraphFrame is a struct for keeping track of the traversal packages while looking for interesting functions
-type GraphFrame struct {
-	// trace is a stack trace of previous calls.
-	trace []*callgraph.Edge
-	// visited is shared between frames and keeps track of which nodes have been visited
-	// to prevent repetitive visits.
-	visited           map[int]bool
-	program           *ssa.Program
-	parent            *Frame
-	config            *AnalyserConfig
-	targetsCollection *TargetsCollection
 }
 
 func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
@@ -184,36 +197,46 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 		BuildCallGraph: true,
 	}
 
+	for _, pkg := range pkgs {
+		if pkg == nil {
+			continue
+		}
+		for _, mem := range pkg.Members {
+			if globalPointer, ok := mem.(*ssa.Global); ok {
+				ptConfig.AddQuery(globalPointer)
+			}
+		}
+	}
 	// query
 
 	fmt.Println("Running pointer analysis...")
-	ptares, err := pointer.Analyze(ptConfig)
+	pointerRes, err := pointer.Analyze(ptConfig)
 
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil, err
 	}
 
-	cg := ptares.CallGraph
+	cg := pointerRes.CallGraph
 	cg.DeleteSyntheticNodes()
 
 	fmt.Printf("Finding nodes (%d)...\n", len(cg.Nodes))
 
-	baseFrame := GraphFrame{
-		trace:   make([]*callgraph.Edge, 0),
-		visited: make(map[int]bool),
-		program: pkgs[0].Prog,
-		parent:  nil,
-		config:  config,
-		targetsCollection: &TargetsCollection{
-			make([]*CallTarget, 0),
-			make([]*CallTarget, 0),
-		},
+	baseFrame := DiscoverFrame{
+		trace:         []*callgraph.Edge{},
+		visited:       map[int]bool{},
+		program:       pkgs[0].Prog,
+		parent:        nil,
+		config:        config,
+		clientTargets: []*CallTarget{},
+		serverTargets: []*CallTarget{},
+		result:        pointerRes,
 	}
 
+	baseFrame.visited[cg.Root.ID] = false
 	for _, edge := range cg.Root.Out {
 		if edge.Callee.Func.Name() == "main" {
-			baseFrame.visited[edge.Callee.ID] = true
+			baseFrame.visited[edge.Callee.ID] = false
 			uniquePaths(edge.Callee, &baseFrame)
 		}
 	}
@@ -227,12 +250,12 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 		}
 	}
 
-	fmt.Printf("%d, %d found (%d/%d)\n", len(baseFrame.targetsCollection.clientTargets), len(baseFrame.targetsCollection.serverTargets), interestingCount, count)
+	fmt.Printf("%d, %d found (%d/%d)\n", len(baseFrame.clientTargets), len(baseFrame.serverTargets), interestingCount, count)
 
-	return baseFrame.targetsCollection.clientTargets, baseFrame.targetsCollection.serverTargets, nil
+	return baseFrame.clientTargets, baseFrame.serverTargets, nil
 }
 
-func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
+func uniquePaths(node *callgraph.Node, frame *DiscoverFrame) bool {
 	//fmt.Printf("Node scanning %s, %d (%d)\n", node.String(), len(node.Out), len(frame.trace))
 	if len(frame.trace) > frame.config.maxTraversalDepth {
 		return false
@@ -241,6 +264,10 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
 	foundInteresting := false
 	frame.visited[node.ID] = false
 
+	if len(node.Out) == 0 {
+		return false
+	}
+
 	for _, edge := range node.Out {
 		//fmt.Printf("Edge scanning %s\n", outNode.String())
 		outNode := edge.Callee
@@ -248,7 +275,7 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
 		// TODO: improve get call
 		shouldSkip := false
 		for _, tracedEdge := range frame.trace {
-			if tracedEdge.Callee.ID == outNode.ID || tracedEdge.Caller.ID == outNode.ID {
+			if tracedEdge == edge || tracedEdge.Callee.ID == outNode.ID || tracedEdge.Caller.ID == outNode.ID {
 				shouldSkip = true
 				break
 			}
@@ -284,25 +311,29 @@ func uniquePaths(node *callgraph.Node, frame *GraphFrame) bool {
 		interestingClient, isInterestingClient := frame.config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 		interestingServer, isInterestingServer := frame.config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 
-		newFrame := *frame
-		copy(newFrame.trace, frame.trace)
-		newFrame.trace = append(newFrame.trace, edge)
+		frame.trace = append(frame.trace, edge)
 
 		if isInterestingClient || isInterestingServer {
 			if isInterestingClient {
-				callTarget := getCallTarget(newFrame.trace, interestingClient)
-				frame.targetsCollection.clientTargets = append(frame.targetsCollection.clientTargets, callTarget)
+				callTarget := getCallTarget(frame.trace, interestingClient, frame)
+				frame.clientTargets = append(frame.clientTargets, callTarget)
 			} else {
-				callTarget := getCallTarget(newFrame.trace, interestingServer)
-				frame.targetsCollection.serverTargets = append(frame.targetsCollection.serverTargets, callTarget)
+				callTarget := getCallTarget(frame.trace, interestingServer, frame)
+				frame.serverTargets = append(frame.serverTargets, callTarget)
 			}
 
 			foundInteresting = true
 			frame.visited[outNode.ID] = true
+
+			//	pop trace
+			frame.trace = frame.trace[:len(frame.trace)-1]
 			continue
 		}
 
-		found := uniquePaths(outNode, &newFrame)
+		found := uniquePaths(outNode, frame)
+		//	pop trace
+		frame.trace = frame.trace[:len(frame.trace)-1]
+
 		frame.visited[outNode.ID] = found
 
 		if found {
