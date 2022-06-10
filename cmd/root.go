@@ -10,17 +10,17 @@ import (
 	"path"
 	"strings"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/matching"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/matching"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 
 	"github.com/spf13/cobra"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages"
+	"lab.weave.nl/internships/tud-2022/netDep/stages"
 )
 
 // RunConfig defines the parameters for a depScan command run
