@@ -4,10 +4,11 @@ package preprocessing
 
 import (
 	"fmt"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 )
 
 type IntCall struct {
@@ -46,9 +47,13 @@ func FindServiceCalls(serviceCallsDir string) (map[IntCall]string, *[]*callanaly
 	serviceCalls := make(map[IntCall]string)
 	serverTargets := make([]*callanalyzer.CallTarget, 0)
 
+	if serviceCallsDir == "" {
+		return serviceCalls, &serverTargets, nil
+	}
+
 	// Collect all files within the packages directory
 	files, err := os.ReadDir(serviceCallsDir)
-	if err != nil || serviceCallsDir == "" {
+	if err != nil {
 		return serviceCalls, &serverTargets, err
 	}
 

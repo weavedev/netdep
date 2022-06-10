@@ -6,11 +6,12 @@ package cmd
 
 import (
 	"fmt"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
@@ -189,11 +190,6 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		return nil, nil, err
 	}
 
-	internalCalls, serverTargets, err := preprocessing.FindServiceCalls(config.ServiceCallsDir)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// resolve environment values
 	// TODO: Integrate the envVariables into discovery
 	envVariables, err := resolveEnvironmentValues(config.EnvFile)
@@ -205,7 +201,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	analyserConfig.SetVerbose(config.Verbose)
 	analyserConfig.SetEnv(envVariables)
 
-	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig, internalCalls, serverTargets)
+	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -231,7 +227,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 }
 
 // processEachService preprocesses and analyses each of the services using RunConfig and callanalyzer.AnalyserConfig
-func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig, internalCalls map[preprocessing.IntCall]string, serverTargets *[]*callanalyzer.CallTarget) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[callanalyzer.Position]string, error) {
+func processEachService(services *[]string, config *RunConfig, analyserConfig *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, map[string]map[callanalyzer.Position]string, error) {
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
 	annotations := make(map[string]map[callanalyzer.Position]string)
@@ -239,6 +235,11 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	analyserConfig.SetAnnotations(annotations)
 
 	packageCount := 0
+
+	internalCalls, serverTargets, err := preprocessing.FindServiceCalls(config.ServiceCallsDir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	allServerTargets = append(allServerTargets, *serverTargets...)
 	internalClientTargets := make([]*callanalyzer.CallTarget, 0)

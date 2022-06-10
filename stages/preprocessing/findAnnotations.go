@@ -3,10 +3,11 @@
 package preprocessing
 
 import (
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 )
 
 // LoadAnnotations scans all the files of a given service directory and returns a list of
@@ -20,6 +21,7 @@ func LoadAnnotations(servicePath string, serviceName string, annotations map[str
 	annotations[serviceName] = make(map[callanalyzer.Position]string)
 
 	for _, file := range files {
+		//nolint:goconst
 		if filepath.Ext(file.Name()) == ".go" && !strings.HasSuffix(file.Name(), "_test.go") && !strings.HasSuffix(file.Name(), "pb.go") {
 			// If the file is a .go file - parse it
 			err := parseComments(filepath.Join(servicePath, file.Name()), serviceName, annotations)

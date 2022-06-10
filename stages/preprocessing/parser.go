@@ -4,9 +4,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"os"
 	"strconv"
 	"strings"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 )
 
 // parseComments parses the given file with a parser.ParseComments mode, filters out
@@ -24,7 +26,7 @@ func parseComments(path string, serviceName string, annotations map[string]map[c
 			if strings.HasPrefix(comment.Text, "//netdep:") {
 				tokenPos := fs.Position(comment.Slash)
 				pos := callanalyzer.Position{
-					Filename: tokenPos.Filename,
+					Filename: tokenPos.Filename[strings.LastIndex(tokenPos.Filename, string(os.PathSeparator)+serviceName+string(os.PathSeparator))+1:],
 					Line:     tokenPos.Line,
 				}
 				value := strings.Join(strings.Split(comment.Text, "netdep:")[1:], "")

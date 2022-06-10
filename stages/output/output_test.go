@@ -108,6 +108,6 @@ func TestSerialiseOutput(t *testing.T) {
 	graph := createSmallTestGraph()
 	list := ConstructAdjacencyList(graph)
 	str, _ := SerializeAdjacencyList(list, false)
-	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
+	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
 	assert.Equal(t, expected, str)
 }
