@@ -13,7 +13,7 @@ import (
 )
 
 func TestExecuteDepScanInvalidProjectDir(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	runDepScanCmd.SetArgs([]string{"--project-directory", "invalid"})
 
 	err := runDepScanCmd.Execute()
@@ -22,16 +22,16 @@ func TestExecuteDepScanInvalidProjectDir(t *testing.T) {
 }
 
 func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	runDepScanCmd.SetArgs([]string{"--service-directory", "invalid"})
 
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "invalid service directory specified: invalid", err.Error())
+	assert.Equal(t, "invalid service directory: invalid", err.Error())
 }
 
 func TestExecuteDepScanNoServicePackages(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "aliased_call")
 
 	runDepScanCmd.SetArgs([]string{
@@ -45,7 +45,7 @@ func TestExecuteDepScanNoServicePackages(t *testing.T) {
 }
 
 func TestExecuteDepScanNoMainFunctionFound(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	projDir := filepath.Join(helpers.RootDir, "test", "example") // root of the project
 	svcDir := filepath.Join(helpers.RootDir, "test", "example", "pkg")
 
@@ -60,7 +60,7 @@ func TestExecuteDepScanNoMainFunctionFound(t *testing.T) {
 }
 
 func TestExecuteDepScanNoGoFiles(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	svcDir := filepath.Join(helpers.RootDir, "test", "empty")
 
 	runDepScanCmd.SetArgs([]string{
@@ -78,7 +78,7 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 // as there is no base case implemented. Uncomment these
 // tests after merging with dev.
 func TestExecuteDepScanExampleServicesVerbose(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 
 	projDir := filepath.Join(helpers.RootDir, "test", "example")
 	svcDir := filepath.Join(helpers.RootDir, "test", "example", "svc")
@@ -94,7 +94,7 @@ func TestExecuteDepScanExampleServicesVerbose(t *testing.T) {
 }
 
 func TestExecuteDepScanFull(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http")
 	runDepScanCmd.SetArgs([]string{
 		"--project-directory", helpers.RootDir,
@@ -106,7 +106,7 @@ func TestExecuteDepScanFull(t *testing.T) {
 }
 
 func TestExecuteDepScanShortHand(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http")
 
 	runDepScanCmd.SetArgs([]string{
@@ -119,7 +119,7 @@ func TestExecuteDepScanShortHand(t *testing.T) {
 }
 
 func TestExecuteDepScanInvalidEnvVarFile(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 	svcDir := filepath.Join(helpers.RootDir, "test", "example", "svc")
 
 	runDepScanCmd.SetArgs([]string{
@@ -133,7 +133,7 @@ func TestExecuteDepScanInvalidEnvVarFile(t *testing.T) {
 }
 
 func TestExecuteDepScanEnvFile(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 
 	projDir := filepath.Join(helpers.RootDir, "test", "sample") // root of the project
 	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http")
@@ -150,7 +150,7 @@ func TestExecuteDepScanEnvFile(t *testing.T) {
 }
 
 func TestExecuteDepScanEnvFileWrongFormat(t *testing.T) {
-	runDepScanCmd := depScanCmd()
+	runDepScanCmd := netDepCmd()
 
 	projDir := filepath.Join(helpers.RootDir, "test", "example") // root of the project
 	svcDir := filepath.Join(helpers.RootDir, "test", "example", "svc")

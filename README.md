@@ -20,17 +20,34 @@ dependencies installed!**
 
 ## Usage
 
+### Option 1: Run the source code directly
 To initiate dependency scanning depScan command has to be used in a command-line interface.
 ou can run the tool using the default settings using:
 
 ```sh
-go run main.go depScan
+go run main.go
 ```
 
 or if you want more control you can use the options as defined below, for example:
 
 ```sh
-go run main.go depScan -p "./some/project/dir" -s "./some/service/dir"
+go run main.go -p "./some/project/dir" -s "./some/service/dir"
+```
+
+### Option 2: Build an executable first
+
+```sh
+go build .
+```
+
+On *NIX systems:
+```sh
+./netDep [-p project_directory] [-s service_directory] [-v]
+```
+
+On Windows:
+```sh
+./netDep.exe [-p project_directory] [-s service_directory] [-v]
 ```
 
 ### Annotations
