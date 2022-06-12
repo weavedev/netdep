@@ -1,4 +1,4 @@
-module lab.weave.nl/internships/tud-2022/static-analysis-project
+module lab.weave.nl/internships/tud-2022/netDep
 
 go 1.17
 
