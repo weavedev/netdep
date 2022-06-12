@@ -7,12 +7,12 @@ import (
 	"sort"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
-
 	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing/nats"
 )
 
 // createEmptyNodes create a set of services, but populates them to nil
-func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) (map[string]*output.ServiceNode, []*output.ServiceNode) {
+func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget, consumers []*nats.NatsCall, producers []*nats.NatsCall) (map[string]*output.ServiceNode, []*output.ServiceNode) {
 	nodes := make([]*output.ServiceNode, 0)
 	serviceMap := make(map[string]*output.ServiceNode)
 
@@ -29,6 +29,22 @@ func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyze
 
 			nodes = append(nodes, serviceNode)
 			// save service name in a map for efficiency
+			serviceMap[call.ServiceName] = serviceNode
+		}
+	}
+
+	combinedNats := consumers
+	combinedNats = append(combinedNats, producers...)
+
+	// extend nodes with NATS only services
+	for _, call := range combinedNats {
+		if _, ok := serviceMap[call.ServiceName]; !ok {
+			serviceNode := &output.ServiceNode{
+				ServiceName: call.ServiceName,
+				IsUnknown:   false,
+			}
+
+			nodes = append(nodes, serviceNode)
 			serviceMap[call.ServiceName] = serviceNode
 		}
 	}
@@ -76,16 +92,17 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 }
 
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
-func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) output.NodeGraph {
+func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget, consumers []*nats.NatsCall, producers []*nats.NatsCall) output.NodeGraph {
 	UnknownService := &output.ServiceNode{
 		ServiceName: "UnknownService",
 		IsUnknown:   true,
 	}
 
 	edges := make([]*output.ConnectionEdge, 0)
-	serviceMap, nodes := createEmptyNodes(calls, endpoints)
+	serviceMap, nodes := createEmptyNodes(calls, endpoints, consumers, producers)
 	endpointMap := createEndpointMap(endpoints)
 	hasUnknown := false
+	edges = append(edges, extendWithNats(consumers, producers, &hasUnknown, serviceMap, &nodes)...)
 
 	// Add edges (eg. matching)
 	// This order is guaranteed because calls is an array
@@ -166,4 +183,72 @@ func findTargetNodeName(call *callanalyzer.CallTarget, endpointMap map[string]st
 	targetServiceName, hasTarget := endpointMap[call.RequestLocation]
 
 	return targetServiceName, hasTarget
+}
+
+func extendWithNats(consumers []*nats.NatsCall, producers []*nats.NatsCall, hasUnknown *bool, services map[string]*output.ServiceNode, nodes *[]*output.ServiceNode) []*output.ConnectionEdge {
+	edges := make([]*output.ConnectionEdge, 0)
+
+	if consumers == nil || producers == nil {
+		return edges
+	}
+
+	UnknownService := &output.ServiceNode{
+		ServiceName: "UnknownService",
+		IsUnknown:   true,
+	}
+
+	// for each producer we  find all  the consumer
+	// if it has no consumer, we mark it as an edge
+	// with unknown target. There is a small chance
+	// that producer's messages are never consumed,
+	// but the greater chance is that its consumer
+	// was not discovered.
+	for _, producer := range producers {
+		hasConsumer := false
+		for _, consumer := range consumers {
+			if producer.Subject == consumer.Subject {
+				hasConsumer = true
+				edge := &output.ConnectionEdge{
+					Call: output.NetworkCall{
+						// TODO add more details
+						Protocol:  producer.Communication,
+						URL:       producer.Subject,
+						Arguments: nil,
+						// TODO: handle stack trace?
+						Location: fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile),
+					},
+					// Always hits, because services was populated using consumers and producers
+					Source: services[producer.ServiceName],
+					Target: services[consumer.ServiceName],
+				}
+
+				edges = append(edges, edge)
+			}
+		}
+
+		if !hasConsumer {
+			edge := &output.ConnectionEdge{
+				Call: output.NetworkCall{
+					// TODO add more details
+					Protocol:  producer.Communication,
+					URL:       producer.Subject,
+					Arguments: nil,
+					// TODO: handle stack trace?
+					Location: fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile),
+				},
+				// Always hits, because services was populated using consumers and producers
+				Source: services[producer.ServiceName],
+				Target: UnknownService,
+			}
+
+			if !*hasUnknown {
+				*nodes = append(*nodes, UnknownService)
+			}
+
+			edges = append(edges, edge)
+			*hasUnknown = true
+		}
+	}
+
+	return edges
 }
