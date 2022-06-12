@@ -9,16 +9,21 @@ import (
 	"lab.weave.nl/internships/tud-2022/netDep/cmd"
 )
 
-// main registers any subcommands and runs the root command of netDep
+// main is the entry point to the program
 func main() {
-	rootCmd := cmd.RootCmd()
-	// add the subcommand for generating a manpage
-	rootCmd.AddCommand(cmd.GenManpageCmd(rootCmd))
-	// execute the root command
-	err := rootCmd.Execute()
+	// execute the main logic
+	err := runRoot()
 	if err != nil {
 		// report an unsuccessful run
 		os.Exit(1)
 		return
 	}
+}
+
+// runRoot registers any subcommands and runs the root command of netDep
+func runRoot() error {
+	rootCmd := cmd.RootCmd()
+	// add the subcommand for generating a manpage
+	rootCmd.AddCommand(cmd.GenManpageCmd(rootCmd))
+	return rootCmd.Execute()
 }
