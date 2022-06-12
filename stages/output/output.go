@@ -5,7 +5,9 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
 	"sort"
+	"strconv"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
@@ -150,4 +152,43 @@ func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 		fmt.Print(target.Trace[0].FileName + ":" + target.Trace[0].PositionInFile + " couldn't be resolved. ")
 		fmt.Println("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:endpoint ...\"")
 	}
+}
+
+// PrintDiscoveredAnnotations prints all the discovered annotations if the tool was run with the verbose flag.
+func PrintDiscoveredAnnotations(annotations map[string]map[preprocessing.Position]string) string {
+	type Annotation struct {
+		ServiceName string
+		Position    string
+		Value       string
+	}
+
+	annotationList := make([]Annotation, 0)
+
+	for serName, serMap := range annotations {
+		for pos, val := range serMap {
+			ann := Annotation{
+				ServiceName: serName,
+				Position:    pos.Filename + ":" + strconv.Itoa(pos.Line),
+				Value:       val,
+			}
+			annotationList = append(annotationList, ann)
+		}
+	}
+
+	discoveredAnnotations := ""
+
+	if len(annotationList) != 0 {
+		discoveredAnnotations += "Discovered annotations:\n\n"
+
+		for _, ann := range annotationList {
+			discoveredAnnotations += "Service name: " + ann.ServiceName + "\n"
+			discoveredAnnotations += "Position: " + ann.Position + "\n"
+			discoveredAnnotations += "Value: " + ann.Value + "\n\n"
+		}
+	} else {
+		discoveredAnnotations += "[Discovered none]"
+	}
+
+	fmt.Println(discoveredAnnotations)
+	return discoveredAnnotations
 }

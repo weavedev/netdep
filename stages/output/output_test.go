@@ -4,6 +4,8 @@
 package output
 
 import (
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -110,4 +112,44 @@ func TestSerialiseOutput(t *testing.T) {
 	str, _ := SerializeAdjacencyList(list, false)
 	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
 	assert.Equal(t, expected, str)
+}
+
+// TestPrintDiscoveredAnnotations test discovered annotation printing
+func TestPrintDiscoveredAnnotations(t *testing.T) {
+	annotations := make(map[string]map[preprocessing.Position]string)
+	annotations["a"] = make(map[preprocessing.Position]string)
+	annotations["b"] = make(map[preprocessing.Position]string)
+
+	pos1 := preprocessing.Position{
+		Filename: "d1",
+		Line:     5,
+	}
+	pos2 := preprocessing.Position{
+		Filename: "d2",
+		Line:     6,
+	}
+	pos3 := preprocessing.Position{
+		Filename: "a2",
+		Line:     62,
+	}
+
+	annotations["a"][pos1] = "valuee1"
+	annotations["a"][pos2] = "valuee2"
+	annotations["b"][pos3] = "valuee3"
+
+	str := PrintDiscoveredAnnotations(annotations)
+	assert.True(t, strings.Contains(str, "Discovered annotations:"))
+	assert.True(t, strings.Contains(str, "valuee1"))
+	assert.True(t, strings.Contains(str, "valuee2"))
+	assert.True(t, strings.Contains(str, "valuee3"))
+}
+
+// TestPrintDiscoveredAnnotationsEmpty test discovered annotation printing
+func TestPrintDiscoveredAnnotationsEmpty(t *testing.T) {
+	annotations := make(map[string]map[preprocessing.Position]string)
+	annotations["a"] = make(map[preprocessing.Position]string)
+	annotations["b"] = make(map[preprocessing.Position]string)
+
+	str := PrintDiscoveredAnnotations(annotations)
+	assert.Equal(t, str, "[Discovered none]")
 }
