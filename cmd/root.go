@@ -29,18 +29,8 @@ type RunConfig struct {
 	Verbose    bool
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	err := netDepCmd().Execute()
-	if err != nil {
-		os.Exit(1)
-		return
-	}
-}
-
-// netDepCmd creates and returns a depScan command object
-func netDepCmd() *cobra.Command {
+// RootCmd creates and returns a depScan command object
+func RootCmd() *cobra.Command {
 	// Variables that are supplied as command-line args
 	var (
 		projectDir     string
