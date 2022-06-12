@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
 )
 
 // ReplaceTargetsAnnotations replaces each unresolved callanalyzer.CallTarget with new a new target containing data
