@@ -1,3 +1,4 @@
+//nolint
 package servicecalls
 
 type TESTService interface {

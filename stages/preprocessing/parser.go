@@ -86,42 +86,54 @@ func parseMethods(path string, calls map[IntCall]string, serviceName string) (*[
 	}
 
 	clientTargets := make([]*callanalyzer.CallTarget, 0)
+	serviceCallsImport := false
+
+	for _, im := range f.Imports {
+		if strings.Contains(im.Path.Value, "servicecalls") {
+			serviceCallsImport = true
+		}
+	}
+
+	if !serviceCallsImport {
+		return &clientTargets, nil
+	}
 
 	ast.Inspect(f, func(n ast.Node) bool {
 		// Find Function Call Statements
 		funcCall, ok := n.(*ast.CallExpr)
-		if ok {
-			mthd, ok := funcCall.Fun.(*ast.SelectorExpr)
-			if ok {
-				sel, ok := mthd.X.(*ast.SelectorExpr)
-				if !ok || (ok && !strings.HasSuffix(sel.Sel.Name, "DB")) {
-					intCall := IntCall{
-						Name:      mthd.Sel.Name,
-						NumParams: len(funcCall.Args),
-					}
-					_, ex := calls[intCall]
-					if ex {
-						clientTarget := &callanalyzer.CallTarget{
-							PackageName:     "servicecalls",
-							MethodName:      mthd.Sel.Name,
-							RequestLocation: mthd.Sel.Name,
-							IsResolved:      true,
-							ServiceName:     serviceName,
-							Trace: []callanalyzer.CallTargetTrace{
-								{
-									FileName:       fs.Position(mthd.Sel.NamePos).Filename,
-									PositionInFile: strconv.Itoa(fs.Position(mthd.Sel.NamePos).Line),
-								},
-							},
-						}
-
-						clientTargets = append(clientTargets, clientTarget)
-					}
+		if !ok {
+			return true
+		}
+		mthd, ok := funcCall.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		sel, ok1 := mthd.X.(*ast.SelectorExpr)
+		if !ok1 || (ok1 && !strings.HasSuffix(sel.Sel.Name, "DB")) {
+			intCall := IntCall{
+				Name:      mthd.Sel.Name,
+				NumParams: len(funcCall.Args),
+			}
+			_, ex := calls[intCall]
+			if ex {
+				clientTarget := &callanalyzer.CallTarget{
+					PackageName:     "servicecalls",
+					MethodName:      mthd.Sel.Name,
+					RequestLocation: mthd.Sel.Name,
+					IsResolved:      true,
+					ServiceName:     serviceName,
+					Trace: []callanalyzer.CallTargetTrace{
+						{
+							FileName:       fs.Position(mthd.Sel.NamePos).Filename,
+							PositionInFile: strconv.Itoa(fs.Position(mthd.Sel.NamePos).Line),
+						},
+					},
 				}
+
+				clientTargets = append(clientTargets, clientTarget)
 			}
 		}
 		return true
 	})
-
 	return &clientTargets, nil
 }

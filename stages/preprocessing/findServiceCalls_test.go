@@ -1,11 +1,13 @@
 package preprocessing
 
 import (
-	"github.com/stretchr/testify/assert"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
 )
 
 func TestLoadServiceCalls(t *testing.T) {

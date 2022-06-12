@@ -79,6 +79,7 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 }
 
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
+//nolint:funlen
 func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) output.NodeGraph {
 	UnknownService := &output.ServiceNode{
 		ServiceName: "UnknownService",
