@@ -3,11 +3,10 @@ package matching
 import (
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
+	"github.com/stretchr/testify/assert"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
-
-	"github.com/stretchr/testify/assert"
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
 )
 
 func CreateSmallTestGraph() output.NodeGraph {
@@ -79,7 +78,7 @@ func CreateSmallTestGraph() output.NodeGraph {
 
 // test basic functionality of the matching functionality
 func TestEmptyCaseCreateDependencyGraph(t *testing.T) {
-	graph := CreateDependencyGraph(nil, nil)
+	graph := CreateDependencyGraph(nil, nil, nil, nil)
 
 	assert.Equal(t, make([]*output.ServiceNode, 0), graph.Nodes)
 	assert.Equal(t, make([]*output.ConnectionEdge, 0), graph.Edges)
@@ -152,7 +151,7 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 	// reuse graph from output stage tests
 	expectedGraph := CreateSmallTestGraph()
 
-	graph := CreateDependencyGraph(calls, endpoints)
+	graph := CreateDependencyGraph(calls, endpoints, nil, nil)
 
 	assert.Equal(t, len(expectedGraph.Nodes), len(graph.Nodes))
 	for i := range expectedGraph.Nodes {
@@ -258,7 +257,7 @@ func TestWithUnknownService(t *testing.T) {
 	expectedNodes := []*output.ServiceNode{&node1, &unknownService}
 	expectedEdges := []*output.ConnectionEdge{&edge12a, &edge12b, &edge13}
 
-	graph := CreateDependencyGraph(calls, endpoints)
+	graph := CreateDependencyGraph(calls, endpoints, nil, nil)
 
 	assert.Equal(t, len(expectedNodes), len(graph.Nodes))
 	for i := range expectedNodes {

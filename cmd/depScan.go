@@ -10,6 +10,8 @@ import (
 	"path"
 	"strings"
 
+	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing/nats"
+
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
 
@@ -62,13 +64,13 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := discoverAllCalls(config)
+			clientCalls, serverCalls, consumers, producers, err := discoverAllCalls(config)
 			if err != nil {
 				return err
 			}
 
 			// generate output
-			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
+			graph := matching.CreateDependencyGraph(clientCalls, serverCalls, consumers, producers)
 			adjacencyList := output.ConstructAdjacencyList(graph)
 			jsonString, err := output.SerializeAdjacencyList(adjacencyList, true)
 			if err != nil {
@@ -168,35 +170,40 @@ func resolveEnvironmentValues(path string) (map[string]map[string]string, error)
 
 // discoverAllCalls calls the correct stages for loading, building,
 // filtering and discovering all client and server calls.
-func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, []*nats.NatsCall, []*nats.NatsCall, error) {
 	// Given a correct project directory en service directory,
 	// apply our discovery algorithm to find all interesting calls
 	if ex, err := pathExists(config.EnvFile); !ex && config.EnvFile != "" || err != nil {
-		return nil, nil, fmt.Errorf("invalid environment variable file specified: %s", config.EnvFile)
+		return nil, nil, nil, nil, fmt.Errorf("invalid environment variable file specified: %s", config.EnvFile)
 	}
 
 	// Filtering
 	services, err := preprocessing.FindServices(config.ServiceDir)
-	fmt.Printf("Starting to analyse %d services.\n", len(services))
-
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
+
+	fmt.Printf("Starting to analyse %d services.\n", len(services))
 
 	// resolve environment values
 	// TODO: Integrate the envVariables into discovery
 	envVariables, err := resolveEnvironmentValues(config.EnvFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
 	analyserConfig.SetVerbose(config.Verbose)
 	analyserConfig.SetEnv(envVariables)
 
+	consumers, producers, err := nats.FindNATSCalls(config.ServiceDir)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
 	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	if config.Verbose {
@@ -216,7 +223,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 		}
 	}
 
-	return allClientTargets, allServerTargets, err
+	return allClientTargets, allServerTargets, consumers, producers, err
 }
 
 // processEachService preprocesses and analyses each of the services using RunConfig and callanalyzer.AnalyserConfig
