@@ -12,18 +12,17 @@ import (
 // main is the entry point to the program
 func main() {
 	// execute the main logic
-	err := runRoot()
-	if err != nil {
-		// report an unsuccessful run
-		os.Exit(1)
-		return
-	}
+	runRoot()
 }
 
 // runRoot registers any subcommands and runs the root command of netDep
-func runRoot() error {
+func runRoot() {
 	rootCmd := cmd.RootCmd()
 	// add the subcommand for generating a manpage
 	rootCmd.AddCommand(cmd.GenManpageCmd(rootCmd))
-	return rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		// report an unsuccessful run
+		os.Exit(1)
+	}
 }
