@@ -4,8 +4,9 @@
 package main
 
 import (
-	"lab.weave.nl/internships/tud-2022/netDep/cmd"
 	"os"
+
+	"lab.weave.nl/internships/tud-2022/netDep/cmd"
 )
 
 // main registers any subcommands and runs the root command of netDep
