@@ -1,7 +1,6 @@
-// Package stages
+// Package preprocessing defines preprocessing of a given Go project directory
 // Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-
-package stages
+package preprocessing
 
 import (
 	"testing"
@@ -10,13 +9,13 @@ import (
 )
 
 func TestResolvingInvalid(t *testing.T) {
-	_, err := MapEnvVars("../test/example/svc/node-basic-http/values.yaml")
+	_, err := IndexEnvironmentVariables("../test/example/svc/node-basic-http/values.yaml")
 	assert.NotNil(t, err)
 	assert.Equal(t, "the file cannot be parsed", err.Error())
 }
 
 func TestMapEnvVarFile(t *testing.T) {
-	res, _ := MapEnvVars("../test/example/svc/node-basic-http/env")
+	res, _ := IndexEnvironmentVariables("../../test/example/svc/node-basic-http/env")
 	expected := make(map[string]map[string]string)
 	expected["service1"] = make(map[string]string)
 	expected["service1"]["var1"] = "value1"

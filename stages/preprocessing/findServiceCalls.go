@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
 
 // LoadServiceCalls scans all the files of a given service directory and returns a list of

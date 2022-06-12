@@ -3,7 +3,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/test/sample/servicecalls"
+	"lab.weave.nl/internships/tud-2022/netDep/test/sample/servicecalls"
 )
 
 func main() {

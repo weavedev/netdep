@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sort"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
 
 /*

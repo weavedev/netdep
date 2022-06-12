@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
+	"lab.weave.nl/internships/tud-2022/netDep/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
