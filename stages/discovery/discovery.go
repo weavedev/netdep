@@ -3,6 +3,8 @@
 package discovery
 
 import (
+	"fmt"
+	"golang.org/x/tools/go/pointer"
 	"golang.org/x/tools/go/ssa"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
@@ -14,17 +16,74 @@ In the Discovery stages, clients and endpoints are discovered and mapped to thei
 Refer to the Project plan, chapter 5.3 for more information.
 */
 
+func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function {
+	baseMap := map[*ssa.CallCommon]*ssa.Function{}
+
+	if packages == nil || len(packages) == 0 {
+		return baseMap
+	}
+
+	var mains []*ssa.Package
+	for _, pkg := range packages {
+		if pkg == nil || pkg.Pkg == nil {
+			if pkg != nil {
+				fmt.Println("No package for " + pkg.String())
+			}
+			continue
+		}
+
+		if pkg.Pkg.Name() == "main" && pkg.Func("main") != nil {
+			mains = append(mains, pkg)
+		}
+	}
+
+	ptConfig := &pointer.Config{
+		Mains:          mains,
+		BuildCallGraph: true,
+	}
+
+	pointerRes, err := pointer.Analyze(ptConfig)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	cg := pointerRes.CallGraph
+	cg.DeleteSyntheticNodes()
+
+	for _, node := range cg.Nodes {
+		for _, edge := range node.Out {
+			if edge.Site == nil {
+				continue
+			}
+			baseMap[edge.Site.Common()] = edge.Callee.Func
+		}
+	}
+
+	return baseMap
+}
+
 // DiscoverAll creates a combined list of all discovered calls in the given packages.
 func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
 	allClientTargets := make([]*callanalyzer.CallTarget, 0)
 	allServerTargets := make([]*callanalyzer.CallTarget, 0)
+
+	useConfig := config
+
+	if config == nil {
+		newConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
+		useConfig = &newConfig
+	}
+
+	callPointer := FindCallPointer(packages)
 
 	for _, pkg := range packages {
 		if pkg == nil {
 			continue
 		}
 
-		clientCalls, serverCalls, err := Discover(pkg, config)
+		clientCalls, serverCalls, err := callanalyzer.AnalysePackageCalls(pkg, useConfig, callPointer)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -57,10 +116,10 @@ func Discover(pkg *ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callana
 	if config == nil {
 		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls()
 		// Analyse each package with the default config
-		return callanalyzer.AnalysePackageCalls(pkg, &defaultConf)
+		return callanalyzer.AnalysePackageCalls(pkg, &defaultConf, map[*ssa.CallCommon]*ssa.Function{})
 	} else {
 		// Analyse each package
-		return callanalyzer.AnalysePackageCalls(pkg, config)
+		return callanalyzer.AnalysePackageCalls(pkg, config, map[*ssa.CallCommon]*ssa.Function{})
 	}
 }
 

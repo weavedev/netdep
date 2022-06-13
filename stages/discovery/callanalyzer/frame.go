@@ -12,6 +12,7 @@ type Frame struct {
 	parent            *Frame                        // parent is necessary to recursively resolve variables (in different scopes)
 	targetsCollection *TargetsCollection            // targetsCollection is a reference to the collection of found calls
 	singlePass        bool                          // singlePass defines if we should check visited or trace for performance
+	pointerMap        map[*ssa.CallCommon]*ssa.Function
 }
 
 // hasVisited returns whether the block has already been trace.

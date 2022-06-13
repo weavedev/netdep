@@ -386,7 +386,7 @@ func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
 //
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
-func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarget, []*CallTarget, error) {
+func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig, pointerMap map[*ssa.CallCommon]*ssa.Function) ([]*CallTarget, []*CallTarget, error) {
 	if pkg == nil {
 		return nil, nil, fmt.Errorf("no package given %v", pkg)
 	}
@@ -402,10 +402,11 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	baseFrame := Frame{
 		trace: make([]*ssa.CallCommon, 0),
 		// Reference to the final list of all _targets of the entire package
-		pkg:     pkg,
-		visited: make(map[*ssa.CallCommon]bool),
-		params:  make(map[*ssa.Parameter]*ssa.Value),
-		globals: make(map[*ssa.Global]*ssa.Value),
+		pkg:        pkg,
+		visited:    make(map[*ssa.CallCommon]bool),
+		params:     make(map[*ssa.Parameter]*ssa.Value),
+		globals:    make(map[*ssa.Global]*ssa.Value),
+		pointerMap: pointerMap,
 		// for the init function we should only pass once
 		// as we don't expect to find a functional call in the setup
 		singlePass: true,
