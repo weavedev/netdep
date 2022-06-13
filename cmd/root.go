@@ -32,18 +32,8 @@ type RunConfig struct {
 	Shallow         bool
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	err := netDepCmd().Execute()
-	if err != nil {
-		os.Exit(1)
-		return
-	}
-}
-
-// netDepCmd creates and returns a depScan command object
-func netDepCmd() *cobra.Command {
+// RootCmd creates and returns a depScan command object
+func RootCmd() *cobra.Command {
 	// Variables that are supplied as command-line args
 	var (
 		projectDir      string
@@ -216,20 +206,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	}
 
 	if config.Verbose {
-		fmt.Println("Discovered annotations:")
-		anyHits := false
-		for k1, serMap := range annotations {
-			for k2, val := range serMap {
-				anyHits = true
-				fmt.Println("Service name: " + k1)
-				fmt.Print("Position: " + k2.Filename + ":")
-				fmt.Println(k2.Line)
-				fmt.Println("Value: " + val)
-			}
-		}
-		if !anyHits {
-			fmt.Println("[Discovered none]")
-		}
+		output.PrintDiscoveredAnnotations(annotations)
 	}
 
 	return allClientTargets, allServerTargets, err
