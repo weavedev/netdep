@@ -84,37 +84,32 @@ func findDependencies(servicePath string, serviceName string, config NatsAnalysi
 			switch methodCall := funcCall.Fun.(type) {
 			case *ast.SelectorExpr:
 				methodName := methodCall.Sel.Name
-				if argPosition, ok := config.producerCalls[methodName]; ok {
-					switch subjectArg := funcCall.Args[argPosition].(type) {
-					case *ast.SelectorExpr:
+				if strings.Contains(methodName, "NotifyMsg") {
+					subject := findSubject(funcCall.Args)
+					if subject != "" {
 						producerCall := &NatsCall{
 							MethodName:     methodName,
 							Communication:  config.communication,
-							Subject:        subjectArg.Sel.Name,
+							Subject:        subject,
 							ServiceName:    serviceName,
 							FileName:       fs.Position(methodCall.X.Pos()).Filename,
 							PositionInFile: strconv.Itoa(fs.Position(methodCall.Sel.Pos()).Line),
 						}
-
 						producers = append(producers, producerCall)
-					default:
-						return true
 					}
-				} else if argPosition, ok := config.consumerCalls[methodName]; ok {
-					switch subjectArg := funcCall.Args[argPosition].(type) {
-					case *ast.SelectorExpr:
+				} else if strings.Contains(methodName, "Subscribe") {
+					subject := findSubject(funcCall.Args)
+					if subject != "" {
 						consumerCall := &NatsCall{
 							MethodName:     methodName,
 							Communication:  config.communication,
-							Subject:        subjectArg.Sel.Name,
+							Subject:        subject,
 							ServiceName:    serviceName,
 							FileName:       fs.Position(methodCall.X.Pos()).Filename,
 							PositionInFile: strconv.Itoa(fs.Position(methodCall.Sel.Pos()).Line),
 						}
 
 						consumers = append(consumers, consumerCall)
-					default:
-						return true
 					}
 				}
 			default:
@@ -127,4 +122,19 @@ func findDependencies(servicePath string, serviceName string, config NatsAnalysi
 	})
 
 	return consumers, producers
+}
+
+func findSubject(args []ast.Expr) string {
+	for _, argument := range args {
+		switch subjectArg := argument.(type) {
+		case *ast.SelectorExpr:
+			if strings.Contains(subjectArg.Sel.Name, "Subject") {
+				return subjectArg.Sel.Name
+			}
+		default:
+			continue
+		}
+	}
+
+	return ""
 }
