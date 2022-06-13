@@ -173,7 +173,7 @@ func TestWrappedClientCall(t *testing.T) {
 }
 
 func TestWrappedInterfaceCall(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "interface_call")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "interface_call")
 	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
 	res, _, _ := DiscoverAll(initial, nil)
 

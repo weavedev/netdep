@@ -213,7 +213,7 @@ func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) {
 }
 
 // getHostFromAnnotation returns the resolved url using the annotated host name for a service
-func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig, target *CallTarget) string {
+func getHostFromAnnotation(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig, target *CallTarget) string {
 	// absolute file path
 	filePath := frame.pkg.Prog.Fset.File(call.Pos()).Name()
 	// split path and form absolute path to service directory
@@ -362,12 +362,8 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
-		case *ssa.Call:
-			analyseCall(&instruction.Call, fr, config)
-		case *ssa.Go:
-			analyseCall(&instruction.Call, fr, config)
-		case *ssa.Defer:
-			analyseCall(&instruction.Call, fr, config)
+		case ssa.CallInstruction:
+			analyseCall(instruction.Common(), fr, config)
 		case *ssa.Store:
 			// for a store to a value
 			if global, ok := instruction.Addr.(*ssa.Global); ok {
