@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/servicecallsanalyzer"
 	"os"
 	"path"
 	"strings"
@@ -23,12 +24,12 @@ import (
 
 // RunConfig defines the parameters for a depScan command run
 type RunConfig struct {
-	ProjectDir       string
-	ServiceDir       string
-	EnvFile          string
-	Verbose          bool
-	ServiceCallsDir  string
-	OnlyServiceCalls bool
+	ProjectDir      string
+	ServiceDir      string
+	EnvFile         string
+	Verbose         bool
+	ServiceCallsDir string
+	Shallow         bool
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -45,13 +46,13 @@ func Execute() {
 func netDepCmd() *cobra.Command {
 	// Variables that are supplied as command-line args
 	var (
-		projectDir       string
-		serviceDir       string
-		envVars          string
-		outputFilename   string
-		verbose          bool
-		serviceCallsDir  string
-		onlyServiceCalls bool
+		projectDir      string
+		serviceDir      string
+		envVars         string
+		outputFilename  string
+		verbose         bool
+		serviceCallsDir string
+		shallow         bool
 	)
 
 	cmd := &cobra.Command{
@@ -67,12 +68,12 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			}
 
 			config := RunConfig{
-				ProjectDir:       projectDir,
-				ServiceDir:       serviceDir,
-				Verbose:          verbose,
-				EnvFile:          envVars,
-				ServiceCallsDir:  serviceCallsDir,
-				OnlyServiceCalls: onlyServiceCalls,
+				ProjectDir:      projectDir,
+				ServiceDir:      serviceDir,
+				Verbose:         verbose,
+				EnvFile:         envVars,
+				ServiceCallsDir: serviceCallsDir,
+				Shallow:         shallow,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
@@ -103,7 +104,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "", "output filename such as ./deps.json")
 	cmd.Flags().StringVarP(&serviceCallsDir, "servicecalls-directory", "c", "", "servicecalls package directory")
-	cmd.Flags().BoolVar(&onlyServiceCalls, "only-servicecalls", false, "only scan the servicecalls")
+	cmd.Flags().BoolVar(&shallow, "shallow", false, "toggle shallow scanning")
 
 	return cmd
 }
@@ -244,7 +245,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 
 	packageCount := 0
 
-	internalCalls, serverTargets, err := preprocessing.FindServiceCalls(config.ServiceCallsDir)
+	internalCalls, serverTargets, err := servicecallsanalyzer.ParseServiceCallsPackage(config.ServiceCallsDir)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -266,15 +267,15 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 
 		// There are some interesting internal calls so the tool should parse all methods
 		if len(internalCalls) != 0 {
-			err = preprocessing.LoadServiceCalls(serviceDir, serviceName, internalCalls, &internalClientTargets)
+			err = servicecallsanalyzer.LoadServiceCalls(serviceDir, serviceName, internalCalls, &internalClientTargets)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 		}
 
 		// Load and build packages and proceed with discovery if the user
-		// Didn't ask for scanning of only servicecalls package
-		if !config.OnlyServiceCalls {
+		// Didn't ask for shallow scanning
+		if !config.Shallow {
 			// load packages
 			packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 			if err != nil {
@@ -295,7 +296,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	}
 	allClientTargets = append(allClientTargets, internalClientTargets...)
 
-	if !config.OnlyServiceCalls && packageCount == 0 {
+	if !config.Shallow && packageCount == 0 {
 		return nil, nil, nil, fmt.Errorf("no service to analyse were found")
 	}
 	return allClientTargets, allServerTargets, annotations, nil

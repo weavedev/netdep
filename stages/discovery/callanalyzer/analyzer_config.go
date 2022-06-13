@@ -23,6 +23,8 @@ type InterestingCall struct {
 	interestingArgs []int
 }
 
+// Position holds information about the filename and line of an object of interest,
+// currently used for annotations.
 type Position struct {
 	Filename string
 	Line     int
