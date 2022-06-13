@@ -73,6 +73,11 @@ func FindNATSCalls(serviceDir string) ([]*NatsCall, []*NatsCall, error) {
 	return consumers, producers, nil
 }
 
+// findDependencies goes over a specified service and collects
+// all consumer and producer calls.
+//
+// Currently the consumers are identified by a "Subscribe" pattern
+// and producers are identified by "NotifyMsg".
 func findDependencies(servicePath string, serviceName string, config NatsAnalysisConfig) ([]*NatsCall, []*NatsCall) {
 	producers := make([]*NatsCall, 0)
 	consumers := make([]*NatsCall, 0)
@@ -84,44 +89,48 @@ func findDependencies(servicePath string, serviceName string, config NatsAnalysi
 	}
 
 	ast.Inspect(f, func(node ast.Node) bool {
-		switch funcCall := node.(type) {
-		case *ast.CallExpr:
-			switch methodCall := funcCall.Fun.(type) {
-			case *ast.SelectorExpr:
-				methodName := methodCall.Sel.Name
-				if strings.Contains(methodName, "NotifyMsg") {
-					subject := findSubject(funcCall.Args)
-					if subject != "" {
-						producerCall := &NatsCall{
-							MethodName:     methodName,
-							Communication:  config.communication,
-							Subject:        subject,
-							ServiceName:    serviceName,
-							FileName:       fs.Position(methodCall.X.Pos()).Filename,
-							PositionInFile: strconv.Itoa(fs.Position(methodCall.Sel.Pos()).Line),
-						}
-						producers = append(producers, producerCall)
-					}
-				} else if strings.Contains(methodName, "Subscribe") {
-					subject := findSubject(funcCall.Args)
-					if subject != "" {
-						consumerCall := &NatsCall{
-							MethodName:     methodName,
-							Communication:  config.communication,
-							Subject:        subject,
-							ServiceName:    serviceName,
-							FileName:       fs.Position(methodCall.X.Pos()).Filename,
-							PositionInFile: strconv.Itoa(fs.Position(methodCall.Sel.Pos()).Line),
-						}
-
-						consumers = append(consumers, consumerCall)
-					}
-				}
-			default:
-				return true
-			}
-		default:
+		// Find a call
+		funcCall, ok := node.(*ast.CallExpr)
+		if !ok {
 			return true
+		}
+		// Find the method of the call
+		methodCall, ok := funcCall.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+
+		methodName := methodCall.Sel.Name
+
+		// if the method name contains "NotifyMsg"
+		// or "Subscribe", then create a consumer
+		// or producer respectively.
+		if strings.Contains(methodName, "NotifyMsg") {
+			subject := findSubject(funcCall.Args)
+			if subject != "" {
+				producerCall := &NatsCall{
+					MethodName:     methodName,
+					Communication:  config.communication,
+					Subject:        subject,
+					ServiceName:    serviceName,
+					FileName:       fs.Position(methodCall.X.Pos()).Filename,
+					PositionInFile: strconv.Itoa(fs.Position(methodCall.Sel.Pos()).Line),
+				}
+				producers = append(producers, producerCall)
+			}
+		} else if strings.Contains(methodName, "Subscribe") {
+			subject := findSubject(funcCall.Args)
+			if subject != "" {
+				consumerCall := &NatsCall{
+					MethodName:     methodName,
+					Communication:  config.communication,
+					Subject:        subject,
+					ServiceName:    serviceName,
+					FileName:       fs.Position(methodCall.X.Pos()).Filename,
+					PositionInFile: strconv.Itoa(fs.Position(methodCall.Sel.Pos()).Line),
+				}
+				consumers = append(consumers, consumerCall)
+			}
 		}
 		return true
 	})
@@ -129,6 +138,11 @@ func findDependencies(servicePath string, serviceName string, config NatsAnalysi
 	return consumers, producers
 }
 
+// findSubject returns a name of the subject from the arguments.
+//
+// The subject has to be specified in the following pattern
+// someCall(package.XSubject), where X is the name of the subject.
+// It only works if the Subject is a selector.
 func findSubject(args []ast.Expr) string {
 	for _, argument := range args {
 		switch subjectArg := argument.(type) {
