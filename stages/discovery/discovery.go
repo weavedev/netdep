@@ -42,6 +42,8 @@ func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function 
 		BuildCallGraph: true,
 	}
 
+	fmt.Println("Running pointer analysis...")
+
 	pointerRes, err := pointer.Analyze(ptConfig)
 
 	if err != nil {
@@ -60,6 +62,8 @@ func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function 
 			baseMap[edge.Site.Common()] = edge.Callee.Func
 		}
 	}
+
+	fmt.Printf("Found mapping for %d calls", len(baseMap))
 
 	return baseMap
 }

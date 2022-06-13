@@ -118,6 +118,7 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	// Qualified function name is: package + interface + function
 	qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fn)
+	//fmt.Printf("Analyzing call to %s\n (%d)", qualifiedFunctionNameOfTarget, len(frame.trace))
 
 	if _, isIgnored := config.ignoreList[functionPackage]; isIgnored {
 		// do not recurse on uninteresting packages
@@ -135,6 +136,9 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 	// define offset when function was resolved to an invocation and the first parameter does not exist
 	// this is the case for functions like `func (o obj) name (arg string) {}`
 	offset := len(fn.Params) - len(call.Args)
+	if offset < 0 {
+		offset = 0
+	}
 
 	// Keep track of given parameters for resolving
 	for i, par := range fn.Params[offset:] {
@@ -187,7 +191,8 @@ func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) {
 		return
 	}
 
-	fn := getFunctionFromCall(call, frame)
+	//fn := getFunctionFromCall(call, frame)
+	fn, _ := frame.pointerMap[call]
 
 	if fn == nil {
 		return
