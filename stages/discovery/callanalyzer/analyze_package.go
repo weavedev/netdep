@@ -16,62 +16,37 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
+// CallTargetTrace describes the physical location of a call in the stack trace
 type CallTargetTrace struct {
-	// The name of the file in which the call is made
-	FileName string
-	// The line number in the file where the call is made
-	PositionInFile string
+	FileName       string // FileName of the file in which the call is made
+	PositionInFile string // PositionInFile defines the line number in the file where the call is made
 }
 
 // CallTarget holds information about a certain call made by the analysed package.
 // This used to be named "Caller" (which was slightly misleading, as it is in fact the target,
 // thus rather a 'callee' than a 'caller'.
 type CallTarget struct {
-	// The name of the package the method belongs to
-	packageName string
-	// The name of the call (i.e. name of function or some other target)
-	MethodName string
-	// The URL of the entity
-	RequestLocation string
-	// A flag describing whether the RequestLocation was resolved
-	IsResolved bool
-	// The name of the service in which the call is made
-	ServiceName string
-	// Target service (in case the CallTarget is a client)
-	TargetSvc string
-	// Trace defines a stack trace for the call
-	Trace []CallTargetTrace
+	packageName     string            // packageName is the name of the package the method belongs to
+	MethodName      string            // MethodName is the name of the call (i.e. name of function or some other target)
+	RequestLocation string            // RequestLocation is the URL of the entity
+	IsResolved      bool              // IsResolved defines a flag describing whether the RequestLocation was resolved
+	ServiceName     string            // ServiceName is the name of the service in which the call is made
+	TargetSvc       string            // TargetSvc is the targeted service (in case the CallTarget is a client)
+	Trace           []CallTargetTrace // Trace defines a stack trace for the call
 }
 
 // SubstitutionConfig holds interesting calls to substitute,
 // as well as a map of the current service's environment
 type SubstitutionConfig struct {
-	substitutionCalls map[string]InterestingCall
-	serviceEnv        map[string]string
+	substitutionCalls map[string]InterestingCall // substitutionCalls defines a map of function signature to call
+	serviceEnv        map[string]string          // serviceEnv holds the mapping of environment names to values
 }
 
 // TargetsCollection holds the output structures that are to be returned by the
 // discovery stage
 type TargetsCollection struct {
-	clientTargets []*CallTarget
-	serverTargets []*CallTarget
-}
-
-// findFunctionInPackage finds the method by its name within the specified package.
-// Important: it only looks for Exported functions
-func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
-	// Find member
-	member, hasSpecifiedMember := pkg.Members[name]
-	if !hasSpecifiedMember {
-		return nil
-	}
-	// Check that member is a Function
-	foundFunction, ok := member.(*ssa.Function)
-	if !ok {
-		// Not a function
-		return nil
-	}
-	return foundFunction
+	clientTargets []*CallTarget // clientTargets is the collection of client calls (outgoing)
+	serverTargets []*CallTarget // serverTargets is the collection of server calls (ingoing)
 }
 
 // getPositionFromPos converts a token.Pos to a filename and line number
@@ -129,8 +104,12 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 	wasInteresting := false
 
 	// Qualified function name is: package + interface + function
-	// TODO: handle parameter equivalence to other interface
 	qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fn)
+
+	if _, isIgnored := config.ignoreList[functionPackage]; isIgnored {
+		// do not recurse on uninteresting packages
+		return
+	}
 
 	// The following creates a copy of 'frame'.
 	// This is the correct place for this because we are going to visit child blocks next.
@@ -140,7 +119,8 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 	copy(newFrame.trace, frame.trace)
 	newFrame.trace = append(newFrame.trace, call)
 
-	// offset when function was resolved to an invocation and the first parameter does not exist
+	// define offset when function was resolved to an invocation and the first parameter does not exist
+	// this is the case for functions like `func (o obj) name (arg string) {}`
 	offset := len(fn.Params) - len(call.Args)
 
 	// Keep track of given parameters for resolving
@@ -153,29 +133,20 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 	if isInterestingClient {
-		// TODO: Resolve the arguments of the function call
 		handleInterestingClientCall(call, fn, config, &newFrame)
 		wasInteresting = true
 	}
 
 	_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if isInterestingServer {
-		// TODO: Resolve the arguments of the function call
 		handleInterestingServerCall(call, fn, config, &newFrame)
 		wasInteresting = true
-	}
-
-	_, isIgnored := config.ignoreList[functionPackage]
-
-	if isIgnored {
-		// Do not recurse into the packageName if it is ignored
-		return
 	}
 
 	// recurse into arguments if they are functions or calls themselves
 	analyseCallArguments(call, frame, config)
 
-	// at this point analyseCallArguments has been called so we can return
+	// do not recurse down on interesting calls
 	if wasInteresting {
 		return
 	}
@@ -309,7 +280,7 @@ func defaultCallTarget(packageName, functionName string) *CallTarget {
 		RequestLocation: "",
 		IsResolved:      false,
 		ServiceName:     "",
-		Trace:           make([]CallTargetTrace, 0),
+		Trace:           []CallTargetTrace{},
 	}
 }
 
@@ -407,8 +378,8 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 		return nil, nil, fmt.Errorf("no package given %v", pkg)
 	}
 
-	mainFunction := findFunctionInPackage(pkg, "main")
-	initFunction := findFunctionInPackage(pkg, "init")
+	mainFunction := pkg.Func("main")
+	initFunction := pkg.Func("init")
 
 	// Find the main function
 	if mainFunction == nil {

@@ -38,16 +38,11 @@ func ReplaceTargetsAnnotations(callTargets *[]*CallTarget, config *AnalyserConfi
 	return nil
 }
 
-/*
-  ResolveAnnotation populates the fields (RequestLocation or TargetSvc)
-  of a CallTarget by extracting them from the annotation value string.
-
-  Annotation format is currently:
-
-  1) "//netdep:client url=... targetSvc=..."
-
-  2) "//netdep:endpoint url=..."
-*/
+// ResolveAnnotation populates the fields (RequestLocation or TargetSvc)
+// of a CallTarget by extracting them from the annotation value string.
+// Annotation format is currently:
+// 1) "//netdep:client url=... targetSvc=..."
+// 2) "//netdep:endpoint url=..."
 func ResolveAnnotation(ann string, target *CallTarget) {
 	annType := strings.Split(ann, " ")[0]
 	annData := strings.Split(ann, " ")[1:]

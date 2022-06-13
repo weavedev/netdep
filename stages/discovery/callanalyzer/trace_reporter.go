@@ -6,6 +6,7 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
+// PrintTraceToCall logs a stack trace for the current frame
 func PrintTraceToCall(frame *Frame, config *AnalyserConfig) {
 	traces := len(frame.trace)
 
