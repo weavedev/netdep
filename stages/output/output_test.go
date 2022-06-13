@@ -23,10 +23,9 @@ func createSmallTestGraph() NodeGraph {
 
 	edge12 := ConnectionEdge{
 		Call: NetworkCall{
-			Protocol:  "HTTP",
-			URL:       "",
-			Arguments: nil,
-			Location:  "",
+			Protocol: "HTTP",
+			URL:      "",
+			Location: nil,
 		},
 		Source: &node1,
 		Target: &node2,
@@ -34,10 +33,9 @@ func createSmallTestGraph() NodeGraph {
 
 	edge13 := ConnectionEdge{
 		Call: NetworkCall{
-			Protocol:  "HTTP",
-			URL:       "",
-			Arguments: nil,
-			Location:  "",
+			Protocol: "HTTP",
+			URL:      "",
+			Location: nil,
 		},
 		Source: &node1,
 		Target: &node3,
@@ -45,10 +43,9 @@ func createSmallTestGraph() NodeGraph {
 
 	edge23 := ConnectionEdge{
 		Call: NetworkCall{
-			Protocol:  "HTTP",
-			URL:       "",
-			Arguments: nil,
-			Location:  "",
+			Protocol: "HTTP",
+			URL:      "",
+			Location: nil,
 		},
 		Source: &node2,
 		Target: &node3,

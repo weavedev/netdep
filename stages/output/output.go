@@ -18,14 +18,15 @@ Refer to the Project plan, chapter 5.4 for more information.
 type NetworkCall struct {
 	Protocol  string   `json:"protocol"`
 	URL       string   `json:"url"`
-	Arguments []string `json:"arguments"`
 	Locations []string `json:"locations"`
 }
 
 // ServiceNode represents a node in the output graph, which is a Service
 type ServiceNode struct {
-	ServiceName string `json:"serviceName"`
-	IsUnknown   bool   `json:"isUnknown"`
+	ServiceName string   `json:"serviceName"`
+	IsUnknown   bool     `json:"isUnknown"`
+	Hostname    []string `json:"hostname"`
+	Endpoints   []string `json:"endpoints"`
 }
 
 // ConnectionEdge represents a directed edge in the output graph

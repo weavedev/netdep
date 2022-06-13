@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
+	//"strings"
 
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery"
 	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
@@ -241,14 +241,14 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		}
 		packageCount += len(packagesInService)
 
-		serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
-		err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
-		if err != nil {
-			fmt.Println("Errors parsing annotations:")
-			fmt.Println(err)
-			continue
-			//return nil, nil, nil, err
-		}
+		//serviceName := strings.Split(serviceDir, "\\")[len(strings.Split(serviceDir, "\\"))-1]
+		//err = preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
+		//if err != nil {
+		//	fmt.Println("Errors parsing annotations:")
+		//	fmt.Println(err)
+		//	continue
+		//	//return nil, nil, nil, err
+		//}
 
 		// discover calls
 		clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)

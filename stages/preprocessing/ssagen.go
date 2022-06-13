@@ -21,7 +21,7 @@ func LoadAndBuildPackages(projectRootDir string, svcPath string) ([]*ssa.Package
 		Tests: false,
 	}
 
-	builderMode := ssa.BuilderMode(0)
+	builderMode := ssa.BuilderMode(0) | ssa.BareInits
 
 	// load all packages in the service directory
 	loadedPackages, err := packages.Load(buildConfig, svcPath)

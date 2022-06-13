@@ -17,7 +17,7 @@ type DiscoverFrame struct {
 	trace []*callgraph.Edge
 	// visited is shared between frames and keeps track of which nodes have been visited
 	// to prevent repetitive visits.
-	visited       map[int]bool
+	visited       map[int]int
 	globals       map[*ssa.Global]*ssa.Value
 	program       *ssa.Program
 	parent        *Frame
@@ -25,7 +25,10 @@ type DiscoverFrame struct {
 	result        *pointer.Result
 	clientTargets []*CallTarget
 	serverTargets []*CallTarget
+	singlePass    bool
 }
+
+const maxRevisits = 1
 
 // resolveValue Resolves a supplied ssa.Value, only in the cases that are supported by the tool:
 // - string concatenation (see BinOp),
@@ -59,6 +62,7 @@ func resolveArgValue(value *ssa.Value, trace []*callgraph.Edge, frame *DiscoverF
 
 		return "unknown: the parameter was not resolved", false
 	case *ssa.Global:
+		// TODO
 		if p, ok := frame.result.Queries[val]; ok {
 			return p.String(), true
 		}
@@ -92,6 +96,7 @@ func resolveArgValue(value *ssa.Value, trace []*callgraph.Edge, frame *DiscoverF
 		}
 		return "unknown: not a string constant", false
 	//case *ssa.Call:
+	// TODO
 	//	return handleSubstitutableCall(val, substConf)
 	default:
 		return "unknown: the parameter was not resolved", false
@@ -108,11 +113,11 @@ func resolveParameterOfCall(trace []*callgraph.Edge, positions []int, frame *Dis
 		return stringParameters, wasResolved
 	}
 
-	parameters := callSite.Common().Args
+	arguments := callSite.Common().Args
 
 	for i, idx := range positions {
-		if idx < len(parameters) {
-			variable, isResolved := resolveArgValue(&parameters[idx], trace, frame)
+		if idx < len(arguments) {
+			variable, isResolved := resolveArgValue(&arguments[idx], trace, frame)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
@@ -197,19 +202,22 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 		BuildCallGraph: true,
 	}
 
-	for _, pkg := range pkgs {
-		if pkg == nil {
-			continue
-		}
-		for _, mem := range pkg.Members {
-			if globalPointer, ok := mem.(*ssa.Global); ok {
-				ptConfig.AddQuery(globalPointer)
-			}
-		}
-	}
+	//for _, pkg := range pkgs {
+	//	if pkg == nil {
+	//		continue
+	//	}
+	//	for _, mem := range pkg.Members {
+	//		if globalPointer, ok := mem.(*ssa.Global); ok {
+	//			ptConfig.AddQuery(globalPointer)
+	//		}
+	//	}
+	//}
 	// query
 
-	fmt.Println("Running pointer analysis...")
+	if config.verbose {
+		fmt.Println("Running pointer analysis...")
+	}
+
 	pointerRes, err := pointer.Analyze(ptConfig)
 
 	if err != nil {
@@ -220,23 +228,27 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 	cg := pointerRes.CallGraph
 	cg.DeleteSyntheticNodes()
 
-	fmt.Printf("Finding nodes (%d)...\n", len(cg.Nodes))
+	if config.verbose {
+		fmt.Printf("Finding nodes (%d)...\n", len(cg.Nodes))
+	}
 
 	baseFrame := DiscoverFrame{
-		trace:         []*callgraph.Edge{},
-		visited:       map[int]bool{},
+		trace: []*callgraph.Edge{},
+		visited: map[int]int{
+			cg.Root.ID: -1,
+		},
 		program:       pkgs[0].Prog,
 		parent:        nil,
 		config:        config,
 		clientTargets: []*CallTarget{},
 		serverTargets: []*CallTarget{},
 		result:        pointerRes,
+		//singlePass:    true,
 	}
 
-	baseFrame.visited[cg.Root.ID] = false
 	for _, edge := range cg.Root.Out {
 		if edge.Callee.Func.Name() == "main" {
-			baseFrame.visited[edge.Callee.ID] = false
+			baseFrame.visited[edge.Callee.ID] = -1
 			uniquePaths(edge.Callee, &baseFrame)
 		}
 	}
@@ -245,24 +257,33 @@ func AnalyzeUsingCallGraph(pkgs []*ssa.Package, config *AnalyserConfig) ([]*Call
 	interestingCount := 0
 	for _, v := range baseFrame.visited {
 		count++
-		if v {
+		if v > -1 {
 			interestingCount++
 		}
 	}
 
-	fmt.Printf("%d, %d found (%d/%d)\n", len(baseFrame.clientTargets), len(baseFrame.serverTargets), interestingCount, count)
+	if config.verbose {
+		fmt.Printf("%d, %d found (%d/%d)\n", len(baseFrame.clientTargets), len(baseFrame.serverTargets), interestingCount, count)
+	}
 
 	return baseFrame.clientTargets, baseFrame.serverTargets, nil
 }
 
 func uniquePaths(node *callgraph.Node, frame *DiscoverFrame) bool {
-	//fmt.Printf("Node scanning %s, %d (%d)\n", node.String(), len(node.Out), len(frame.trace))
+	if frame.config.verbose {
+		fmt.Printf("Node scanning %s, %d (%d)\n", node.String(), len(node.Out), len(frame.trace))
+	}
+
 	if len(frame.trace) > frame.config.maxTraversalDepth {
+		frame.visited[node.ID] = -1
 		return false
 	}
 
 	foundInteresting := false
-	frame.visited[node.ID] = false
+	_, nodeVisited := frame.visited[node.ID]
+	if !nodeVisited {
+		frame.visited[node.ID] = -1
+	}
 
 	if len(node.Out) == 0 {
 		return false
@@ -281,16 +302,19 @@ func uniquePaths(node *callgraph.Node, frame *DiscoverFrame) bool {
 			}
 		}
 
+		visited, wasVisited := frame.visited[outNode.ID]
+		if wasVisited && (visited == -1 || visited > maxRevisits) {
+			shouldSkip = true
+		}
+
 		if shouldSkip {
 			continue
 		}
 
-		isInterestingVisit, wasVisited := frame.visited[outNode.ID]
-		if wasVisited && !isInterestingVisit {
-			continue
+		if !wasVisited {
+			frame.visited[outNode.ID] = -1
 		}
 
-		frame.visited[outNode.ID] = false
 		// check for interesting call
 		outFunc := outNode.Func
 
@@ -322,8 +346,12 @@ func uniquePaths(node *callgraph.Node, frame *DiscoverFrame) bool {
 				frame.serverTargets = append(frame.serverTargets, callTarget)
 			}
 
+			if frame.config.verbose {
+				fmt.Printf("Found new trace! %d, %d\n", len(frame.clientTargets), len(frame.serverTargets))
+			}
+
 			foundInteresting = true
-			frame.visited[outNode.ID] = true
+			frame.visited[outNode.ID] = 1
 
 			//	pop trace
 			frame.trace = frame.trace[:len(frame.trace)-1]
@@ -334,13 +362,14 @@ func uniquePaths(node *callgraph.Node, frame *DiscoverFrame) bool {
 		//	pop trace
 		frame.trace = frame.trace[:len(frame.trace)-1]
 
-		frame.visited[outNode.ID] = found
-
 		if found {
 			foundInteresting = true
+			frame.visited[outNode.ID]++
 		}
 	}
 
-	frame.visited[node.ID] = foundInteresting
+	if foundInteresting && !nodeVisited {
+		frame.visited[node.ID] = 0
+	}
 	return foundInteresting
 }

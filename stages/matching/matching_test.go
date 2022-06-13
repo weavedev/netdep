@@ -28,8 +28,7 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node2:80/URL_2",
-			Arguments: nil,
-			Location:  "./node1/path/to/some/file.go:24",
+			Locations: []string{"./node1/path/to/some/file.go:24"},
 		},
 		Source: &node1,
 		Target: &node2,
@@ -39,8 +38,7 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
-			Location:  "./node1/path/to/some/other/file.go:36",
+			Locations: []string{"./node1/path/to/some/other/file.go:36"},
 		},
 		Source: &node1,
 		Target: &node3,
@@ -50,8 +48,7 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
-			Location:  "./node1/path/to/some/file.go:245",
+			Locations: []string{"./node1/path/to/some/file.go:245"},
 		},
 		Source: &node2,
 		Target: &node3,
@@ -61,8 +58,7 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
-			Location:  "./node2/path/to/some/other/file.go:436",
+			Locations: []string{"./node2/path/to/some/other/file.go:436"},
 		},
 		Source: &node2,
 		Target: &node3,
@@ -226,8 +222,7 @@ func TestWithUnknownService(t *testing.T) {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node2:80/URL_2",
-			Arguments: nil,
-			Location:  "./node1/path/to/some/file.go:24",
+			Locations: []string{"./node1/path/to/some/file.go:24"},
 		},
 		Source: &node1,
 		Target: &unknownService,
@@ -237,8 +232,7 @@ func TestWithUnknownService(t *testing.T) {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node2:80/URL_2",
-			Arguments: nil,
-			Location:  "./node1/path/to/some/other/file.go:436",
+			Locations: []string{"./node1/path/to/some/other/file.go:436"},
 		},
 		Source: &node1,
 		Target: &unknownService,
@@ -248,8 +242,7 @@ func TestWithUnknownService(t *testing.T) {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
-			Location:  "./node1/path/to/some/other_file.go:24",
+			Locations: []string{"./node1/path/to/some/other_file.go:24"},
 		},
 		Source: &node1,
 		Target: &unknownService,

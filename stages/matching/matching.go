@@ -89,22 +89,22 @@ func populateTraceMap(calls []*callanalyzer.CallTarget, traceMap map[token.Pos]i
 
 func getRelevantCallLocation(calls []callanalyzer.CallTargetTrace, traceMap map[token.Pos]int) []string {
 	ret := make([]string, 0)
-	min := -1
+	//min := -1
 	for _, call := range calls {
 		//if !call.Internal {
 		//	break
 		//}
-		n, _ := traceMap[call.Pos]
+		//n, _ := traceMap[call.Pos]
+		//
+		//if min == -1 || n < min {
+		//	ret = make([]string, 0)
+		//	min = n
+		//}
+		//
+		//if n > min {
+		//	continue
+		//}
 
-		if min == -1 || n < min {
-			ret = make([]string, 0)
-			min = n
-		}
-
-		if n > min {
-			continue
-		}
-		
 		ret = append(ret, fmt.Sprintf("%s:%s", call.FileName, call.PositionInFile))
 	}
 
@@ -160,9 +160,8 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 		connectionEdge := &output.ConnectionEdge{
 			Call: output.NetworkCall{
 				// TODO add more details
-				Protocol:  "HTTP",
-				URL:       call.RequestLocation,
-				Arguments: nil,
+				Protocol: "HTTP",
+				URL:      call.RequestLocation,
 				// TODO: handle stack trace?
 				Locations: callLocations,
 			},
