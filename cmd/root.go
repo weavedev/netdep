@@ -198,20 +198,7 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	}
 
 	if config.Verbose {
-		fmt.Println("Discovered annotations:")
-		anyHits := false
-		for k1, serMap := range annotations {
-			for k2, val := range serMap {
-				anyHits = true
-				fmt.Println("Service name: " + k1)
-				fmt.Print("Position: " + k2.Filename + ":")
-				fmt.Println(k2.Line)
-				fmt.Println("Value: " + val)
-			}
-		}
-		if !anyHits {
-			fmt.Println("[Discovered none]")
-		}
+		output.PrintDiscoveredAnnotations(annotations)
 	}
 
 	return allClientTargets, allServerTargets, err
