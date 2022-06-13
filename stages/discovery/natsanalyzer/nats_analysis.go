@@ -1,8 +1,6 @@
-/*
-Package nats contains NATS specific call analysis
-Copyright © 2022 TW Group 13C, Weave BV, TU Delft
-*/
-package nats
+// Package natsanalyzer contains NATS specific call analysis
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft/*
+package natsanalyzer
 
 import (
 	"fmt"
@@ -16,6 +14,8 @@ import (
 	"strings"
 )
 
+// NatsCall is a data structure to hold either consumer
+// or producer side calls.
 type NatsCall struct {
 	// The name of the package the method belongs to
 	Communication string
@@ -31,6 +31,11 @@ type NatsCall struct {
 	PositionInFile string
 }
 
+// FindNATSCalls exposes natsanalyzer API. It receives service directory path
+// as an argument and iterates over each file searching for non-test .go files
+//
+// Each .go file is then passed to findDependencies, which returns a list of
+// consumers and producers as NatsCall.
 func FindNATSCalls(serviceDir string) ([]*NatsCall, []*NatsCall, error) {
 	consumers := make([]*NatsCall, 0)
 	producers := make([]*NatsCall, 0)

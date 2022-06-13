@@ -6,18 +6,20 @@ import (
 	"fmt"
 	"sort"
 
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/natsanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/structures"
+
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
-	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing/nats"
 )
 
 // createEmptyNodes create a set of services, but populates them to nil
-func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget, consumers []*nats.NatsCall, producers []*nats.NatsCall) (map[string]*output.ServiceNode, []*output.ServiceNode) {
+func createEmptyNodes(dependencies *structures.Dependencies) (map[string]*output.ServiceNode, []*output.ServiceNode) {
 	nodes := make([]*output.ServiceNode, 0)
 	serviceMap := make(map[string]*output.ServiceNode)
 
-	combinedList := calls
-	combinedList = append(combinedList, endpoints...)
+	combinedList := dependencies.Calls
+	combinedList = append(combinedList, dependencies.Endpoints...)
 
 	// create nodes
 	for _, call := range combinedList {
@@ -33,8 +35,8 @@ func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyze
 		}
 	}
 
-	combinedNats := consumers
-	combinedNats = append(combinedNats, producers...)
+	combinedNats := dependencies.Consumers
+	combinedNats = append(combinedNats, dependencies.Producers...)
 
 	// extend nodes with NATS only services
 	for _, call := range combinedNats {
@@ -92,21 +94,27 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 }
 
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
-func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget, consumers []*nats.NatsCall, producers []*nats.NatsCall) output.NodeGraph {
+func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGraph {
+	if dependencies == nil {
+		nodes := make([]*output.ServiceNode, 0)
+		edges := make([]*output.ConnectionEdge, 0)
+		return output.NodeGraph{Nodes: nodes, Edges: edges}
+	}
+
 	UnknownService := &output.ServiceNode{
 		ServiceName: "UnknownService",
 		IsUnknown:   true,
 	}
 
 	edges := make([]*output.ConnectionEdge, 0)
-	serviceMap, nodes := createEmptyNodes(calls, endpoints, consumers, producers)
-	endpointMap := createEndpointMap(endpoints)
+	serviceMap, nodes := createEmptyNodes(dependencies)
+	endpointMap := createEndpointMap(dependencies.Endpoints)
 	hasUnknown := false
-	edges = append(edges, extendWithNats(consumers, producers, &hasUnknown, serviceMap, &nodes)...)
+	edges = append(edges, extendWithNats(dependencies.Consumers, dependencies.Producers, &hasUnknown, serviceMap, &nodes)...)
 
 	// Add edges (eg. matching)
 	// This order is guaranteed because calls is an array
-	for _, call := range calls {
+	for _, call := range dependencies.Calls {
 		sourceNode := serviceMap[call.ServiceName]
 		targetServiceName, isResolved := findTargetNodeName(call, endpointMap)
 
@@ -185,7 +193,11 @@ func findTargetNodeName(call *callanalyzer.CallTarget, endpointMap map[string]st
 	return targetServiceName, hasTarget
 }
 
-func extendWithNats(consumers []*nats.NatsCall, producers []*nats.NatsCall, hasUnknown *bool, services map[string]*output.ServiceNode, nodes *[]*output.ServiceNode) []*output.ConnectionEdge {
+// extendWithNats extends the Connection Edges data structure
+// with discovered NATS edges. This was required, because NATS
+// can have one-to-many dependencies, where as something like HTTP
+// is one-to-one.
+func extendWithNats(consumers []*natsanalyzer.NatsCall, producers []*natsanalyzer.NatsCall, hasUnknown *bool, services map[string]*output.ServiceNode, nodes *[]*output.ServiceNode) []*output.ConnectionEdge {
 	edges := make([]*output.ConnectionEdge, 0)
 
 	if consumers == nil || producers == nil {

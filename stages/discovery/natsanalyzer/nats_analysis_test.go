@@ -1,4 +1,4 @@
-package nats
+package natsanalyzer
 
 import (
 	"path/filepath"

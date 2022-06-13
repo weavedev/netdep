@@ -3,11 +3,13 @@ package matching
 import (
 	"testing"
 
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/natsanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/structures"
+
 	"github.com/stretchr/testify/assert"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
-	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing/nats"
 )
 
 func CreateSmallTestGraph() output.NodeGraph {
@@ -79,7 +81,7 @@ func CreateSmallTestGraph() output.NodeGraph {
 
 // test basic functionality of the matching functionality
 func TestEmptyCaseCreateDependencyGraph(t *testing.T) {
-	graph := CreateDependencyGraph(nil, nil, nil, nil)
+	graph := CreateDependencyGraph(nil)
 
 	assert.Equal(t, make([]*output.ServiceNode, 0), graph.Nodes)
 	assert.Equal(t, make([]*output.ConnectionEdge, 0), graph.Edges)
@@ -152,7 +154,14 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 	// reuse graph from output stage tests
 	expectedGraph := CreateSmallTestGraph()
 
-	graph := CreateDependencyGraph(calls, endpoints, nil, nil)
+	dependencies := &structures.Dependencies{
+		Calls:     calls,
+		Endpoints: endpoints,
+		Consumers: nil,
+		Producers: nil,
+	}
+
+	graph := CreateDependencyGraph(dependencies)
 
 	assert.Equal(t, len(expectedGraph.Nodes), len(graph.Nodes))
 	for i := range expectedGraph.Nodes {
@@ -258,7 +267,14 @@ func TestWithUnknownService(t *testing.T) {
 	expectedNodes := []*output.ServiceNode{&node1, &unknownService}
 	expectedEdges := []*output.ConnectionEdge{&edge12a, &edge12b, &edge13}
 
-	graph := CreateDependencyGraph(calls, endpoints, nil, nil)
+	dependencies := &structures.Dependencies{
+		Calls:     calls,
+		Endpoints: endpoints,
+		Consumers: nil,
+		Producers: nil,
+	}
+
+	graph := CreateDependencyGraph(dependencies)
 
 	assert.Equal(t, len(expectedNodes), len(graph.Nodes))
 	for i := range expectedNodes {
@@ -272,7 +288,7 @@ func TestWithUnknownService(t *testing.T) {
 }
 
 func TestNatsExtension(t *testing.T) {
-	call1 := &nats.NatsCall{
+	call1 := &natsanalyzer.NatsCall{
 		Communication:  "NATS",
 		MethodName:     "Subscribe",
 		Subject:        "HelloSubject",
@@ -281,7 +297,7 @@ func TestNatsExtension(t *testing.T) {
 		PositionInFile: "15",
 	}
 
-	call2 := &nats.NatsCall{
+	call2 := &natsanalyzer.NatsCall{
 		Communication:  "NATS",
 		MethodName:     "Subscribe",
 		Subject:        "ByeSubject",
@@ -290,7 +306,7 @@ func TestNatsExtension(t *testing.T) {
 		PositionInFile: "16",
 	}
 
-	call3 := &nats.NatsCall{
+	call3 := &natsanalyzer.NatsCall{
 		Communication:  "NATS",
 		MethodName:     "ByeNotifyMsg",
 		Subject:        "ByeSubject",
@@ -299,7 +315,7 @@ func TestNatsExtension(t *testing.T) {
 		PositionInFile: "18",
 	}
 
-	call4 := &nats.NatsCall{
+	call4 := &natsanalyzer.NatsCall{
 		Communication:  "NATS",
 		MethodName:     "HelloNotifyMsg",
 		Subject:        "HelloSubject",
@@ -308,7 +324,7 @@ func TestNatsExtension(t *testing.T) {
 		PositionInFile: "17",
 	}
 
-	call5 := &nats.NatsCall{
+	call5 := &natsanalyzer.NatsCall{
 		Communication:  "NATS",
 		MethodName:     "AyoNotifyMsg",
 		Subject:        "AyoSubject",
@@ -330,11 +346,11 @@ func TestNatsExtension(t *testing.T) {
 	serviceMap["ayo"] = &node1
 	serviceMap["test"] = &node2
 
-	consumers := make([]*nats.NatsCall, 2)
+	consumers := make([]*natsanalyzer.NatsCall, 2)
 	consumers[0] = call1
 	consumers[1] = call2
 
-	producers := make([]*nats.NatsCall, 3)
+	producers := make([]*natsanalyzer.NatsCall, 3)
 	producers[0] = call3
 	producers[1] = call4
 	producers[2] = call5
