@@ -20,28 +20,109 @@ dependencies installed!**
 
 ## Usage
 
+### Option 1: Run the source code directly
+
 To initiate dependency scanning depScan command has to be used in a command-line interface.
 ou can run the tool using the default settings using:
 
 ```sh
-go run main.go depScan
+go run main.go
 ```
 
 or if you want more control you can use the options as defined below, for example:
 
 ```sh
-go run main.go depScan -p "./some/project/dir" -s "./some/service/dir"
+go run main.go -p "./some/project/dir" -s "./some/project/dir/svc"
 ```
 
-### Options
+### Option 2: Build an executable first
 
-| Argument                  | Description                                                                               | Default  |
-|:--------------------------|:------------------------------------------------------------------------------------------|:---------|
-| `-h, --help`              | Print help                                                                                |          |
-| `-p, --project-directory` | The path to the project directory. Must be a valid path.                                  | `./`     |
-| `-s --service-directory`  | The path to the services inside the project. Must be a valid path.                        | `./svc/` |
-| `-o --output-filename`    | Output filename such as ./deps.json. By default or when empty, it is outputted to stdout. | ``       |
-| `-v --verbose`            | Toggle printing stack traces of unknown variables.                                        | `false`  |
+```sh
+go build .
+```
+
+On *NIX systems:
+
+```sh
+./netDep [-p project_directory] [-s service_directory] [-v]
+```
+
+On Windows:
+
+```sh
+./netDep.exe [-p project_directory] [-s service_directory] [-v]
+```
+
+### Annotations
+
+The tool supports code annotations. This is necessary, because it might fail to resolve some of the variables due to
+complexity of the code or lack of support.
+
+#### Annotation format
+
+User can add annotations as comments in their project before running the tool on it. Currently, the tool supports 3
+types of annotations:
+
+1) Annotations for client calls. Example:
+
+```go
+//netdep:client url=http://example.com/ targetSvc=service-2
+c.Do(req)
+```
+
+Both `url` and `targetSvc` can be specified, but any one is also enough.
+
+2) Annotations for endpoint definitions. Example:
+
+```go
+//netdep:endpoint url=http://example.com/ping
+r.GET("/ping", func (c *gin.Context) {
+c.JSON(200, gin.H{
+"message": "pong",
+})
+})
+```
+
+3) Annotations for host name definition. Example:
+
+```go
+http.Handle("/count", th)
+http.ListenAndServe(":8080", nil)
+//netdep:host http://basic_handle:8080
+```
+
+#### Annotation suggestions
+
+An annotation suggestion will be printed for all unresolved targets.
+
+Suggestion output example:
+
+```sh
+service-1\main.go:24 couldn't be resolved. Add an annotation above it in the format "//netdep:client ..." or "//netdep:endpoint ..."
+```
+
+### Verbs
+
+When no verbs are specified (i.e. running just `netDep` with or without flags), the main logic is run.
+
+Available verbs:
+
+| Verb         | Description                                                                |
+|:-------------|:---------------------------------------------------------------------------|
+| `help`       | Displays the help page                                                     |
+| `genManPage` | Generates manpage entries to the current directory, normally ./netDep.1    |
+| `completion` | Creates command-line interface completion scripts in the current directory |
+
+### Flags
+
+| Argument                     | Description                                                                                                   | Default  |
+|:-----------------------------|:--------------------------------------------------------------------------------------------------------------|:---------|
+| `-h, --help`                 | Print help                                                                                                    |          |
+| `-p, --project-directory`    | The path to the project directory. Must be a valid path.                                                      | `./`     |
+| `-s --service-directory`     | The path to the services inside the project. Must be a valid path.                                            | `./svc/` |
+| `-e --environment-variables` | The path to the file containing environment variables. Must be a valid path. The file must be in YAML format. | ``       |
+| `-o --output-filename`       | Output filename such as ./deps.json. By default or when empty, it is outputted to stdout.                     | ``       |
+| `-v --verbose`               | Toggle printing stack traces of unknown variables.                                                            | `false`  |
 
 ## Documentation
 

@@ -21,3 +21,5 @@ func main() {
 	http.Handle("/count", th)
 	http.ListenAndServe(":8080", nil)
 }
+
+//netdep:host http://basic_handle:8080

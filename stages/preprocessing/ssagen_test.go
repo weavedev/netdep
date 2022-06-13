@@ -4,23 +4,23 @@
 package preprocessing
 
 import (
-	"path"
+	"path/filepath"
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
+	"lab.weave.nl/internships/tud-2022/netDep/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadPackages(t *testing.T) {
-	svcDir := path.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "basic_call")
 	initial, _ := LoadAndBuildPackages(svcDir, svcDir)
 
 	assert.Equal(t, "main", initial[0].Pkg.Name())
 }
 
 func TestLoadPackagesError(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "example", "svc")
+	projDir := filepath.Join(helpers.RootDir, "test", "example", "svc")
 	_, err := LoadAndBuildPackages(projDir, projDir)
 
 	assert.Equal(t, "no usable packages found", err.Error())

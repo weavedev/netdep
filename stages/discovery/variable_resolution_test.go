@@ -1,15 +1,17 @@
+// Package discovery defines discovery of clients calls and endpoints
+// Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package discovery
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/preprocessing"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/helpers"
+	"lab.weave.nl/internships/tud-2022/netDep/helpers"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,8 +21,8 @@ TestEnvVarResolution tests getEnv substitution. After passing
 the env vars to discovery, they can be properly substituted
 */
 func TestEnvVarResolution(t *testing.T) {
-	projDir := path.Join(helpers.RootDir, "test", "example")
-	svcDir := path.Join(helpers.RootDir, "test", "example", "env_svc")
+	projDir := filepath.Join(helpers.RootDir, "test", "example")
+	svcDir := filepath.Join(helpers.RootDir, "test", "example", "env_svc")
 	services, _ := preprocessing.FindServices(svcDir)
 	destinationURL := "127.0.0.1:8081"
 	env := map[string]map[string]string{
@@ -29,7 +31,8 @@ func TestEnvVarResolution(t *testing.T) {
 		},
 	}
 
-	configWithEnv := callanalyzer.DefaultConfigForFindingHTTPCalls(env)
+	configWithEnv := callanalyzer.DefaultConfigForFindingHTTPCalls()
+	configWithEnv.SetEnv(env)
 	resC, resS := discoverAllServices(projDir, services, &configWithEnv)
 
 	assert.Equal(t, 1, len(resC), "Expect 1 interesting call")

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sort"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 
-	"lab.weave.nl/internships/tud-2022/static-analysis-project/stages/output"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
 )
 
 // createEmptyNodes create a set of services, but populates them to nil
@@ -69,6 +69,7 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 			endpointURL := fmt.Sprintf("http://%s%s%s", call.ServiceName, port, call.RequestLocation)
 			endpointMap[endpointURL] = call.ServiceName
 		}
+		endpointMap[call.RequestLocation] = call.ServiceName
 	}
 
 	return endpointMap
@@ -154,6 +155,10 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 func findTargetNodeName(call *callanalyzer.CallTarget, endpointMap map[string]string) (string, bool) {
 	if !call.IsResolved {
 		return "", false
+	}
+
+	if call.TargetSvc != "" {
+		return call.TargetSvc, true
 	}
 
 	// TODO improve matching, compare URL
