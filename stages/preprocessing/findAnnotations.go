@@ -3,6 +3,7 @@
 package preprocessing
 
 import (
+	"fmt"
 	"go/parser"
 	"go/token"
 	"os"
@@ -23,13 +24,9 @@ func LoadAnnotations(servicePath string, serviceName string, annotations map[str
 	annotations[serviceName] = make(map[callanalyzer.Position]string)
 
 	for _, file := range files {
-		//nolint:goconst
 		if filepath.Ext(file.Name()) == ".go" && !strings.HasSuffix(file.Name(), "_test.go") && !strings.HasSuffix(file.Name(), "pb.go") {
 			// If the file is a .go file - parse it
-			err := parseComments(filepath.Join(servicePath, file.Name()), serviceName, annotations)
-			if err != nil {
-				return err
-			}
+			parseComments(filepath.Join(servicePath, file.Name()), serviceName, annotations)
 		} else if file.IsDir() {
 			// If the file is a directory - recursively look for .go files inside it
 			err := LoadAnnotations(filepath.Join(servicePath, file.Name()), serviceName, annotations)
@@ -45,11 +42,12 @@ func LoadAnnotations(servicePath string, serviceName string, annotations map[str
 // parseComments parses the given file with a parser.ParseComments mode, filters out
 // the comments which don't contain a substring "netdep:client" or "netdep:endpoint", generates an Annotation for
 // every remaining comment and returns a list of them.
-func parseComments(path string, serviceName string, annotations map[string]map[callanalyzer.Position]string) error {
+
+func parseComments(path string, serviceName string, annotations map[string]map[callanalyzer.Position]string) {
 	fs := token.NewFileSet()
 	f, err := parser.ParseFile(fs, path, nil, parser.ParseComments)
 	if err != nil {
-		return err
+		fmt.Println(err.Error())
 	}
 
 	for _, commentGroup := range f.Comments {
@@ -66,6 +64,4 @@ func parseComments(path string, serviceName string, annotations map[string]map[c
 			}
 		}
 	}
-
-	return nil
 }

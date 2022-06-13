@@ -21,7 +21,7 @@ func TestLoadAnnotations(t *testing.T) {
 	expected["object_call"] = make(map[callanalyzer.Position]string)
 	pos := callanalyzer.Position{
 		Filename: filepath.Join("object_call", "object_call.go"),
-		Line:     14,
+		Line:     18,
 	}
 	expected["object_call"][pos] = "client http://example.com/"
 

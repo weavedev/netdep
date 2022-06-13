@@ -1,3 +1,7 @@
+/*
+Package servicecallsanalyzer defines servicecalls package specific scanning methods
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+*/
 package servicecallsanalyzer
 
 import (

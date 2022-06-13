@@ -1,3 +1,7 @@
+/*
+Package servicecallsanalyzer defines servicecalls package specific scanning methods
+Copyright © 2022 TW Group 13C, Weave BV, TU Delft
+*/
 package servicecallsanalyzer
 
 import (
@@ -11,21 +15,21 @@ import (
 )
 
 func TestLoadServiceCalls(t *testing.T) {
-	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "gin_handle")
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "object_call")
 	intCalls := make(map[IntCall]string)
 	clientTargets := make([]*callanalyzer.CallTarget, 0)
 
 	intCall := IntCall{
-		Name:      "Default",
-		NumParams: 0,
+		Name:      "FirstMethod",
+		NumParams: 3,
 	}
 
 	intCalls[intCall] = "serviceA"
 
-	LoadServiceCalls(svcDir, "gin_handle", intCalls, &clientTargets)
+	LoadServiceCalls(svcDir, "object_call", intCalls, &clientTargets)
 
 	assert.Equal(t, 1, len(clientTargets))
-	assert.Equal(t, "Default", clientTargets[0].MethodName)
+	assert.Equal(t, "FirstMethod", clientTargets[0].MethodName)
 }
 
 func TestLoadServiceCallsInvalidPath(t *testing.T) {
