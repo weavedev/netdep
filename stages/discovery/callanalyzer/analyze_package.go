@@ -26,7 +26,7 @@ type CallTargetTrace struct {
 // This used to be named "Caller" (which was slightly misleading, as it is in fact the target,
 // thus rather a 'callee' than a 'caller'.
 type CallTarget struct {
-	packageName     string            // packageName is the name of the package the method belongs to
+	PackageName     string            // PackageName is the name of the package the method belongs to
 	MethodName      string            // MethodName is the name of the call (i.e. name of function or some other target)
 	RequestLocation string            // RequestLocation is the URL of the entity
 	IsResolved      bool              // IsResolved defines a flag describing whether the RequestLocation was resolved
@@ -272,10 +272,10 @@ func getSubstConfig(config *AnalyserConfig, service string) SubstitutionConfig {
 	}
 }
 
-// defaultCallTarget returns a new callTarget with initialised packageName, functionName and IsResolved fields
+// defaultCallTarget returns a new callTarget with initialised PackageName, functionName and IsResolved fields
 func defaultCallTarget(packageName, functionName string) *CallTarget {
 	return &CallTarget{
-		packageName:     packageName,
+		PackageName:     packageName,
 		MethodName:      functionName,
 		RequestLocation: "",
 		IsResolved:      false,

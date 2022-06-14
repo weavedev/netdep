@@ -10,15 +10,15 @@ import (
 	"path"
 	"strings"
 
-	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery"
-	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
+	"github.com/spf13/cobra"
 
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/natsanalyzer"
 	"lab.weave.nl/internships/tud-2022/netDep/stages/matching"
 	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
-
-	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
-
-	"github.com/spf13/cobra"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
+	"lab.weave.nl/internships/tud-2022/netDep/structures"
 )
 
 // RunConfig defines the parameters for a depScan command run
@@ -60,13 +60,13 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
-			clientCalls, serverCalls, err := discoverAllCalls(config)
+			dependencies, err := discoverAllCalls(config)
 			if err != nil {
 				return err
 			}
 
 			// generate output
-			graph := matching.CreateDependencyGraph(clientCalls, serverCalls)
+			graph := matching.CreateDependencyGraph(dependencies)
 			adjacencyList := output.ConstructAdjacencyList(graph)
 			jsonString, err := output.SerializeAdjacencyList(adjacencyList, true)
 			if err != nil {
@@ -166,11 +166,11 @@ func resolveEnvironmentValues(path string) (map[string]map[string]string, error)
 
 // discoverAllCalls calls the correct stages for loading, building,
 // filtering and discovering all client and server calls.
-func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
+func discoverAllCalls(config RunConfig) (*structures.Dependencies, error) {
 	// Given a correct project directory en service directory,
 	// apply our discovery algorithm to find all interesting calls
 	if ex, err := pathExists(config.EnvFile); !ex && config.EnvFile != "" || err != nil {
-		return nil, nil, fmt.Errorf("invalid environment variable file specified: %s", config.EnvFile)
+		return nil, fmt.Errorf("invalid environment variable file specified: %s", config.EnvFile)
 	}
 
 	// Filtering
@@ -178,14 +178,14 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 	fmt.Printf("Starting to analyse %d services.\n", len(services))
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// resolve environment values
 	// TODO: Integrate the envVariables into discovery
 	envVariables, err := resolveEnvironmentValues(config.EnvFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	analyserConfig := callanalyzer.DefaultConfigForFindingHTTPCalls()
@@ -194,27 +194,26 @@ func discoverAllCalls(config RunConfig) ([]*callanalyzer.CallTarget, []*callanal
 
 	allClientTargets, allServerTargets, annotations, err := processEachService(&services, &config, &analyserConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+
+	consumers, producers, err := natsanalyzer.FindNATSCalls(config.ServiceDir)
+	if err != nil {
+		return nil, err
 	}
 
 	if config.Verbose {
-		fmt.Println("Discovered annotations:")
-		anyHits := false
-		for k1, serMap := range annotations {
-			for k2, val := range serMap {
-				anyHits = true
-				fmt.Println("Service name: " + k1)
-				fmt.Print("Position: " + k2.Filename + ":")
-				fmt.Println(k2.Line)
-				fmt.Println("Value: " + val)
-			}
-		}
-		if !anyHits {
-			fmt.Println("[Discovered none]")
-		}
+		output.PrintDiscoveredAnnotations(annotations)
 	}
 
-	return allClientTargets, allServerTargets, err
+	dependencies := &structures.Dependencies{
+		Calls:     allClientTargets,
+		Endpoints: allServerTargets,
+		Consumers: consumers,
+		Producers: producers,
+	}
+
+	return dependencies, err
 }
 
 // processEachService preprocesses and analyses each of the services using RunConfig and callanalyzer.AnalyserConfig
