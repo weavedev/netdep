@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
-
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
 
@@ -24,10 +22,11 @@ Refer to the Project plan, chapter 5.4 for more information.
 
 // NetworkCall represents a call that can be made in the network
 type NetworkCall struct {
-	Protocol  string   `json:"protocol"`
-	URL       string   `json:"url"`
-	Arguments []string `json:"arguments"`
-	Location  string   `json:"location"`
+	Protocol   string   `json:"protocol"`
+	URL        string   `json:"url,omitempty"`
+	MethodName string   `json:"methodName,omitempty"`
+	Arguments  []string `json:"arguments,omitempty"`
+	Location   string   `json:"location"`
 }
 
 // ServiceNode represents a node in the output graph, which is a Service
@@ -212,7 +211,7 @@ func PrintUnusedServices(noReferenceToServices []string, noReferenceToAndFromSer
 }
 
 // PrintDiscoveredAnnotations prints all the discovered annotations if the tool was run with the verbose flag.
-func PrintDiscoveredAnnotations(annotations map[string]map[preprocessing.Position]string) string {
+func PrintDiscoveredAnnotations(annotations map[string]map[callanalyzer.Position]string) string {
 	type Annotation struct {
 		ServiceName string
 		Position    string

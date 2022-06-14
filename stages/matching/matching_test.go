@@ -30,6 +30,10 @@ func CreateSmallTestGraph() output.NodeGraph {
 		IsUnknown:    false,
 		IsReferenced: true,
 	}
+	node4 := output.ServiceNode{
+		ServiceName: "Node4",
+		IsUnknown:   false,
+	}
 
 	edge12 := output.ConnectionEdge{
 		Call: output.NetworkCall{
@@ -74,9 +78,20 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Source: &node2,
 		Target: &node3,
 	}
+	edge24 := output.ConnectionEdge{
+		Call: output.NetworkCall{
+			Protocol:   "servicecalls",
+			MethodName: "SomeMethod",
+			URL:        "",
+			Arguments:  nil,
+			Location:   "./node2/path/to/some/other/file1.go:42",
+		},
+		Source: &node2,
+		Target: &node4,
+	}
 
-	nodes := []*output.ServiceNode{&node1, &node2, &node3}
-	edges := []*output.ConnectionEdge{&edge12, &edge13, &edge23a, &edge23b}
+	nodes := []*output.ServiceNode{&node1, &node2, &node3, &node4}
+	edges := []*output.ConnectionEdge{&edge12, &edge13, &edge23a, &edge23b, &edge24}
 
 	return output.NodeGraph{
 		Nodes: nodes,
@@ -139,6 +154,19 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 			},
 			IsResolved: true,
 		},
+		{
+			PackageName:     "servicecalls",
+			MethodName:      "SomeMethod",
+			RequestLocation: "SomeMethod",
+			ServiceName:     "Node2",
+			Trace: []callanalyzer.CallTargetTrace{
+				{
+					FileName:       "./node2/path/to/some/other/file1.go",
+					PositionInFile: "42",
+				},
+			},
+			IsResolved: true,
+		},
 	}
 
 	endpoints := []*callanalyzer.CallTarget{
@@ -153,6 +181,12 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 		{
 			RequestLocation: "/URL_3",
 			ServiceName:     "Node3",
+		},
+		{
+			PackageName:     "servicecalls",
+			MethodName:      "SomeMethod",
+			RequestLocation: "SomeMethod",
+			ServiceName:     "Node4",
 		},
 	}
 
