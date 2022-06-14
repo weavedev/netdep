@@ -5,7 +5,12 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
+	"strconv"
+	"strings"
+
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
@@ -27,9 +32,10 @@ type NetworkCall struct {
 
 // ServiceNode represents a node in the output graph, which is a Service
 type ServiceNode struct {
-	ServiceName string `json:"serviceName"`
-	IsUnknown   bool   `json:"isUnknown"`
-	IsUsed      bool   `json:"isUsed"`
+	ServiceName   string `json:"serviceName"`
+	IsUnknown     bool   `json:"isUnknown"`
+	IsReferenced  bool   `json:"isReferenced"`
+	IsReferencing bool   `json:"isReferencing"`
 }
 
 // ConnectionEdge represents a directed edge in the output graph
@@ -153,11 +159,86 @@ func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 	}
 }
 
-func PrintUnusedServices(services []*ServiceNode) {
-	fmt.Println("Unused services:")
+func contains(s []string, searchterm string) bool {
+	i := sort.SearchStrings(s, searchterm)
+	return i < len(s) && s[i] == searchterm
+}
+
+func ConstructUnusedServicesList(services []*ServiceNode, allServices []string) ([]string, []string) {
+	var noReferenceToServices []string
+	var noReferenceToAndFromServices []string
+	var servicesInGraph []string
 	for _, service := range services {
-		if !service.IsUsed {
-			fmt.Println(service.ServiceName)
+		if !service.IsReferenced && !service.IsReferencing {
+			noReferenceToAndFromServices = append(noReferenceToAndFromServices, service.ServiceName)
+		}
+		if !service.IsReferenced {
+			noReferenceToServices = append(noReferenceToServices, service.ServiceName)
+		}
+		servicesInGraph = append(servicesInGraph, service.ServiceName)
+	}
+
+	var allServiceNames []string
+	for _, service := range allServices {
+		allServiceNames = append(allServiceNames, service[strings.LastIndex(service, string(os.PathSeparator))+1:])
+	}
+	for _, service := range allServiceNames {
+		if !contains(servicesInGraph, service) {
+			noReferenceToAndFromServices = append(noReferenceToAndFromServices, service)
+			noReferenceToServices = append(noReferenceToServices, service)
 		}
 	}
+	return noReferenceToServices, noReferenceToAndFromServices
+}
+
+func PrintUnusedServices(noReferenceToServices []string, noReferenceToAndFromServices []string) {
+	fmt.Println("Unreferenced services: ")
+	for _, service := range noReferenceToServices {
+		fmt.Println(service)
+	}
+	fmt.Println()
+
+	fmt.Println("Unreferenced services that don't make any calls: ")
+	for _, service := range noReferenceToAndFromServices {
+		fmt.Println(service)
+	}
+}
+
+// PrintDiscoveredAnnotations prints all the discovered annotations if the tool was run with the verbose flag.
+func PrintDiscoveredAnnotations(annotations map[string]map[preprocessing.Position]string) string {
+	type Annotation struct {
+		ServiceName string
+		Position    string
+		Value       string
+	}
+
+	annotationList := make([]*Annotation, 0)
+
+	for serName, serMap := range annotations {
+		for pos, val := range serMap {
+			ann := &Annotation{
+				ServiceName: serName,
+				Position:    pos.Filename + ":" + strconv.Itoa(pos.Line),
+				Value:       val,
+			}
+			annotationList = append(annotationList, ann)
+		}
+	}
+
+	discoveredAnnotations := ""
+
+	if len(annotationList) != 0 {
+		discoveredAnnotations += "Discovered annotations:\n\n"
+
+		for _, ann := range annotationList {
+			discoveredAnnotations += "Service name: " + ann.ServiceName + "\n"
+			discoveredAnnotations += "Position: " + ann.Position + "\n"
+			discoveredAnnotations += "Value: " + ann.Value + "\n\n"
+		}
+	} else {
+		discoveredAnnotations += "[Discovered none]"
+	}
+
+	fmt.Println(discoveredAnnotations)
+	return discoveredAnnotations
 }
