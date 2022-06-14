@@ -101,8 +101,28 @@ Suggestion output example:
 service-1\main.go:24 couldn't be resolved. Add an annotation above it in the format "//netdep:client ..." or "//netdep:endpoint ..."
 ```
 
-### Verbs
+### NATS Extension
+netDep supports NATS messaging system. NATS analyzer is based on method name patterns
+and specific way of passing Subjects.
 
+#### Producer parsing
+Source of the dependency is identified by the call to a method containing "NotifyMsg". Subject is
+an argument whose selector has "Subject" substring. The parsing of the subject is position agnostic.
+```go
+nats.SomeNotifyMsg(...,natsConfig.XSubject,...)
+```
+
+#### Consumer parsing
+Target of the dependency is identified by the call to the method name containing "Subscribe". Subject is
+an argument whose selector has "Subject" substring. The parsing of the subject is position agnostic.
+```go
+nats.Subscribe(...,natsConfig.XSubject,...)
+```
+
+The patterns for method names can be modified under natsanalyzer#findDependencies. The pattern for subject
+can be modified under natsanalyzer#findSubject.
+
+### Verbs
 When no verbs are specified (i.e. running just `netDep` with or without flags), the main logic is run.
 
 Available verbs:
@@ -114,7 +134,6 @@ Available verbs:
 | `completion` | Creates command-line interface completion scripts in the current directory |
 
 ### Flags
-
 | Argument                     | Description                                                                                                   | Default  |
 |:-----------------------------|:--------------------------------------------------------------------------------------------------------------|:---------|
 | `-h, --help`                 | Print help                                                                                                    |          |
