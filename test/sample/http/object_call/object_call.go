@@ -3,8 +3,9 @@ package main
 
 import (
 	"context"
-	"lab.weave.nl/internships/tud-2022/netDep/test/sample/servicecalls"
 	"net/http"
+
+	"lab.weave.nl/internships/tud-2022/netDep/test/sample/servicecalls"
 )
 
 func main() {

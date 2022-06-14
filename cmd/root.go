@@ -284,13 +284,13 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 
 				fmt.Printf("Found: %d calls of which %d client call(s) and %d server call(s)\n", clientSum+targetSum, clientSum, targetSum)
 			}
-			
+
 			// append
 			allClientTargets = append(allClientTargets, clientCalls...)
 			allServerTargets = append(allServerTargets, serverCalls...)
 		}
-
 	}
+
 	allClientTargets = append(allClientTargets, internalClientTargets...)
 
 	if !config.Shallow && packageCount == 0 {

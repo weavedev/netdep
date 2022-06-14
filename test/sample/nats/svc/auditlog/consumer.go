@@ -1,8 +1,8 @@
-//nolint
 package main
 
 import (
 	"fmt"
+
 	natsconfig "lab.weave.nl/internships/tud-2022/netDep/test/sample/nats"
 )
 
