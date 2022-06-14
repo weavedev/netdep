@@ -69,11 +69,14 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			graph := matching.CreateDependencyGraph(dependencies)
 			adjacencyList := output.ConstructAdjacencyList(graph)
 			jsonString, err := output.SerializeAdjacencyList(adjacencyList, true)
-			allServices, _ := preprocessing.FindServices(config.ServiceDir)
-			noReferenceToServices, noReferenceToAndFromServices := output.ConstructUnusedServicesList(graph.Nodes, allServices)
 			if err != nil {
 				return err
 			}
+			allServices, err := preprocessing.FindServices(config.ServiceDir)
+			if err != nil {
+				return err
+			}
+			noReferenceToServices, noReferenceToAndFromServices := output.ConstructUnusedServicesLists(graph.Nodes, allServices)
 
 			err = printOutput(outputFilename, jsonString, noReferenceToServices, noReferenceToAndFromServices)
 			if err != nil {

@@ -164,10 +164,14 @@ func contains(s []string, searchterm string) bool {
 	return i < len(s) && s[i] == searchterm
 }
 
-func ConstructUnusedServicesList(services []*ServiceNode, allServices []string) ([]string, []string) {
+// ConstructUnusedServicesLists constructs 2 lists containing unreferenced services and unreferenced
+// services that don't make any calls to other services, respectively
+func ConstructUnusedServicesLists(services []*ServiceNode, allServices []string) ([]string, []string) {
 	var noReferenceToServices []string
 	var noReferenceToAndFromServices []string
+	// list of services in which dependencies have been discovered
 	var servicesInGraph []string
+
 	for _, service := range services {
 		if !service.IsReferenced && !service.IsReferencing {
 			noReferenceToAndFromServices = append(noReferenceToAndFromServices, service.ServiceName)
@@ -180,9 +184,11 @@ func ConstructUnusedServicesList(services []*ServiceNode, allServices []string) 
 
 	var allServiceNames []string
 	for _, service := range allServices {
+		// get only the service names from the absolute paths stored in allServices
 		allServiceNames = append(allServiceNames, service[strings.LastIndex(service, string(os.PathSeparator))+1:])
 	}
 	for _, service := range allServiceNames {
+		// add services in which no dependencies have been found
 		if !contains(servicesInGraph, service) {
 			noReferenceToAndFromServices = append(noReferenceToAndFromServices, service)
 			noReferenceToServices = append(noReferenceToServices, service)
@@ -191,6 +197,7 @@ func ConstructUnusedServicesList(services []*ServiceNode, allServices []string) 
 	return noReferenceToServices, noReferenceToAndFromServices
 }
 
+// PrintUnusedServices prints all the unused services
 func PrintUnusedServices(noReferenceToServices []string, noReferenceToAndFromServices []string) {
 	fmt.Println("Unreferenced services: ")
 	for _, service := range noReferenceToServices {
