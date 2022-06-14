@@ -26,13 +26,16 @@ func CreateSmallTestGraph() output.NodeGraph {
 		IsReferencing: true,
 	}
 	node3 := output.ServiceNode{
-		ServiceName:  "Node3",
-		IsUnknown:    false,
-		IsReferenced: true,
+		ServiceName:   "Node3",
+		IsUnknown:     false,
+		IsReferenced:  true,
+		IsReferencing: false,
 	}
 	node4 := output.ServiceNode{
-		ServiceName: "Node4",
-		IsUnknown:   false,
+		ServiceName:   "Node4",
+		IsUnknown:     false,
+		IsReferenced:  true,
+		IsReferencing: false,
 	}
 
 	edge12 := output.ConnectionEdge{
