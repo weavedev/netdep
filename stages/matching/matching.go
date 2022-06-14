@@ -86,6 +86,9 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 			// register request
 			endpointURL := fmt.Sprintf("http://%s%s%s", call.ServiceName, port, call.RequestLocation)
 			endpointMap[endpointURL] = call.ServiceName
+		} else if call.PackageName == "servicecalls" {
+			endpointURL := call.RequestLocation
+			endpointMap[endpointURL] = call.ServiceName
 		}
 		endpointMap[call.RequestLocation] = call.ServiceName
 	}
@@ -96,9 +99,7 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
 func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGraph {
 	if dependencies == nil {
-		nodes := make([]*output.ServiceNode, 0)
-		edges := make([]*output.ConnectionEdge, 0)
-		return output.NodeGraph{Nodes: nodes, Edges: edges}
+		return output.NodeGraph{Nodes: make([]*output.ServiceNode, 0), Edges: make([]*output.ConnectionEdge, 0)}
 	}
 
 	UnknownService := &output.ServiceNode{
@@ -112,8 +113,7 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 	hasUnknown := false
 	edges = append(edges, extendWithNats(dependencies.Consumers, dependencies.Producers, &hasUnknown, serviceMap, &nodes)...)
 
-	// Add edges (eg. matching)
-	// This order is guaranteed because calls is an array
+	// Add edges (eg. matching). This order is guaranteed because calls is an array
 	for _, call := range dependencies.Calls {
 		sourceNode := serviceMap[call.ServiceName]
 		targetServiceName, isResolved := findTargetNodeName(call, endpointMap)
@@ -122,15 +122,17 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 
 		if target, ok := serviceMap[targetServiceName]; ok && isResolved {
 			targetNode = target
-			// Set target to UnknownService if not found
-			// There are 3 possibilities for this scenario:
+			// Set target to UnknownService if not found. There are 3 possibilities for this scenario:
 			// 1. endpoint definition of call.RequestLocation wasn't resolved correctly.
-			// 2. call.RequestLocation references external API, which is not contained
-			// in the endpointMap.
-			// 3. The call.RequestLocation itself was not resolved correctly.
-			// In the future this distinction could be made.
+			// 2. call.RequestLocation references external API, which is not contained in the endpointMap.
+			// 3. The call.RequestLocation itself was not resolved correctly. In the future this distinction could be made.
 		} else {
 			targetNode = UnknownService
+		}
+		// In case of servicecalls scanning some services use the methods in module or proto definitions which
+		// Make the tool think that it's a self reference. This is a clear case of false positives.
+		if targetNode.ServiceName == sourceNode.ServiceName {
+			continue
 		}
 
 		// If at least one unknown target has been found,
@@ -142,14 +144,26 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 
 		callLocation := call.Trace[len(call.Trace)-1]
 
+		// Default values
+		protocol := "HTTP"
+		url := call.RequestLocation
+		methodName := ""
+
+		// If the call was discovered via servicecalls package scanning
+		// Edit the values with the servicecalls specific data
+		if call.PackageName == "servicecalls" {
+			protocol = call.PackageName
+			url = ""
+			methodName = call.RequestLocation
+		}
+
 		connectionEdge := &output.ConnectionEdge{
 			Call: output.NetworkCall{
-				// TODO add more details
-				Protocol:  "HTTP",
-				URL:       call.RequestLocation,
-				Arguments: nil,
-				// TODO: handle stack trace?
-				Location: fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
+				Protocol:   protocol,
+				URL:        url,
+				Arguments:  nil,
+				MethodName: methodName,
+				Location:   fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
 			},
 			Source: sourceNode,
 			Target: targetNode,
@@ -157,19 +171,22 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 
 		edges = append(edges, connectionEdge)
 	}
-
 	// ensure alphabetical order for nodes (to prevent flaky tests)
-	sort.Slice(nodes, func(i, j int) bool {
-		x := nodes[i]
-		y := nodes[j]
-
-		return x.ServiceName < y.ServiceName
-	})
-
+	sortNodes(&nodes)
 	return output.NodeGraph{
 		Nodes: nodes,
 		Edges: edges,
 	}
+}
+
+// sortNodes sorts the nodes in alphabetical order of their service names.
+func sortNodes(nodes *[]*output.ServiceNode) {
+	sort.Slice(*nodes, func(i, j int) bool {
+		x := (*nodes)[i]
+		y := (*nodes)[j]
+
+		return x.ServiceName < y.ServiceName
+	})
 }
 
 // findTargetNodeName returns a name of the target service
