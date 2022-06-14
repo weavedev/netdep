@@ -124,7 +124,7 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	// Qualified function name is: package + interface + function
 	qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fn)
-	//fmt.Printf("Analyzing call to %s\n (%d)", qualifiedFunctionNameOfTarget, len(frame.trace))
+	// fmt.Printf("Analysing call to %s\n (%d)", qualifiedFunctionNameOfTarget, len(frame.trace))
 
 	if _, isIgnored := config.ignoreList[functionPackage]; isIgnored {
 		// do not recurse on uninteresting packages
@@ -210,14 +210,22 @@ func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) boo
 		return false
 	}
 
-	//fn := getFunctionFromCall(call, frame)
-	fn, _ := frame.pointerMap[call]
+	// fn := getFunctionFromCall(call, frame)
+	fns, hasFn := frame.pointerMap[call]
 
-	if fn == nil {
+	if !hasFn || len(fns) == 0 {
 		return false
 	}
 
-	return analyzeCallToFunction(call, fn, frame, config)
+	interesting := false
+	for _, fn := range fns {
+		wasInteresting := analyzeCallToFunction(call, fn, frame, config)
+		if wasInteresting {
+			interesting = true
+		}
+	}
+
+	return interesting
 }
 
 // getHostFromAnnotation returns the resolved url using the annotated host name for a service
@@ -435,7 +443,7 @@ func countVisited(visited map[*ssa.CallCommon]bool) (int, int) {
 //
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.
-func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig, pointerMap map[*ssa.CallCommon]*ssa.Function) ([]*CallTarget, []*CallTarget, error) {
+func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig, pointerMap map[*ssa.CallCommon][]*ssa.Function) ([]*CallTarget, []*CallTarget, error) {
 	if pkg == nil {
 		return nil, nil, fmt.Errorf("no package given %v", pkg)
 	}

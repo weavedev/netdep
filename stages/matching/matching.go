@@ -4,7 +4,6 @@ package matching
 
 import (
 	"fmt"
-	"go/token"
 	"sort"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/natsanalyzer"
@@ -96,36 +95,10 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 	return endpointMap
 }
 
-func populateTraceMap(calls []*callanalyzer.CallTarget, traceMap map[token.Pos]int) {
-	for _, target := range calls {
-		for _, call := range target.Trace {
-			if _, ok := traceMap[call.Pos]; !ok {
-				traceMap[call.Pos] = 1
-			} else {
-				traceMap[call.Pos]++
-			}
-		}
-	}
-}
-
-func getRelevantCallLocation(calls []callanalyzer.CallTargetTrace, traceMap map[token.Pos]int) []string {
+func getRelevantCallLocation(calls []callanalyzer.CallTargetTrace) []string {
 	ret := make([]string, 0)
-	//min := -1
-	for _, call := range calls {
-		//if !call.Internal {
-		//	break
-		//}
-		//n, _ := traceMap[call.Pos]
-		//
-		//if min == -1 || n < min {
-		//	ret = make([]string, 0)
-		//	min = n
-		//}
-		//
-		//if n > min {
-		//	continue
-		//}
-
+	for i := range calls {
+		call := &calls[i]
 		ret = append(ret, fmt.Sprintf("%s:%s", call.FileName, call.PositionInFile))
 	}
 

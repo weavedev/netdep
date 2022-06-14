@@ -4,6 +4,7 @@ package discovery
 
 import (
 	"fmt"
+
 	"golang.org/x/tools/go/pointer"
 	"golang.org/x/tools/go/ssa"
 
@@ -16,13 +17,7 @@ In the Discovery stages, clients and endpoints are discovered and mapped to thei
 Refer to the Project plan, chapter 5.3 for more information.
 */
 
-func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function {
-	baseMap := map[*ssa.CallCommon]*ssa.Function{}
-
-	if packages == nil || len(packages) == 0 {
-		return baseMap
-	}
-
+func runPointerAnalysis(packages []*ssa.Package) (*pointer.Result, error) {
 	var mains []*ssa.Package
 	for _, pkg := range packages {
 		if pkg == nil || pkg.Pkg == nil {
@@ -42,8 +37,17 @@ func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function 
 		BuildCallGraph: true,
 	}
 
-	pointerRes, err := pointer.Analyze(ptConfig)
+	return pointer.Analyze(ptConfig)
+}
 
+func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon][]*ssa.Function {
+	baseMap := map[*ssa.CallCommon][]*ssa.Function{}
+
+	if len(packages) == 0 {
+		return baseMap
+	}
+
+	pointerRes, err := runPointerAnalysis(packages)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -57,7 +61,26 @@ func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function 
 			if edge.Site == nil {
 				continue
 			}
-			baseMap[edge.Site.Common()] = edge.Callee.Func
+			call := edge.Site.Common()
+			_, has := baseMap[call]
+			if !has {
+				baseMap[call] = []*ssa.Function{
+					edge.Callee.Func,
+				}
+				continue
+			}
+
+			shouldAdd := true
+			for _, fn := range baseMap[call] {
+				if fn == edge.Callee.Func {
+					shouldAdd = false
+					break
+				}
+			}
+
+			if shouldAdd {
+				baseMap[call] = append(baseMap[call], edge.Callee.Func)
+			}
 		}
 	}
 
@@ -112,20 +135,6 @@ func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) (
 	output.PrintAnnotationSuggestions(unresolvedTargets)
 
 	return allClientTargets, allServerTargets, nil
-}
-
-// Discover finds client and server calls in the given packages
-func Discover(pkg *ssa.Package, config *callanalyzer.AnalyserConfig) ([]*callanalyzer.CallTarget, []*callanalyzer.CallTarget, error) {
-	// The current output data structure. TODO: add additional fields
-
-	if config == nil {
-		defaultConf := callanalyzer.DefaultConfigForFindingHTTPCalls()
-		// Analyse each package with the default config
-		return callanalyzer.AnalysePackageCalls(pkg, &defaultConf, map[*ssa.CallCommon]*ssa.Function{})
-	} else {
-		// Analyse each package
-		return callanalyzer.AnalysePackageCalls(pkg, config, map[*ssa.CallCommon]*ssa.Function{})
-	}
 }
 
 // filterUnresolvedTargets filters both client and server targets and returns a list of unresolved targets which is later

@@ -19,7 +19,11 @@ func ReplaceTargetsAnnotations(callTargets *[]*CallTarget, config *AnalyserConfi
 
 	for _, callTarget := range *callTargets {
 		if !callTarget.IsResolved {
-			line, err := strconv.Atoi(callTarget.Trace[0].PositionInFile)
+			positionString := callTarget.Trace[0].PositionInFile
+			if positionString == "" {
+				positionString = "0"
+			}
+			line, err := strconv.Atoi(positionString)
 			if err != nil {
 				return err
 			}

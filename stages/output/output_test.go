@@ -112,6 +112,7 @@ func TestSerialiseOutput(t *testing.T) {
 	list := ConstructAdjacencyList(graph)
 	str, _ := SerializeAdjacencyList(list, false)
 	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"locations\":null}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"locations\":null}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"locations\":null}],\"count\":1}],\"Node3\":[]}"
+
 	assert.Equal(t, expected, str)
 }
 
