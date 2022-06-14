@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fatih/color"
-
 	"golang.org/x/tools/go/ssa"
 )
 
@@ -299,8 +297,8 @@ func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config 
 
 	callTarget.RequestLocation = getHostFromAnnotation(call, frame, config, callTarget)
 
-	if !callTarget.IsResolved && config.verbose {
-		color.Yellow("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
+	if !callTarget.IsResolved && config.Verbose {
+		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 		PrintTraceToCall(frame, config)
 	}
 
@@ -355,8 +353,8 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 		callTarget.RequestLocation = strings.Join(variables, "")
 	}
 
-	if !callTarget.IsResolved && config.verbose {
-		color.Yellow("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
+	if !callTarget.IsResolved && config.Verbose {
+		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 		PrintTraceToCall(frame, config)
 	}
 
@@ -484,7 +482,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig, pointerMap ma
 	// Visit the init function for globals
 	visitBlocks(initFunction.Blocks, &baseFrame, config)
 
-	if config.verbose {
+	if config.Verbose {
 		i, c := countVisited(baseFrame.visited)
 		fmt.Printf("Init: Visited %d nodes, of which %d interesting\n", c, i)
 	}
@@ -496,7 +494,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig, pointerMap ma
 	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)
 
-	if config.verbose {
+	if config.Verbose {
 		i, c := countVisited(baseFrame.visited)
 		fmt.Printf("Main: Visited %d nodes, of which %d interesting\n", c, i)
 	}

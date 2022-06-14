@@ -49,14 +49,14 @@ type AnalyserConfig struct {
 
 	// ignoreList is a set of function names to not recurse into
 	ignoreList        map[string]bool
-	verbose           bool
+	Verbose           bool
 	maxTraversalDepth int
 	maxTraceDepth     int
 }
 
-// SetVerbose is a setter for verbose
+// SetVerbose is a setter for Verbose
 func (a *AnalyserConfig) SetVerbose(v bool) {
-	a.verbose = v
+	a.Verbose = v
 }
 
 func (a *AnalyserConfig) SetEnv(envMap map[string]map[string]string) {
@@ -103,7 +103,7 @@ func DefaultConfigForFindingHTTPCalls() AnalyserConfig {
 
 		maxTraversalDepth: defaultMaxTraversalDepth,
 		maxTraceDepth:     defaultMaxTraceDepth,
-		verbose:           false,
+		Verbose:           false,
 
 		ignoreList: map[string]bool{
 			"fmt":                  true,

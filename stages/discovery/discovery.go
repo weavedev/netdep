@@ -22,7 +22,7 @@ func runPointerAnalysis(packages []*ssa.Package) (*pointer.Result, error) {
 	for _, pkg := range packages {
 		if pkg == nil || pkg.Pkg == nil {
 			if pkg != nil {
-				fmt.Println("No package for " + pkg.String())
+				return nil, fmt.Errorf("no package for " + pkg.String())
 			}
 			continue
 		}
@@ -99,12 +99,16 @@ func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) (
 		useConfig = &newConfig
 	}
 
-	fmt.Println("Running pointer analysis...")
+	if useConfig.Verbose {
+		fmt.Println("Running pointer analysis...")
+	}
 
 	callPointer := FindCallPointer(packages)
 
-	fmt.Printf("Found mapping for %d calls\n", len(callPointer))
-	fmt.Println("Running discover analysis...")
+	if useConfig.Verbose {
+		fmt.Printf("Found mapping for %d calls\n", len(callPointer))
+		fmt.Println("Running discover analysis...")
+	}
 
 	for _, pkg := range packages {
 		if pkg == nil {
