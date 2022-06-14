@@ -3,11 +3,13 @@ package matching
 import (
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
-
-	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/natsanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/structures"
 
 	"github.com/stretchr/testify/assert"
+
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
 )
 
 func CreateSmallTestGraph() output.NodeGraph {
@@ -94,7 +96,7 @@ func CreateSmallTestGraph() output.NodeGraph {
 
 // test basic functionality of the matching functionality
 func TestEmptyCaseCreateDependencyGraph(t *testing.T) {
-	graph := CreateDependencyGraph(nil, nil)
+	graph := CreateDependencyGraph(nil)
 
 	assert.Equal(t, make([]*output.ServiceNode, 0), graph.Nodes)
 	assert.Equal(t, make([]*output.ConnectionEdge, 0), graph.Edges)
@@ -186,7 +188,14 @@ func TestBasicCreateDependencyGraph(t *testing.T) {
 	// reuse graph from output stage tests
 	expectedGraph := CreateSmallTestGraph()
 
-	graph := CreateDependencyGraph(calls, endpoints)
+	dependencies := &structures.Dependencies{
+		Calls:     calls,
+		Endpoints: endpoints,
+		Consumers: nil,
+		Producers: nil,
+	}
+
+	graph := CreateDependencyGraph(dependencies)
 
 	assert.Equal(t, len(expectedGraph.Nodes), len(graph.Nodes))
 	for i := range expectedGraph.Nodes {
@@ -292,7 +301,14 @@ func TestWithUnknownService(t *testing.T) {
 	expectedNodes := []*output.ServiceNode{&node1, &unknownService}
 	expectedEdges := []*output.ConnectionEdge{&edge12a, &edge12b, &edge13}
 
-	graph := CreateDependencyGraph(calls, endpoints)
+	dependencies := &structures.Dependencies{
+		Calls:     calls,
+		Endpoints: endpoints,
+		Consumers: nil,
+		Producers: nil,
+	}
+
+	graph := CreateDependencyGraph(dependencies)
 
 	assert.Equal(t, len(expectedNodes), len(graph.Nodes))
 	for i := range expectedNodes {
@@ -303,4 +319,86 @@ func TestWithUnknownService(t *testing.T) {
 	for i := range expectedEdges {
 		assert.Equal(t, expectedEdges[i], graph.Edges[i])
 	}
+}
+
+func TestNatsExtension(t *testing.T) {
+	call1 := &natsanalyzer.NatsCall{
+		Communication:  "NATS",
+		MethodName:     "Subscribe",
+		Subject:        "HelloSubject",
+		ServiceName:    "test",
+		FileName:       "test.go",
+		PositionInFile: "15",
+	}
+
+	call2 := &natsanalyzer.NatsCall{
+		Communication:  "NATS",
+		MethodName:     "Subscribe",
+		Subject:        "ByeSubject",
+		ServiceName:    "test",
+		FileName:       "test.go",
+		PositionInFile: "16",
+	}
+
+	call3 := &natsanalyzer.NatsCall{
+		Communication:  "NATS",
+		MethodName:     "ByeNotifyMsg",
+		Subject:        "ByeSubject",
+		ServiceName:    "test",
+		FileName:       "testNotify.go",
+		PositionInFile: "18",
+	}
+
+	call4 := &natsanalyzer.NatsCall{
+		Communication:  "NATS",
+		MethodName:     "HelloNotifyMsg",
+		Subject:        "HelloSubject",
+		ServiceName:    "test",
+		FileName:       "testNotify.go",
+		PositionInFile: "17",
+	}
+
+	call5 := &natsanalyzer.NatsCall{
+		Communication:  "NATS",
+		MethodName:     "AyoNotifyMsg",
+		Subject:        "AyoSubject",
+		ServiceName:    "ayo",
+		FileName:       "ayo.go",
+		PositionInFile: "1",
+	}
+
+	node1 := output.ServiceNode{
+		ServiceName: "ayo",
+		IsUnknown:   false,
+	}
+	node2 := output.ServiceNode{
+		ServiceName: "test",
+		IsUnknown:   false,
+	}
+
+	serviceMap := make(map[string]*output.ServiceNode)
+	serviceMap["ayo"] = &node1
+	serviceMap["test"] = &node2
+
+	consumers := make([]*natsanalyzer.NatsCall, 2)
+	consumers[0] = call1
+	consumers[1] = call2
+
+	producers := make([]*natsanalyzer.NatsCall, 3)
+	producers[0] = call3
+	producers[1] = call4
+	producers[2] = call5
+
+	hasUnknown := false
+	nodes := make([]*output.ServiceNode, 0)
+
+	edges := extendWithNats(consumers, producers, &hasUnknown, serviceMap, &nodes)
+	assert.Equal(t, *edges[0].Source, node2)
+	assert.Equal(t, *edges[0].Target, node2)
+	assert.Equal(t, edges[0].Call.URL, "ByeSubject")
+	assert.Equal(t, *edges[1].Source, node2)
+	assert.Equal(t, *edges[1].Target, node2)
+	assert.Equal(t, edges[1].Call.URL, "HelloSubject")
+	assert.Equal(t, edges[2].Call.URL, "AyoSubject")
+	assert.Equal(t, edges[2].Target.ServiceName, "UnknownService")
 }

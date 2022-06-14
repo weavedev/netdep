@@ -6,18 +6,20 @@ import (
 	"fmt"
 	"sort"
 
-	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/natsanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/structures"
 
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/netDep/stages/output"
 )
 
 // createEmptyNodes create a set of services, but populates them to nil
-func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) (map[string]*output.ServiceNode, []*output.ServiceNode) {
+func createEmptyNodes(dependencies *structures.Dependencies) (map[string]*output.ServiceNode, []*output.ServiceNode) {
 	nodes := make([]*output.ServiceNode, 0)
 	serviceMap := make(map[string]*output.ServiceNode)
 
-	combinedList := calls
-	combinedList = append(combinedList, endpoints...)
+	combinedList := dependencies.Calls
+	combinedList = append(combinedList, dependencies.Endpoints...)
 
 	// create nodes
 	for _, call := range combinedList {
@@ -29,6 +31,22 @@ func createEmptyNodes(calls []*callanalyzer.CallTarget, endpoints []*callanalyze
 
 			nodes = append(nodes, serviceNode)
 			// save service name in a map for efficiency
+			serviceMap[call.ServiceName] = serviceNode
+		}
+	}
+
+	combinedNats := dependencies.Consumers
+	combinedNats = append(combinedNats, dependencies.Producers...)
+
+	// extend nodes with NATS only services
+	for _, call := range combinedNats {
+		if _, ok := serviceMap[call.ServiceName]; !ok {
+			serviceNode := &output.ServiceNode{
+				ServiceName: call.ServiceName,
+				IsUnknown:   false,
+			}
+
+			nodes = append(nodes, serviceNode)
 			serviceMap[call.ServiceName] = serviceNode
 		}
 	}
@@ -79,21 +97,24 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 }
 
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
-//nolint:funlen
-func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callanalyzer.CallTarget) output.NodeGraph {
+func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGraph {
+	if dependencies == nil {
+		return output.NodeGraph{Nodes: make([]*output.ServiceNode, 0), Edges: make([]*output.ConnectionEdge, 0)}
+	}
+
 	UnknownService := &output.ServiceNode{
 		ServiceName: "UnknownService",
 		IsUnknown:   true,
 	}
 
 	edges := make([]*output.ConnectionEdge, 0)
-	serviceMap, nodes := createEmptyNodes(calls, endpoints)
-	endpointMap := createEndpointMap(endpoints)
+	serviceMap, nodes := createEmptyNodes(dependencies)
+	endpointMap := createEndpointMap(dependencies.Endpoints)
 	hasUnknown := false
+	edges = append(edges, extendWithNats(dependencies.Consumers, dependencies.Producers, &hasUnknown, serviceMap, &nodes)...)
 
-	// Add edges (eg. matching)
-	// This order is guaranteed because calls is an array
-	for _, call := range calls {
+	// Add edges (eg. matching). This order is guaranteed because calls is an array
+	for _, call := range dependencies.Calls {
 		sourceNode := serviceMap[call.ServiceName]
 		targetServiceName, isResolved := findTargetNodeName(call, endpointMap)
 
@@ -101,17 +122,13 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 
 		if target, ok := serviceMap[targetServiceName]; ok && isResolved {
 			targetNode = target
-			// Set target to UnknownService if not found
-			// There are 3 possibilities for this scenario:
+			// Set target to UnknownService if not found. There are 3 possibilities for this scenario:
 			// 1. endpoint definition of call.RequestLocation wasn't resolved correctly.
-			// 2. call.RequestLocation references external API, which is not contained
-			// in the endpointMap.
-			// 3. The call.RequestLocation itself was not resolved correctly.
-			// In the future this distinction could be made.
+			// 2. call.RequestLocation references external API, which is not contained in the endpointMap.
+			// 3. The call.RequestLocation itself was not resolved correctly. In the future this distinction could be made.
 		} else {
 			targetNode = UnknownService
 		}
-
 		// In case of servicecalls scanning some services use the methods in module or proto definitions which
 		// Make the tool think that it's a self reference. This is a clear case of false positives.
 		if targetNode.ServiceName == sourceNode.ServiceName {
@@ -142,13 +159,11 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 
 		connectionEdge := &output.ConnectionEdge{
 			Call: output.NetworkCall{
-				// TODO add more details
 				Protocol:   protocol,
 				URL:        url,
 				Arguments:  nil,
 				MethodName: methodName,
-				// TODO: handle stack trace?
-				Location: fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
+				Location:   fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
 			},
 			Source: sourceNode,
 			Target: targetNode,
@@ -156,19 +171,22 @@ func CreateDependencyGraph(calls []*callanalyzer.CallTarget, endpoints []*callan
 
 		edges = append(edges, connectionEdge)
 	}
-
 	// ensure alphabetical order for nodes (to prevent flaky tests)
-	sort.Slice(nodes, func(i, j int) bool {
-		x := nodes[i]
-		y := nodes[j]
-
-		return x.ServiceName < y.ServiceName
-	})
-
+	sortNodes(&nodes)
 	return output.NodeGraph{
 		Nodes: nodes,
 		Edges: edges,
 	}
+}
+
+// sortNodes sorts the nodes in alphabetical order of their service names.
+func sortNodes(nodes *[]*output.ServiceNode) {
+	sort.Slice(*nodes, func(i, j int) bool {
+		x := (*nodes)[i]
+		y := (*nodes)[j]
+
+		return x.ServiceName < y.ServiceName
+	})
 }
 
 // findTargetNodeName returns a name of the target service
@@ -190,4 +208,76 @@ func findTargetNodeName(call *callanalyzer.CallTarget, endpointMap map[string]st
 	targetServiceName, hasTarget := endpointMap[call.RequestLocation]
 
 	return targetServiceName, hasTarget
+}
+
+// extendWithNats extends the Connection Edges data structure
+// with discovered NATS edges. This was required, because NATS
+// can have one-to-many dependencies, where as something like HTTP
+// is one-to-one.
+func extendWithNats(consumers []*natsanalyzer.NatsCall, producers []*natsanalyzer.NatsCall, hasUnknown *bool, services map[string]*output.ServiceNode, nodes *[]*output.ServiceNode) []*output.ConnectionEdge {
+	edges := make([]*output.ConnectionEdge, 0)
+
+	if consumers == nil || producers == nil {
+		return edges
+	}
+
+	UnknownService := &output.ServiceNode{
+		ServiceName: "UnknownService",
+		IsUnknown:   true,
+	}
+
+	// for each producer we  find all  the consumer
+	// if it has no consumer, we mark it as an edge
+	// with unknown target. There is a small chance
+	// that producer's messages are never consumed,
+	// but the greater chance is that its consumer
+	// was not discovered.
+	for _, producer := range producers {
+		hasConsumer := false
+		for _, consumer := range consumers {
+			if producer.Subject == consumer.Subject {
+				hasConsumer = true
+				edge := &output.ConnectionEdge{
+					Call: output.NetworkCall{
+						// TODO add more details
+						Protocol:  producer.Communication,
+						URL:       producer.Subject,
+						Arguments: nil,
+						// TODO: handle stack trace?
+						Location: fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile),
+					},
+					// Always hits, because services was populated using consumers and producers
+					Source: services[producer.ServiceName],
+					Target: services[consumer.ServiceName],
+				}
+
+				edges = append(edges, edge)
+			}
+		}
+
+		if !hasConsumer {
+			edge := &output.ConnectionEdge{
+				Call: output.NetworkCall{
+					// TODO add more details
+					Protocol:  producer.Communication,
+					URL:       producer.Subject,
+					Arguments: nil,
+					// TODO: handle stack trace?
+					Location: fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile),
+				},
+				// Always hits, because services was populated using consumers and producers
+				Source: services[producer.ServiceName],
+				Target: UnknownService,
+			}
+
+			if !*hasUnknown {
+				*nodes = append(*nodes, UnknownService)
+			}
+
+			edges = append(edges, edge)
+			*hasUnknown = true
+		}
+	}
+
+	return edges
 }
