@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/constant"
 	"go/token"
+	"go/types"
 
 	"golang.org/x/tools/go/ssa"
 )
@@ -37,6 +38,50 @@ func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
 	return nil, fr
 }
 
+// resolveRequestObject attempts to resolve a value for a request object
+// TODO this implementation is very naive and will not cover many cases
+func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (string, bool) {
+	switch val := (*value).(type) {
+	case *ssa.Extract:
+		return resolveRequestObject(&val.Tuple, fr, substConf)
+	case *ssa.Call:
+		call := val.Common()
+		if call != nil && !call.IsInvoke() {
+			fn := call.StaticCallee()
+			if fn != nil {
+				signature, packageName := getFunctionQualifiers(fn)
+
+				if signature == "net/http.NewRequest" {
+					return resolveValue(&call.Args[1], fr, substConf)
+				}
+
+				if signature == "net/http.NewRequestWithContext" {
+					return resolveValue(&call.Args[2], fr, substConf)
+				}
+
+				if packageName == "net/http" {
+					fmt.Println(signature)
+				}
+			}
+		}
+		return "", false
+	}
+	return "", false
+}
+
+// IsRequestObjectType determines if the given type is either a pointer to, or a request object
+func IsRequestObjectType(varType types.Type) bool {
+	switch subType := varType.(type) {
+	case *types.Pointer:
+		return IsRequestObjectType(subType.Elem())
+	case *types.Named:
+		nameType := subType.String()
+		return nameType == "net/http.Request"
+	}
+
+	return false
+}
+
 // resolveValue Resolves a supplied ssa.Value, only in the cases that are supported by the tool:
 // - string concatenation (see BinOp),
 // - string literal
@@ -46,6 +91,14 @@ func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
 func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (string, bool) {
 	if value == nil {
 		return "unknown: the give value is null", false
+	}
+
+	// if the value is a request object type, attempt to resolve it in some cases
+	typ := (*value).Type()
+	isRequestObject := IsRequestObjectType(typ)
+
+	if isRequestObject {
+		return resolveRequestObject(value, fr, substConf)
 	}
 
 	switch val := (*value).(type) {

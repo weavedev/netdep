@@ -178,8 +178,7 @@ func TestWrappedInterfaceCall(t *testing.T) {
 	res, _, _ := DiscoverAll(initial, nil)
 
 	assert.Equal(t, "interface_call", res[0].ServiceName, "Expected service name interface_call.go")
-	// TODO: if we can manage request objects, this should be resolved!
-	assert.Equal(t, false, res[0].IsResolved, "Expected call to not (yet) be fully resolved")
+	assert.Equal(t, true, res[0].IsResolved, "Expected call to not (yet) be fully resolved")
 }
 
 func TestGetEnvCall(t *testing.T) {
