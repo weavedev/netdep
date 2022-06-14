@@ -101,6 +101,17 @@ Suggestion output example:
 service-1\main.go:24 couldn't be resolved. Add an annotation above it in the format "//netdep:client ..." or "//netdep:endpoint ..."
 ```
 
+### Servicecalls extension
+
+netDep is able to detect dependencies in projects which use the `servicecalls` package to abstract away internal network communication
+between services.
+
+#### Servicecalls structure
+
+The tool expects the user to provide a path to the `servicecalls` package directory via the `servicecalls-directory` flag. The directory should contain `.go` files in the format
+of `{servicename}-service.go`, where the servicename is an actual name of the service. The abstract communication methods of each service should be defined in interface structures of these files,
+as that's what the tool scans for.
+
 ### Verbs
 
 When no verbs are specified (i.e. running just `netDep` with or without flags), the main logic is run.
@@ -115,14 +126,16 @@ Available verbs:
 
 ### Flags
 
-| Argument                     | Description                                                                                                   | Default  |
-|:-----------------------------|:--------------------------------------------------------------------------------------------------------------|:---------|
-| `-h, --help`                 | Print help                                                                                                    |          |
-| `-p, --project-directory`    | The path to the project directory. Must be a valid path.                                                      | `./`     |
-| `-s --service-directory`     | The path to the services inside the project. Must be a valid path.                                            | `./svc/` |
-| `-e --environment-variables` | The path to the file containing environment variables. Must be a valid path. The file must be in YAML format. | ``       |
-| `-o --output-filename`       | Output filename such as ./deps.json. By default or when empty, it is outputted to stdout.                     | ``       |
-| `-v --verbose`               | Toggle printing stack traces of unknown variables.                                                            | `false`  |
+| Argument                       | Description                                                                                                   | Default  |
+|:-------------------------------|:--------------------------------------------------------------------------------------------------------------|:---------|
+| `-h, --help`                   | Print help                                                                                                    |          |
+| `-p, --project-directory`      | The path to the project directory. Must be a valid path.                                                      | `./`     |
+| `-s, --service-directory`      | The path to the services inside the project. Must be a valid path.                                            | `./svc/` |
+| `-e, --environment-variables`  | The path to the file containing environment variables. Must be a valid path. The file must be in YAML format. | ``       |
+| `-o, --output-filename`        | Output filename such as ./deps.json. By default or when empty, it is outputted to stdout.                     | ``       |
+| `-v, --verbose`                | Toggle printing stack traces of unknown variables.                                                            | `false`  |
+| `-c, --servicecalls-directory` | The path to the servicecalls package directory. Must be a valid path.                                         | ``       |
+| `--shallow`                    | Toggle shallow scanning.                                                                                      | `false`  |
 
 ## Documentation
 
