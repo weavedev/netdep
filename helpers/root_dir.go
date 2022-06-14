@@ -4,7 +4,7 @@
 package helpers
 
 import (
-	"path"
+	"path/filepath"
 	"runtime"
 )
 
@@ -17,8 +17,8 @@ var RootDir = getRootDir() //nolint:gochecknoglobals
 // Its value is stored in RootDir global variable.
 func getRootDir() string {
 	_, thisFilePath, _, _ := runtime.Caller(0)
-	// The first path.Dir points to "helpers" directory;
-	// The second nested path.Dir points to its parent, which is
+	// The first filepath.Dir points to "helpers" directory;
+	// The second nested filepath.Dir points to its parent, which is
 	// the root of the project.
-	return path.Dir(path.Dir(thisFilePath))
+	return filepath.Dir(filepath.Dir(thisFilePath))
 }

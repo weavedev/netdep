@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -111,25 +111,25 @@ func TestSerialiseOutput(t *testing.T) {
 	graph := createSmallTestGraph()
 	list := ConstructAdjacencyList(graph)
 	str, _ := SerializeAdjacencyList(list, false)
-	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"url\":\"\",\"arguments\":null,\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
+	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
 	assert.Equal(t, expected, str)
 }
 
 // TestPrintDiscoveredAnnotations test discovered annotation printing
 func TestPrintDiscoveredAnnotations(t *testing.T) {
-	annotations := make(map[string]map[preprocessing.Position]string)
-	annotations["a"] = make(map[preprocessing.Position]string)
-	annotations["b"] = make(map[preprocessing.Position]string)
+	annotations := make(map[string]map[callanalyzer.Position]string)
+	annotations["a"] = make(map[callanalyzer.Position]string)
+	annotations["b"] = make(map[callanalyzer.Position]string)
 
-	pos1 := preprocessing.Position{
+	pos1 := callanalyzer.Position{
 		Filename: "d1",
 		Line:     5,
 	}
-	pos2 := preprocessing.Position{
+	pos2 := callanalyzer.Position{
 		Filename: "d2",
 		Line:     6,
 	}
-	pos3 := preprocessing.Position{
+	pos3 := callanalyzer.Position{
 		Filename: "a2",
 		Line:     62,
 	}
@@ -147,9 +147,9 @@ func TestPrintDiscoveredAnnotations(t *testing.T) {
 
 // TestPrintDiscoveredAnnotationsEmpty test discovered annotation printing
 func TestPrintDiscoveredAnnotationsEmpty(t *testing.T) {
-	annotations := make(map[string]map[preprocessing.Position]string)
-	annotations["a"] = make(map[preprocessing.Position]string)
-	annotations["b"] = make(map[preprocessing.Position]string)
+	annotations := make(map[string]map[callanalyzer.Position]string)
+	annotations["a"] = make(map[callanalyzer.Position]string)
+	annotations["b"] = make(map[callanalyzer.Position]string)
 
 	str := PrintDiscoveredAnnotations(annotations)
 	assert.Equal(t, str, "[Discovered none]")
