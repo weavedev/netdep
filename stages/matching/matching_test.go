@@ -14,20 +14,28 @@ import (
 
 func CreateSmallTestGraph() output.NodeGraph {
 	node1 := output.ServiceNode{
-		ServiceName: "Node1",
-		IsUnknown:   false,
+		ServiceName:   "Node1",
+		IsUnknown:     false,
+		IsReferenced:  false,
+		IsReferencing: true,
 	}
 	node2 := output.ServiceNode{
-		ServiceName: "Node2",
-		IsUnknown:   false,
+		ServiceName:   "Node2",
+		IsUnknown:     false,
+		IsReferenced:  true,
+		IsReferencing: true,
 	}
 	node3 := output.ServiceNode{
-		ServiceName: "Node3",
-		IsUnknown:   false,
+		ServiceName:   "Node3",
+		IsUnknown:     false,
+		IsReferenced:  true,
+		IsReferencing: false,
 	}
 	node4 := output.ServiceNode{
-		ServiceName: "Node4",
-		IsUnknown:   false,
+		ServiceName:   "Node4",
+		IsUnknown:     false,
+		IsReferenced:  true,
+		IsReferencing: false,
 	}
 
 	edge12 := output.ConnectionEdge{
@@ -256,13 +264,17 @@ func TestWithUnknownService(t *testing.T) {
 
 	// output data
 	node1 := output.ServiceNode{
-		ServiceName: "Node1",
-		IsUnknown:   false,
+		ServiceName:   "Node1",
+		IsUnknown:     false,
+		IsReferenced:  false,
+		IsReferencing: true,
 	}
 
 	unknownService := output.ServiceNode{
-		ServiceName: "UnknownService",
-		IsUnknown:   true,
+		ServiceName:   "UnknownService",
+		IsUnknown:     true,
+		IsReferenced:  true,
+		IsReferencing: true,
 	}
 
 	edge12a := output.ConnectionEdge{

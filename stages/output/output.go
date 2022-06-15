@@ -5,8 +5,10 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
@@ -29,8 +31,10 @@ type NetworkCall struct {
 
 // ServiceNode represents a node in the output graph, which is a Service
 type ServiceNode struct {
-	ServiceName string `json:"serviceName"`
-	IsUnknown   bool   `json:"isUnknown"`
+	ServiceName   string `json:"serviceName"`
+	IsUnknown     bool   `json:"isUnknown"`
+	IsReferenced  bool   `json:"isReferenced"`
+	IsReferencing bool   `json:"isReferencing"`
 }
 
 // ConnectionEdge represents a directed edge in the output graph
@@ -151,6 +155,58 @@ func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 	for _, target := range targets {
 		fmt.Print(target.Trace[0].FileName + ":" + target.Trace[0].PositionInFile + " couldn't be resolved. ")
 		fmt.Println("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:endpoint ...\"")
+	}
+}
+
+func contains(s []string, searchterm string) bool {
+	i := sort.SearchStrings(s, searchterm)
+	return i < len(s) && s[i] == searchterm
+}
+
+// ConstructUnusedServicesLists constructs 2 lists containing unreferenced services and unreferenced
+// services that don't make any calls to other services, respectively
+func ConstructUnusedServicesLists(services []*ServiceNode, allServices []string) ([]string, []string) {
+	var noReferenceToServices []string
+	var noReferenceToAndFromServices []string
+	// list of services in which dependencies have been discovered
+	var servicesInGraph []string
+
+	for _, service := range services {
+		if !service.IsReferenced && !service.IsReferencing {
+			noReferenceToAndFromServices = append(noReferenceToAndFromServices, service.ServiceName)
+		}
+		if !service.IsReferenced {
+			noReferenceToServices = append(noReferenceToServices, service.ServiceName)
+		}
+		servicesInGraph = append(servicesInGraph, service.ServiceName)
+	}
+
+	var allServiceNames []string
+	for _, service := range allServices {
+		// get only the service names from the absolute paths stored in allServices
+		allServiceNames = append(allServiceNames, service[strings.LastIndex(service, string(os.PathSeparator))+1:])
+	}
+	for _, service := range allServiceNames {
+		// add services in which no dependencies have been found
+		if !contains(servicesInGraph, service) {
+			noReferenceToAndFromServices = append(noReferenceToAndFromServices, service)
+			noReferenceToServices = append(noReferenceToServices, service)
+		}
+	}
+	return noReferenceToServices, noReferenceToAndFromServices
+}
+
+// PrintUnusedServices prints all the unused services
+func PrintUnusedServices(noReferenceToServices []string, noReferenceToAndFromServices []string) {
+	fmt.Println("Unreferenced services: ")
+	for _, service := range noReferenceToServices {
+		fmt.Println(service)
+	}
+	fmt.Println()
+
+	fmt.Println("Unreferenced services that don't make any calls: ")
+	for _, service := range noReferenceToAndFromServices {
+		fmt.Println(service)
 	}
 }
 

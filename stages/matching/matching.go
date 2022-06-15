@@ -103,8 +103,10 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 	}
 
 	UnknownService := &output.ServiceNode{
-		ServiceName: "UnknownService",
-		IsUnknown:   true,
+		ServiceName:   "UnknownService",
+		IsUnknown:     true,
+		IsReferenced:  true,
+		IsReferencing: true,
 	}
 
 	edges := make([]*output.ConnectionEdge, 0)
@@ -116,12 +118,14 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 	// Add edges (eg. matching). This order is guaranteed because calls is an array
 	for _, call := range dependencies.Calls {
 		sourceNode := serviceMap[call.ServiceName]
+		sourceNode.IsReferencing = true
 		targetServiceName, isResolved := findTargetNodeName(call, endpointMap)
 
 		var targetNode *output.ServiceNode
 
 		if target, ok := serviceMap[targetServiceName]; ok && isResolved {
 			targetNode = target
+			targetNode.IsReferenced = true
 			// Set target to UnknownService if not found. There are 3 possibilities for this scenario:
 			// 1. endpoint definition of call.RequestLocation wasn't resolved correctly.
 			// 2. call.RequestLocation references external API, which is not contained in the endpointMap.
@@ -134,16 +138,13 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 		if targetNode.ServiceName == sourceNode.ServiceName {
 			continue
 		}
-
 		// If at least one unknown target has been found,
 		// add it to a list of nodes.
 		if targetNode == UnknownService && !hasUnknown {
 			nodes = append(nodes, UnknownService)
 			hasUnknown = true
 		}
-
 		callLocation := call.Trace[len(call.Trace)-1]
-
 		// Default values
 		protocol := "HTTP"
 		url := call.RequestLocation

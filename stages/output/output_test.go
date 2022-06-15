@@ -15,13 +15,19 @@ import (
 // createSmallTestGraph creates a graph with three nodes, where node 1 had edges to node 2 and 3, and node 2 to node 3
 func createSmallTestGraph() NodeGraph {
 	node1 := ServiceNode{
-		ServiceName: "Node1",
+		ServiceName:   "Node1",
+		IsReferenced:  false,
+		IsReferencing: true,
 	}
 	node2 := ServiceNode{
-		ServiceName: "Node2",
+		ServiceName:   "Node2",
+		IsReferenced:  true,
+		IsReferencing: true,
 	}
 	node3 := ServiceNode{
-		ServiceName: "Node3",
+		ServiceName:   "Node3",
+		IsReferenced:  true,
+		IsReferencing: false,
 	}
 
 	edge12 := ConnectionEdge{
@@ -153,4 +159,36 @@ func TestPrintDiscoveredAnnotationsEmpty(t *testing.T) {
 
 	str := PrintDiscoveredAnnotations(annotations)
 	assert.Equal(t, str, "[Discovered none]")
+}
+
+func TestConstructUnusedServicesLists(t *testing.T) {
+	graph := createSmallTestGraph()
+	node4 := ServiceNode{
+		ServiceName:   "Node4",
+		IsReferenced:  false,
+		IsReferencing: false,
+	}
+	graph.Nodes = append(graph.Nodes, &node4)
+	allServices := []string{"Node1", "Node2", "Node3", "Node5"}
+	noReferenceToServices, noReferenceToAndFromServices := ConstructUnusedServicesLists(graph.Nodes, allServices)
+
+	assert.Equal(t, []string{"Node1", "Node4", "Node5"}, noReferenceToServices)
+	assert.Equal(t, []string{"Node4", "Node5"}, noReferenceToAndFromServices)
+}
+
+// TestPrintMethods runs untestable methods that only print so the coverage isn't affected
+func TestPrintMethods(t *testing.T) {
+	noReferenceToServices := []string{"svc1"}
+	noReferenceToAndFromServices := []string{"svc2", "svc3"}
+	PrintUnusedServices(noReferenceToServices, noReferenceToAndFromServices)
+
+	trace := callanalyzer.CallTargetTrace{FileName: "file", PositionInFile: "1"}
+	traces := []callanalyzer.CallTargetTrace{trace}
+	callTarget := callanalyzer.CallTarget{
+		PackageName: "pkg", MethodName: "method", RequestLocation: "url",
+		IsResolved: true, ServiceName: "svc1", TargetSvc: "svc2", Trace: traces,
+	}
+	targets := make([]*callanalyzer.CallTarget, 0)
+	targets = append(targets, &callTarget)
+	PrintAnnotationSuggestions(targets)
 }
