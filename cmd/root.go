@@ -54,7 +54,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, err := os.Getwd()
-			if err {
+			if err != nil {
 				return err
 			}
 
