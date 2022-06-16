@@ -4,6 +4,7 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,19 +16,26 @@ import (
 func TestExecuteDepScanInvalidProjectDir(t *testing.T) {
 	runDepScanCmd := RootCmd()
 	runDepScanCmd.SetArgs([]string{"--project-directory", "invalid"})
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	invalidPath := filepath.Join(cwd, "invalid")
 
-	err := runDepScanCmd.Execute()
+	err = runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "invalid project directory specified: invalid", err.Error())
+	assert.Equal(t, "invalid project directory specified: "+invalidPath, err.Error())
 }
 
 func TestExecuteDepScanInvalidServiceDir(t *testing.T) {
 	runDepScanCmd := RootCmd()
 	runDepScanCmd.SetArgs([]string{"--service-directory", "invalid"})
 
-	err := runDepScanCmd.Execute()
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	invalidPath := filepath.Join(cwd, "invalid")
+
+	err = runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "invalid service directory: invalid", err.Error())
+	assert.Equal(t, "invalid service directory: "+invalidPath, err.Error())
 }
 
 func TestExecuteDepScanNoServicePackages(t *testing.T) {
