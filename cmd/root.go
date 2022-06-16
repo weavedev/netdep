@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -52,6 +53,16 @@ func RootCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cwd, _ := os.Getwd()
+
+			if !filepath.IsAbs(projectDir) {
+				projectDir = filepath.Join(cwd, projectDir)
+			}
+
+			if !filepath.IsAbs(serviceDir) {
+				serviceDir = filepath.Join(cwd, serviceDir)
+			}
+
 			ok, err := areInputPathsValid(projectDir, serviceDir, serviceCallsDir, envVars, outputFilename)
 			if !ok {
 				return err
