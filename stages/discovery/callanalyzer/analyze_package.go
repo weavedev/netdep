@@ -16,62 +16,37 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
+// CallTargetTrace describes the physical location of a call in the stack trace
 type CallTargetTrace struct {
-	// The name of the file in which the call is made
-	FileName string
-	// The line number in the file where the call is made
-	PositionInFile string
+	FileName       string // FileName of the file in which the call is made
+	PositionInFile string // PositionInFile defines the line number in the file where the call is made
 }
 
 // CallTarget holds information about a certain call made by the analysed package.
 // This used to be named "Caller" (which was slightly misleading, as it is in fact the target,
 // thus rather a 'callee' than a 'caller'.
 type CallTarget struct {
-	// The name of the package the method belongs to
-	PackageName string
-	// The name of the call (i.e. name of function or some other target)
-	MethodName string
-	// The URL of the entity
-	RequestLocation string
-	// A flag describing whether the RequestLocation was resolved
-	IsResolved bool
-	// The name of the service in which the call is made
-	ServiceName string
-	// Target service (in case the CallTarget is a client)
-	TargetSvc string
-	// Trace defines a stack trace for the call
-	Trace []CallTargetTrace
+	PackageName     string            // PackageName is the name of the package the method belongs to
+	MethodName      string            // MethodName is the name of the call (i.e. name of function or some other target)
+	RequestLocation string            // RequestLocation is the URL of the entity
+	IsResolved      bool              // IsResolved defines a flag describing whether the RequestLocation was resolved
+	ServiceName     string            // ServiceName is the name of the service in which the call is made
+	TargetSvc       string            // TargetSvc is the targeted service (in case the CallTarget is a client)
+	Trace           []CallTargetTrace // Trace defines a stack trace for the call
 }
 
 // SubstitutionConfig holds interesting calls to substitute,
 // as well as a map of the current service's environment
 type SubstitutionConfig struct {
-	substitutionCalls map[string]InterestingCall
-	serviceEnv        map[string]string
+	substitutionCalls map[string]InterestingCall // substitutionCalls defines a map of function signature to call
+	serviceEnv        map[string]string          // serviceEnv holds the mapping of environment names to values
 }
 
 // TargetsCollection holds the output structures that are to be returned by the
 // discovery stage
 type TargetsCollection struct {
-	clientTargets []*CallTarget
-	serverTargets []*CallTarget
-}
-
-// findFunctionInPackage finds the method by its name within the specified package.
-// Important: it only looks for Exported functions
-func findFunctionInPackage(pkg *ssa.Package, name string) *ssa.Function {
-	// Find member
-	member, hasSpecifiedMember := pkg.Members[name]
-	if !hasSpecifiedMember {
-		return nil
-	}
-	// Check that member is a Function
-	foundFunction, ok := member.(*ssa.Function)
-	if !ok {
-		// Not a function
-		return nil
-	}
-	return foundFunction
+	clientTargets []*CallTarget // clientTargets is the collection of client calls (outgoing)
+	serverTargets []*CallTarget // serverTargets is the collection of server calls (ingoing)
 }
 
 // getPositionFromPos converts a token.Pos to a filename and line number
@@ -125,6 +100,65 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	return callTarget
 }
 
+func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig) {
+	wasInteresting := false
+
+	// Qualified function name is: package + interface + function
+	qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fn)
+
+	if _, isIgnored := config.ignoreList[functionPackage]; isIgnored {
+		// do not recurse on uninteresting packages
+		return
+	}
+
+	// The following creates a copy of 'frame'.
+	// This is the correct place for this because we are going to visit child blocks next.
+	newFrame := *frame
+
+	// copy trace and append current call
+	copy(newFrame.trace, frame.trace)
+	newFrame.trace = append(newFrame.trace, call)
+
+	// define offset when function was resolved to an invocation and the first parameter does not exist
+	// this is the case for functions like `func (o obj) name (arg string) {}`
+	offset := len(fn.Params) - len(call.Args)
+
+	// Keep track of given parameters for resolving
+	for i, par := range fn.Params[offset:] {
+		newFrame.params[par] = &call.Args[i]
+	}
+
+	// Keep a reference to the parent frame
+	newFrame.parent = frame
+
+	_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
+	if isInterestingClient {
+		handleInterestingClientCall(call, fn, config, &newFrame)
+		wasInteresting = true
+	}
+
+	_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
+	if isInterestingServer {
+		handleInterestingServerCall(call, fn, config, &newFrame)
+		wasInteresting = true
+	}
+
+	// recurse into arguments if they are functions or calls themselves
+	analyseCallArguments(call, frame, config)
+
+	// do not recurse down on interesting calls
+	if wasInteresting {
+		return
+	}
+
+	frame.visited[call] = true
+
+	// recurse into function blocks
+	if fn.Blocks != nil {
+		visitBlocks(fn.Blocks, &newFrame, config)
+	}
+}
+
 // analyseCall recursively traverses the SSA, with call being the starting point,
 // and using the environment specified in the frame
 // Variables are only resolved if the call is 'interesting'
@@ -135,90 +169,22 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseCall(call *ssa.Call, frame *Frame, config *AnalyserConfig) {
-	// prevent infinite recursion
+func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) {
 	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
 		return
 	}
 
-	if call.Call.Method != nil {
-		// TODO: resolve a call to a method
-	}
+	fn := getFunctionFromCall(call, frame)
 
-	// The function call type can either be a *ssa.Function, an anonymous function type, or something else,
-	// hence the switch. See https://pkg.go.dev/golang.org/x/tools/go/ssa#Call for all possibilities
-	switch fnCallType := call.Call.Value.(type) {
-	// TODO: handle other cases
-	case *ssa.Parameter:
-		// TODO: refactor analyseCall to accept an adjusted call
-		// parValue, _ := resolveParameter(fnCallType, frame)
-		return
-	case *ssa.Function:
-		wasInteresting := false
-
-		// Qualified function name is: package + interface + function
-		// TODO: handle parameter equivalence to other interface
-		qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fnCallType)
-
-		// The following creates a copy of 'frame'.
-		// This is the correct place for this because we are going to visit child blocks next.
-		newFrame := *frame
-
-		// copy stack trace and append current call
-		copy(newFrame.trace, frame.trace)
-		newFrame.trace = append(newFrame.trace, call)
-
-		// Keep track of given parameters for resolving
-		for i, par := range fnCallType.Params {
-			newFrame.params[par] = &call.Call.Args[i]
-		}
-
-		// Keep a reference to the parent frame
-		newFrame.parent = frame
-
-		_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
-		if isInterestingClient {
-			// TODO: Resolve the arguments of the function call
-			handleInterestingClientCall(call, fnCallType, config, &newFrame)
-			wasInteresting = true
-		}
-
-		_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
-		if isInterestingServer {
-			// TODO: Resolve the arguments of the function call
-			handleInterestingServerCall(call, fnCallType, config, &newFrame)
-			wasInteresting = true
-		}
-
-		_, isIgnored := config.ignoreList[functionPackage]
-
-		if isIgnored {
-			// Do not recurse into the packageName if it is ignored
-			return
-		}
-
-		// recurse into arguments if they are functions or calls themselves
-		analyseCallArguments(call, frame, config)
-
-		// at this point analyseCallArguments has been called so we can return
-		if wasInteresting {
-			return
-		}
-
-		newFrame.visited[call] = true
-
-		// recurse into function blocks
-		if fnCallType.Blocks != nil {
-			visitBlocks(fnCallType.Blocks, &newFrame, config)
-		}
-	default:
-		// Unsupported call type
+	if fn == nil {
 		return
 	}
+
+	analyzeCallToFunction(call, fn, frame, config)
 }
 
 // getHostFromAnnotation returns the resolved url using the annotated host name for a service
-func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig, target *CallTarget) string {
+func getHostFromAnnotation(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig, target *CallTarget) string {
 	// absolute file path
 	filePath := frame.pkg.Prog.Fset.File(call.Pos()).Name()
 	// split path and form absolute path to service directory
@@ -248,8 +214,8 @@ func getHostFromAnnotation(call *ssa.Call, frame *Frame, config *AnalyserConfig,
 // given that they potentially contain another block of code. That is possible in two cases:
 // 1. argument is a function. For example, a callback.
 // 2. argument is another call. For example. http.Get(getEndpoint(smth))
-func analyseCallArguments(call *ssa.Call, fr *Frame, config *AnalyserConfig) {
-	for _, argument := range call.Call.Args {
+func analyseCallArguments(call *ssa.CallCommon, fr *Frame, config *AnalyserConfig) {
+	for _, argument := range call.Args {
 		// visit function as argument
 		if functionArg, ok := argument.(*ssa.Function); ok {
 			visitBlocks(functionArg.Blocks, fr, config)
@@ -260,7 +226,7 @@ func analyseCallArguments(call *ssa.Call, fr *Frame, config *AnalyserConfig) {
 // handleInterestingServerCall collects the information about a supplied endpoint declaration
 // and adds this information to the targetsServer data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
-func handleInterestingServerCall(call *ssa.Call, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
+func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
 	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if interestingStuffServer.action != Output {
@@ -271,16 +237,16 @@ func handleInterestingServerCall(call *ssa.Call, fn *ssa.Function, config *Analy
 
 	callTarget := getCallInformation(frame, fn)
 
-	if call.Call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
+	if call.Args != nil && len(interestingStuffServer.interestingArgs) > 0 {
 		if qualifiedFunctionNameOfTarget == "(*github.com/gin-gonic/gin.Engine).Run" {
-			variables, callTarget.IsResolved = resolveGinAddrSlice(call.Call.Args[1])
+			variables, callTarget.IsResolved = resolveGinAddrSlice(call.Args[1])
 			// TODO: parse the url
 			callTarget.RequestLocation = strings.Join(variables, "")
 		} else {
 			// Since the environment can vary on a per-service basis,
 			// a substConfig is created for the specific service
 			substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-			variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
+			variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
 			// TODO: parse the url
 			callTarget.RequestLocation = strings.Join(variables, "")
 		}
@@ -306,7 +272,7 @@ func getSubstConfig(config *AnalyserConfig, service string) SubstitutionConfig {
 	}
 }
 
-// defaultCallTarget returns a new callTarget with initialised packageName, functionName and IsResolved fields
+// defaultCallTarget returns a new callTarget with initialised PackageName, functionName and IsResolved fields
 func defaultCallTarget(packageName, functionName string) *CallTarget {
 	return &CallTarget{
 		PackageName:     packageName,
@@ -314,14 +280,14 @@ func defaultCallTarget(packageName, functionName string) *CallTarget {
 		RequestLocation: "",
 		IsResolved:      false,
 		ServiceName:     "",
-		Trace:           make([]CallTargetTrace, 0),
+		Trace:           []CallTargetTrace{},
 	}
 }
 
 // handleInterestingServerCall collects the information about a supplied http client call
 // and adds this information to the targetClient data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
-func handleInterestingClientCall(call *ssa.Call, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
+func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
 	interestingStuffClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 
@@ -335,11 +301,11 @@ func handleInterestingClientCall(call *ssa.Call, fn *ssa.Function, config *Analy
 	// callTarget holds all the details of the interesting call
 	callTarget := getCallInformation(frame, fn)
 
-	if call.Call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
+	if call.Args != nil && len(interestingStuffClient.interestingArgs) > 0 {
 		// Since the environment can vary on a per-service basis,
 		// a substConfig is created for the specific service
 		substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-		variables, callTarget.IsResolved = resolveParameters(call.Call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
+		variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
 		// TODO: parse the url
 		callTarget.RequestLocation = strings.Join(variables, "")
 	}
@@ -367,8 +333,8 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
-		case *ssa.Call:
-			analyseCall(instruction, fr, config)
+		case ssa.CallInstruction:
+			analyseCall(instruction.Common(), fr, config)
 		case *ssa.Store:
 			// for a store to a value
 			if global, ok := instruction.Addr.(*ssa.Global); ok {
@@ -412,8 +378,8 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 		return nil, nil, fmt.Errorf("no package given %v", pkg)
 	}
 
-	mainFunction := findFunctionInPackage(pkg, "main")
-	initFunction := findFunctionInPackage(pkg, "init")
+	mainFunction := pkg.Func("main")
+	initFunction := pkg.Func("init")
 
 	// Find the main function
 	if mainFunction == nil {
@@ -421,10 +387,10 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	baseFrame := Frame{
-		trace: make([]*ssa.Call, 0),
+		trace: make([]*ssa.CallCommon, 0),
 		// Reference to the final list of all _targets of the entire package
 		pkg:     pkg,
-		visited: make(map[*ssa.Call]bool),
+		visited: make(map[*ssa.CallCommon]bool),
 		params:  make(map[*ssa.Parameter]*ssa.Value),
 		globals: make(map[*ssa.Global]*ssa.Value),
 		// for the init function we should only pass once
@@ -448,7 +414,7 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	visitBlocks(initFunction.Blocks, &baseFrame, config)
 
 	// rest visited
-	baseFrame.visited = make(map[*ssa.Call]bool)
+	baseFrame.visited = make(map[*ssa.CallCommon]bool)
 	baseFrame.singlePass = false
 
 	// Visit each of the block of the main function

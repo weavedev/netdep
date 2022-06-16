@@ -16,6 +16,7 @@ func recurse(url string, depth int) {
 		recurse(url, depth-1)
 	} else {
 		wrappedGetCall(url)
+		wrappedGetCall(url)
 	}
 }
 

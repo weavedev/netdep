@@ -95,6 +95,8 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (st
 	}
 }
 
+// handleSubstitutableCall handles substitution for calls that can't be easily resolved
+// for example `os.getEnv()`
 func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (string, bool) {
 	unknownCallError := "unknown: substitutable call that is not supported"
 	switch fnCallType := val.Call.Value.(type) {
