@@ -53,7 +53,10 @@ func RootCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cwd, _ := os.Getwd()
+			cwd, err := os.Getwd()
+			if err {
+				return err
+			}
 
 			if !filepath.IsAbs(projectDir) {
 				projectDir = filepath.Join(cwd, projectDir)
