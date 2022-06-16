@@ -58,13 +58,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				return err
 			}
 
-			if !filepath.IsAbs(projectDir) {
-				projectDir = filepath.Join(cwd, projectDir)
-			}
-
-			if !filepath.IsAbs(serviceDir) {
-				serviceDir = filepath.Join(cwd, serviceDir)
-			}
+			projectDir = ensureAbsolutePath(cwd, projectDir)
+			serviceDir = ensureAbsolutePath(cwd, serviceDir)
 
 			ok, err := areInputPathsValid(projectDir, serviceDir, serviceCallsDir, envVars, outputFilename)
 			if !ok {
@@ -117,6 +112,15 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().BoolVar(&shallow, "shallow", false, "toggle shallow scanning")
 
 	return cmd
+}
+
+// ensureAbsolutePath makes sure the given path is absolute, or makes it absolute based on the current working directory
+func ensureAbsolutePath(cwd, pth string) string {
+	if !filepath.IsAbs(pth) {
+		return filepath.Join(cwd, pth)
+	}
+
+	return pth
 }
 
 // printOutput writes the output to the target file (btw stdout is also a file on UNIX)
