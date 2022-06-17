@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	"github.com/fatih/color"
@@ -275,6 +276,10 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	internalClientTargets := make([]*callanalyzer.CallTarget, 0)
 
 	for _, serviceDir := range *services {
+
+		color.HiRed("Callstack: ")
+		debug.PrintStack()
+
 		serviceName := strings.Split(serviceDir, string(os.PathSeparator))[len(strings.Split(serviceDir, string(os.PathSeparator)))-1]
 
 		if config.Verbose {
