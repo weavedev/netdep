@@ -1,19 +1,18 @@
-<p align="center"><img width style="width: 20%; height: auto" src="logo.png" alt="netDep logo"></p>
+<p style="text-align: center"><img width style="width: 20%; height: auto" src="logo.png" alt="netDep logo"></p>
 
----
-
-<h1 style="margin: -17px 0 0 0" align="center">netDep</h1>
-<p align="center"><b>netDep</b> a command-line, cross-platform static code analysis tool <br>for detecting inter-service network dependencies in microservices written in Go.</p>
+<h1 style="margin: -17px 0 0 0; text-align: center">netDep</h1>
+<p style="text-align: center"><b>netDep</b> a command-line, cross-platform static code analysis tool <br>for detecting inter-service network dependencies in microservices written in Go.</p>
 
 ---
 
 ## Features
+
 - Detection of HTTP network dependencies, including [NATS Technology](https://nats.io/) and
   the [Gin Framework](https://gin-gonic.com/)
 - Linting capabilities: detection of unused services
 - Interprets URLs of endpoints, client calls, provided that the URL complies with one of the following conditions:
-  - it is a string literal
-  - it is created using concatenation on string literals
+    - it is a string literal
+    - it is created using concatenation on string literals
 - Supports user-assisted detection of netDeps - supports such annotations as `//netDep: endpoint`
 - Substitution of Environment variables
 - Easy to use command line interface
