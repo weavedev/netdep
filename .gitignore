@@ -23,4 +23,10 @@ kubeconfig
 env/*
 !env/sample.env
 *.bak
-*.exe
+
+# Output files (of the project)
+out/**
+
+# Compiled binaries
+netDep
+netDep.exe

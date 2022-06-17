@@ -3,7 +3,6 @@
 package natsanalyzer
 
 import (
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 // NatsCall is a data structure to hold either consumer
@@ -52,7 +53,7 @@ func FindNATSCalls(serviceDir string) ([]*NatsCall, []*NatsCall, error) {
 			servicePath := filepath.Join(serviceDir, file.Name())
 			fileErr := filepath.Walk(servicePath, func(path string, info fs.FileInfo, e error) error {
 				if e != nil {
-					fmt.Println(e)
+					color.Yellow("Error in NATS analysis: %s", e)
 				}
 
 				if filepath.Ext(info.Name()) == ".go" && !strings.HasSuffix(info.Name(), "_test.go") {
@@ -65,7 +66,7 @@ func FindNATSCalls(serviceDir string) ([]*NatsCall, []*NatsCall, error) {
 			})
 
 			if fileErr != nil {
-				fmt.Println(fileErr)
+				color.Yellow("Error while traversing services for NATS analysis: %s", fileErr)
 			}
 		}
 	}

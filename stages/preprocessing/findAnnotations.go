@@ -3,12 +3,13 @@
 package preprocessing
 
 import (
-	"fmt"
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/fatih/color"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
@@ -47,7 +48,7 @@ func parseComments(path string, serviceName string, annotations map[string]map[c
 	fs := token.NewFileSet()
 	f, err := parser.ParseFile(fs, path, nil, parser.ParseComments)
 	if err != nil {
-		fmt.Println(err.Error())
+		color.Yellow("Error parsing comments for annotations: %s", err)
 	}
 
 	for _, commentGroup := range f.Comments {

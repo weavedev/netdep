@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
+
 	"github.com/spf13/cobra"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery"
@@ -44,6 +46,7 @@ func RootCmd() *cobra.Command {
 		verbose         bool
 		serviceCallsDir string
 		shallow         bool
+		noColor         bool
 	)
 
 	cmd := &cobra.Command{
@@ -53,6 +56,8 @@ func RootCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			color.NoColor = noColor // colourful terminal output
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				return err
@@ -109,8 +114,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "", "output filename such as ./deps.json")
 	cmd.Flags().StringVarP(&serviceCallsDir, "servicecalls-directory", "c", "", "servicecalls package directory")
-	cmd.Flags().BoolVar(&shallow, "shallow", false, "toggle shallow scanning")
-
+	cmd.Flags().BoolVarP(&shallow, "no-color", "n", false, "disable colourful terminal output")
+	cmd.Flags().BoolVarP(&noColor, "shallow", "S", false, "toggle shallow scanning")
 	return cmd
 }
 
@@ -129,16 +134,17 @@ func printOutput(targetFileName, jsonString string, noReferenceToServices []stri
 		const filePerm = 0o600
 		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
 		if err == nil {
-			fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
+			color.HiGreen("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
 		} else {
-			// Could not write to file, output to stdout
-			fmt.Println(jsonString)
+			color.Yellow("Could not write to file %s", targetFileName)
+			color.HiGreen("Successfully analysed, here is the list of dependencies:")
+			color.HiWhite(jsonString)
 			output.PrintUnusedServices(noReferenceToServices, noReferenceToAndFromServices)
 			return err
 		}
 	} else {
-		fmt.Println("Successfully analysed, here is the list of dependencies:")
-		fmt.Println(jsonString)
+		color.HiGreen("Successfully analysed, here is the list of dependencies:")
+		color.HiWhite(jsonString)
 		output.PrintUnusedServices(noReferenceToServices, noReferenceToAndFromServices)
 	}
 	return nil
@@ -272,7 +278,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		serviceName := strings.Split(serviceDir, string(os.PathSeparator))[len(strings.Split(serviceDir, string(os.PathSeparator)))-1]
 
 		if config.Verbose {
-			fmt.Println("Analysing service " + serviceDir)
+			fmt.Printf("Analysing service %s\n", serviceDir)
 		}
 
 		err := preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
@@ -308,7 +314,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 				clientSum := len(allClientTargets)
 				targetSum := len(clientCalls)
 
-				fmt.Printf("Found: %d calls of which %d client call(s) and %d server call(s)\n", clientSum+targetSum, clientSum, targetSum)
+				color.Green("Found %d calls of which %d client call(s) and %d server call(s)", clientSum+targetSum, clientSum, targetSum)
 			}
 
 			// append

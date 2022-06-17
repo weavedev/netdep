@@ -24,13 +24,13 @@ func discoverAllServices(projectDir string, services []string, config *callanaly
 	// for each service
 	for _, serviceDir := range services {
 		// load packages
-		fmt.Println("Building service " + serviceDir)
+		fmt.Printf("Building service %s\n", serviceDir)
 		packagesInService, err := preprocessing.LoadAndBuildPackages(projectDir, serviceDir)
 		if err != nil {
 			continue
 		}
 
-		fmt.Println("Discovering service " + serviceDir)
+		fmt.Printf("Discovering service %s\n", serviceDir)
 		// discover calls
 		clientCalls, serviceCalls, err := DiscoverAll(packagesInService, config)
 		if err != nil {
@@ -101,7 +101,7 @@ func TestCallInfo(t *testing.T) {
 
 	assert.Equal(t, "multiple_calls", res[10].ServiceName, "Expected service name multiple_calls.go")
 	assert.Equal(t, "27", res[14].Trace[0].PositionInFile, "Expected line number 27")
-	assert.Equal(t, "multiple_calls"+string(os.PathSeparator)+"multiple_calls.go", res[10].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
+	assert.Equal(t, fmt.Sprintf("multiple_calls%smultiple_calls.go", string(os.PathSeparator)), res[10].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
 func TestWrappedNestedUnknown(t *testing.T) {

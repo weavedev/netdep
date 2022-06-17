@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
+
 	"golang.org/x/tools/go/ssa"
 )
 
@@ -101,7 +103,7 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 
 		newTrace := CallTargetTrace{
 			// split package name and take the last item to get the service name
-			FileName:       filePath[strings.LastIndex(filePath, string(os.PathSeparator)+callTarget.ServiceName+string(os.PathSeparator))+1:],
+			FileName:       filePath[strings.LastIndex(filePath, fmt.Sprintf("%s%s%s", string(os.PathSeparator), callTarget.ServiceName, string(os.PathSeparator)))+1:],
 			PositionInFile: position,
 		}
 
@@ -266,7 +268,7 @@ func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config 
 	callTarget.RequestLocation = getHostFromAnnotation(call, frame, config, callTarget)
 
 	if !callTarget.IsResolved && config.verbose {
-		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
+		color.Yellow("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 		PrintTraceToCall(frame, config)
 	}
 
@@ -322,7 +324,7 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 	}
 
 	if !callTarget.IsResolved && config.verbose {
-		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
+		color.Yellow("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 		PrintTraceToCall(frame, config)
 	}
 

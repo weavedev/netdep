@@ -152,7 +152,7 @@ func TestPrintDiscoveredAnnotationsEmpty(t *testing.T) {
 	annotations["b"] = make(map[callanalyzer.Position]string)
 
 	str := PrintDiscoveredAnnotations(annotations)
-	assert.Equal(t, str, "[Discovered none]")
+	assert.Equal(t, str, "")
 }
 
 func TestConstructUnusedServicesLists(t *testing.T) {
