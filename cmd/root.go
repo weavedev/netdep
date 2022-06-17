@@ -114,8 +114,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "", "output filename such as ./deps.json")
 	cmd.Flags().StringVarP(&serviceCallsDir, "servicecalls-directory", "c", "", "servicecalls package directory")
-	cmd.Flags().BoolVarP(&shallow, "no-color", "n", false, "disable colourful terminal output")
-	cmd.Flags().BoolVarP(&noColor, "shallow", "S", false, "toggle shallow scanning")
+	cmd.Flags().BoolVarP(&noColor, "no-color", "n", false, "disable colourful terminal output")
+	cmd.Flags().BoolVarP(&shallow, "shallow", "S", false, "toggle shallow scanning")
 	return cmd
 }
 
