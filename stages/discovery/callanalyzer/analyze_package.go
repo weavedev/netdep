@@ -35,6 +35,17 @@ type CallTarget struct {
 	Trace           []CallTargetTrace // Trace defines a stack trace for the call
 }
 
+// TraceAsStringArray maps the CallTargetTrace in Trace to a string
+func (trace *CallTarget) TraceAsStringArray() []string {
+	ret := make([]string, 0)
+	for i := range trace.Trace {
+		call := &trace.Trace[i]
+		ret = append(ret, fmt.Sprintf("%s:%s", call.FileName, call.PositionInFile))
+	}
+
+	return ret
+}
+
 // SubstitutionConfig holds interesting calls to substitute,
 // as well as a map of the current service's environment
 type SubstitutionConfig struct {
