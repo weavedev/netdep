@@ -150,7 +150,7 @@ func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, servi
 // Returns list of strings that represent the slice, and bool value indicating whether the variable was resolved.
 // TODO: implement a general way for resolving variables in slices
 func resolveGinAddrSlice(value ssa.Value) ([]string, bool) {
-	unresolvedType := []string{"unknown: var(" + value.Name() + ") = ??"}
+	unresolvedType := []string{fmt.Sprintf("unknown: var(%s) = ??", value.Name())}
 	switch val := value.(type) {
 	case *ssa.Slice:
 		switch val1Type := val.X.(type) {

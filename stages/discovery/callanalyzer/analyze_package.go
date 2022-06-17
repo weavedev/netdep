@@ -92,7 +92,7 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 
 		newTrace := CallTargetTrace{
 			// split package name and take the last item to get the service name
-			FileName:       filePath[strings.LastIndex(filePath, string(os.PathSeparator)+callTarget.ServiceName+string(os.PathSeparator))+1:],
+			FileName:       filePath[strings.LastIndex(filePath, fmt.Sprintf("%s%s%s", string(os.PathSeparator), callTarget.ServiceName, string(os.PathSeparator)))+1:],
 			PositionInFile: position,
 		}
 

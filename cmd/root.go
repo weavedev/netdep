@@ -278,7 +278,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		serviceName := strings.Split(serviceDir, string(os.PathSeparator))[len(strings.Split(serviceDir, string(os.PathSeparator)))-1]
 
 		if config.Verbose {
-			fmt.Println("Analysing service " + serviceDir)
+			fmt.Printf("Analysing service %s\n", serviceDir)
 		}
 
 		err := preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
@@ -314,7 +314,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 				clientSum := len(allClientTargets)
 				targetSum := len(clientCalls)
 
-				color.Green("Found %d calls of which %d client call(s) and %d server call(s)\n", clientSum+targetSum, clientSum, targetSum)
+				color.Green("Found %d calls of which %d client call(s) and %d server call(s)", clientSum+targetSum, clientSum, targetSum)
 			}
 
 			// append

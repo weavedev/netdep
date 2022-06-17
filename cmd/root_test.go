@@ -4,6 +4,7 @@ Copyright © 2022 TW Group 13C, Weave BV, TU Delft
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,7 +23,7 @@ func TestExecuteDepScanInvalidProjectDir(t *testing.T) {
 
 	err = runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "invalid project directory specified: "+invalidPath, err.Error())
+	assert.Equal(t, fmt.Sprintf("invalid project directory specified: %s", invalidPath), err.Error())
 }
 
 func TestExecuteDepScanInvalidServiceDir(t *testing.T) {

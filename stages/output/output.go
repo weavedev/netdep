@@ -4,6 +4,7 @@ package output
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -154,7 +155,7 @@ func SerializeAdjacencyList(adjacencyList AdjacencyList, pretty bool) (string, e
 // Intended to be used for unresolved targets.
 func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 	for _, target := range targets {
-		color.HiCyan(target.Trace[0].FileName + ":" + target.Trace[0].PositionInFile + " couldn't be resolved. ")
+		color.HiCyan("%s:%s couldn't be resolved. ", target.Trace[0].FileName, target.Trace[0].PositionInFile)
 		color.HiCyan("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:endpoint ...\"")
 	}
 }
@@ -223,7 +224,7 @@ func PrintDiscoveredAnnotations(annotations map[string]map[callanalyzer.Position
 		for pos, val := range serMap {
 			ann := &Annotation{
 				ServiceName: serName,
-				Position:    pos.Filename + ":" + strconv.Itoa(pos.Line),
+				Position:    fmt.Sprintf("%s:%s", pos.Filename, strconv.Itoa(pos.Line)),
 				Value:       val,
 			}
 			annotationList = append(annotationList, ann)
