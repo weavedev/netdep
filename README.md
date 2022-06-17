@@ -155,7 +155,8 @@ Available verbs:
 | `-o, --output-filename`        | Output filename such as ./deps.json. By default or when empty, it is outputted to stdout.                     | ``       |
 | `-v, --verbose`                | Toggle printing stack traces of unknown variables.                                                            | `false`  |
 | `-c, --servicecalls-directory` | The path to the servicecalls package directory. Must be a valid path.                                         | ``       |
-| `--shallow`                    | Toggle shallow scanning.                                                                                      | `false`  |
+| `-n, --no-color`               | Disable colorful terminal output.                                                                             | `false`  |
+| `-S, --shallow`                | Toggle shallow scanning.                                                                                      | `false`  |
 
 ## Documentation
 

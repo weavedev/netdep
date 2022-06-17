@@ -46,6 +46,7 @@ func RootCmd() *cobra.Command {
 		verbose         bool
 		serviceCallsDir string
 		shallow         bool
+		noColor         bool
 	)
 
 	cmd := &cobra.Command{
@@ -55,6 +56,8 @@ func RootCmd() *cobra.Command {
 Output is an adjacency list of service dependencies in a JSON format`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			color.NoColor = noColor // colourful terminal output
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				return err
@@ -111,8 +114,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&envVars, "environment-variables", "e", "", "environment variable file")
 	cmd.Flags().StringVarP(&outputFilename, "output-filename", "o", "", "output filename such as ./deps.json")
 	cmd.Flags().StringVarP(&serviceCallsDir, "servicecalls-directory", "c", "", "servicecalls package directory")
-	cmd.Flags().BoolVar(&shallow, "shallow", false, "toggle shallow scanning")
-
+	cmd.Flags().BoolVarP(&shallow, "no-color", "n", false, "disable colourful terminal output")
+	cmd.Flags().BoolVarP(&noColor, "shallow", "S", false, "toggle shallow scanning")
 	return cmd
 }
 
