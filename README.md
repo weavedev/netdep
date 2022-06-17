@@ -1,10 +1,16 @@
-# Microservice Architecture Analysis Tool
+# netDep: detecting network dependencies
 
-A command line utility for service network dependencies using static code analysis built in Go.
+netDep is a command-line, cross-platform static code analysis tool for detecting inter-service network dependencies (netDeps) in microservices written in Go.
 
 ## Features
 
+- Detection of HTTP network dependencies, including [NATS Technology](https://nats.io/) the [Gin Framework](https://gin-gonic.com/)
+- Linting capabilities: detection of unused services
+- Interprets URLs of endpoints, client calls (in certain cases)
+- Supports user-assisted detection of netDeps - supports such annotations as `//netDep: endpoint`
+- Substitution of Environment variables
 - Easy to use command line interface
+- Color-coded output, outputting to file or console
 
 ## Installation
 
@@ -16,7 +22,8 @@ Clone the project and install using
 ```
 
 **Important: For the tool to work, the project directory it is run against _has_ to compile and must have all its
-dependencies installed!**
+dependencies installed.**
+Use `go get` to synchronize your project's dependencies.
 
 ## Usage
 
@@ -29,19 +36,21 @@ ou can run the tool using the default settings using:
 go run main.go
 ```
 
-or if you want more control you can use the options as defined below, for example:
+or if you want more control, you can use the options as defined below. For example:
 
 ```sh
-go run main.go -p "./some/project/dir" -s "./some/project/dir/svc"
+go run main.go -p "/some/project/dir" -s "/some/project/dir/svc"
 ```
 
-### Option 2: Build an executable first
+### Option 2: Build and then run
 
+1. Build an executable: 
 ```sh
 go build .
 ```
+2. The above command will generate a standalone binary, which can be run as follows:
 
-On *NIX systems:
+On *NIX systems (linux distros, macOS, ...):
 
 ```sh
 ./netDep [-p project_directory] [-s service_directory] [-v]
@@ -178,6 +187,8 @@ Please adhere to this project's `code of conduct`.
 
 ## Authors
 
+TU Delft CSE2000 Software Project Team, for Weave B.V:
+
 - Gints Kuļikovskis
 - Martynas Krupskis
 - Bianca Şerbănescu
@@ -186,4 +197,6 @@ Please adhere to this project's `code of conduct`.
 
 ## License
 
-
+[//]: # (If this repository is to be open-sourced, please update the below statement to link to the new licence.)
+[//]: # (And do not forget to upload the appropriate licence to the following file: /LICENCE.)
+All rights reserved, Weave B.V.
