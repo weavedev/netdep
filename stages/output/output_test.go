@@ -32,10 +32,8 @@ func createSmallTestGraph() NodeGraph {
 
 	edge12 := ConnectionEdge{
 		Call: NetworkCall{
-			Protocol:  "HTTP",
-			URL:       "",
-			Arguments: nil,
-			Location:  "",
+			Protocol: "HTTP",
+			URL:      "",
 		},
 		Source: &node1,
 		Target: &node2,
@@ -43,10 +41,8 @@ func createSmallTestGraph() NodeGraph {
 
 	edge13 := ConnectionEdge{
 		Call: NetworkCall{
-			Protocol:  "HTTP",
-			URL:       "",
-			Arguments: nil,
-			Location:  "",
+			Protocol: "HTTP",
+			URL:      "",
 		},
 		Source: &node1,
 		Target: &node3,
@@ -54,10 +50,8 @@ func createSmallTestGraph() NodeGraph {
 
 	edge23 := ConnectionEdge{
 		Call: NetworkCall{
-			Protocol:  "HTTP",
-			URL:       "",
-			Arguments: nil,
-			Location:  "",
+			Protocol: "HTTP",
+			URL:      "",
 		},
 		Source: &node2,
 		Target: &node3,
@@ -117,7 +111,7 @@ func TestSerialiseOutput(t *testing.T) {
 	graph := createSmallTestGraph()
 	list := ConstructAdjacencyList(graph)
 	str, _ := SerializeAdjacencyList(list, false)
-	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"location\":\"\"}],\"count\":1}],\"Node3\":[]}"
+	expected := "{\"Node1\":[{\"service\":\"Node2\",\"calls\":[{\"protocol\":\"HTTP\",\"locations\":null}],\"count\":1},{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"locations\":null}],\"count\":1}],\"Node2\":[{\"service\":\"Node3\",\"calls\":[{\"protocol\":\"HTTP\",\"locations\":null}],\"count\":1}],\"Node3\":[]}"
 	assert.Equal(t, expected, str)
 }
 

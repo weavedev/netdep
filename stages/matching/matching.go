@@ -144,7 +144,7 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 			nodes = append(nodes, UnknownService)
 			hasUnknown = true
 		}
-		callLocation := call.Trace[len(call.Trace)-1]
+
 		// Default values
 		protocol := "HTTP"
 		url := call.RequestLocation
@@ -164,7 +164,7 @@ func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGra
 				URL:        url,
 				Arguments:  nil,
 				MethodName: methodName,
-				Location:   fmt.Sprintf("%s:%s", callLocation.FileName, callLocation.PositionInFile),
+				Locations:  call.TraceAsStringArray(),
 			},
 			Source: sourceNode,
 			Target: targetNode,
@@ -245,7 +245,7 @@ func extendWithNats(consumers []*natsanalyzer.NatsCall, producers []*natsanalyze
 						URL:       producer.Subject,
 						Arguments: nil,
 						// TODO: handle stack trace?
-						Location: fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile),
+						Locations: []string{fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile)},
 					},
 					// Always hits, because services was populated using consumers and producers
 					Source: services[producer.ServiceName],
@@ -264,7 +264,7 @@ func extendWithNats(consumers []*natsanalyzer.NatsCall, producers []*natsanalyze
 					URL:       producer.Subject,
 					Arguments: nil,
 					// TODO: handle stack trace?
-					Location: fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile),
+					Locations: []string{fmt.Sprintf("%s:%s", producer.FileName, producer.PositionInFile)},
 				},
 				// Always hits, because services was populated using consumers and producers
 				Source: services[producer.ServiceName],
