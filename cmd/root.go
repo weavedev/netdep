@@ -311,8 +311,8 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 			}
 
 			if config.Verbose {
-				clientSum := len(allClientTargets)
-				targetSum := len(clientCalls)
+				clientSum := len(clientCalls)
+				targetSum := len(serverCalls)
 
 				color.Green("Found %d calls of which %d client call(s) and %d server call(s)", clientSum+targetSum, clientSum, targetSum)
 			}
