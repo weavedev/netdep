@@ -1,7 +1,8 @@
-<p style="text-align: center"><img width style="width: 20%; height: auto" src="logo.png" alt="netDep logo"></p>
-
-<h1 style="margin: -17px 0 0 0; text-align: center">netDep</h1>
-<p style="text-align: center"><b>netDep</b> a command-line, cross-platform static code analysis tool <br>for detecting inter-service network dependencies in microservices written in Go.</p>
+<div align="center">
+  <img width="200" height="auto" src="logo.png" alt="netDep logo">
+  <h3>netDep</h3>
+  <p><b>netDep</b> is a command-line, cross-platform static code analysis tool <br>for detecting inter-service network dependencies in microservices written in Go.</p>
+</div>
 
 ---
 
@@ -11,8 +12,8 @@
   the [Gin Framework](https://gin-gonic.com/)
 - Linting capabilities: detection of unused services
 - Interprets URLs of endpoints, client calls, provided that the URL complies with one of the following conditions:
-    - it is a string literal
-    - it is created using concatenation on string literals
+  - it is a string literal
+  - it is created using concatenation on string literals
 - Supports user-assisted detection of netDeps - supports such annotations as `//netDep: endpoint`
 - Substitution of Environment variables
 - Easy to use command line interface
