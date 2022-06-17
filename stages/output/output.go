@@ -4,11 +4,12 @@ package output
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/color"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
@@ -153,8 +154,8 @@ func SerializeAdjacencyList(adjacencyList AdjacencyList, pretty bool) (string, e
 // Intended to be used for unresolved targets.
 func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {
 	for _, target := range targets {
-		fmt.Print(target.Trace[0].FileName + ":" + target.Trace[0].PositionInFile + " couldn't be resolved. ")
-		fmt.Println("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:endpoint ...\"")
+		color.HiCyan(target.Trace[0].FileName + ":" + target.Trace[0].PositionInFile + " couldn't be resolved. ")
+		color.HiCyan("Add an annotation above it in the format \"//netdep:client ...\" or \"//netdep:endpoint ...\"")
 	}
 }
 
@@ -198,15 +199,13 @@ func ConstructUnusedServicesLists(services []*ServiceNode, allServices []string)
 
 // PrintUnusedServices prints all the unused services
 func PrintUnusedServices(noReferenceToServices []string, noReferenceToAndFromServices []string) {
-	fmt.Println("Unreferenced services: ")
+	color.HiCyan("Unreferenced services: ")
 	for _, service := range noReferenceToServices {
-		fmt.Println(service)
+		color.HiWhite("\t%s\n", service)
 	}
-	fmt.Println()
-
-	fmt.Println("Unreferenced services that don't make any calls: ")
+	color.HiCyan("Unreferenced services that don't make any calls: ")
 	for _, service := range noReferenceToAndFromServices {
-		fmt.Println(service)
+		color.HiWhite("\t%s\n", service)
 	}
 }
 
@@ -241,10 +240,8 @@ func PrintDiscoveredAnnotations(annotations map[string]map[callanalyzer.Position
 			discoveredAnnotations += "Position: " + ann.Position + "\n"
 			discoveredAnnotations += "Value: " + ann.Value + "\n\n"
 		}
-	} else {
-		discoveredAnnotations += "[Discovered none]"
 	}
 
-	fmt.Println(discoveredAnnotations)
+	color.Magenta(discoveredAnnotations)
 	return discoveredAnnotations
 }

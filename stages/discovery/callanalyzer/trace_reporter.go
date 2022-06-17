@@ -1,7 +1,7 @@
 package callanalyzer
 
 import (
-	"fmt"
+	"github.com/fatih/color"
 
 	"golang.org/x/tools/go/ssa"
 )
@@ -28,6 +28,6 @@ func PrintTraceToCall(frame *Frame, config *AnalyserConfig) {
 		default:
 			signature = call.Value.String()
 		}
-		fmt.Printf("%d: %s:%s\t%s\n", traces-i, file, position, signature)
+		color.Yellow("\t%d: %s:%s\t%s\n", traces-i, file, position, signature)
 	}
 }

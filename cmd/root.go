@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
+
 	"github.com/spf13/cobra"
 
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery"
@@ -129,16 +131,17 @@ func printOutput(targetFileName, jsonString string, noReferenceToServices []stri
 		const filePerm = 0o600
 		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
 		if err == nil {
-			fmt.Printf("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
+			color.HiGreen("Successfully analysed, the dependencies have been output to %v\n", targetFileName)
 		} else {
-			// Could not write to file, output to stdout
-			fmt.Println(jsonString)
+			color.Yellow("Could not write to file %s", targetFileName)
+			color.HiGreen("Successfully analysed, here is the list of dependencies:")
+			color.HiWhite(jsonString)
 			output.PrintUnusedServices(noReferenceToServices, noReferenceToAndFromServices)
 			return err
 		}
 	} else {
-		fmt.Println("Successfully analysed, here is the list of dependencies:")
-		fmt.Println(jsonString)
+		color.HiGreen("Successfully analysed, here is the list of dependencies:")
+		color.HiWhite(jsonString)
 		output.PrintUnusedServices(noReferenceToServices, noReferenceToAndFromServices)
 	}
 	return nil
@@ -308,7 +311,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 				clientSum := len(allClientTargets)
 				targetSum := len(clientCalls)
 
-				fmt.Printf("Found: %d calls of which %d client call(s) and %d server call(s)\n", clientSum+targetSum, clientSum, targetSum)
+				color.Green("Found %d calls of which %d client call(s) and %d server call(s)\n", clientSum+targetSum, clientSum, targetSum)
 			}
 
 			// append
