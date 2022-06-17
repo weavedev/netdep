@@ -5,10 +5,12 @@ netDeps) in microservices written in Go.
 
 ## Features
 
-- Detection of HTTP network dependencies, including [NATS Technology](https://nats.io/)
+- Detection of HTTP network dependencies, including [NATS Technology](https://nats.io/) and
   the [Gin Framework](https://gin-gonic.com/)
 - Linting capabilities: detection of unused services
-- Interprets URLs of endpoints, client calls (in certain cases)
+- Interprets URLs of endpoints, client calls, provided that the URL complies with one of the following conditions:
+    - it is a string literal
+    - it is created using concatenation on string literals
 - Supports user-assisted detection of netDeps - supports such annotations as `//netDep: endpoint`
 - Substitution of Environment variables
 - Easy to use command line interface
@@ -49,7 +51,7 @@ go run main.go -p "/some/project/dir" -s "/some/project/dir/svc"
 1. Build an executable:
 
 ```sh
-go build .
+go build
 ```
 
 2. The above command will generate a standalone binary, which can be run as follows:
@@ -213,7 +215,16 @@ Moreover, there are in-line comments in every gofile to ease extendability or re
 
 ## Contributing
 
-See `CONTRIBUTING.md` for ways to get started.
+### Issues
+
+When encountering a bug or otherwise unexpected behaviour, please open an issue and fill in the default issue template.
+Please, label the issue appropriately. A member of the team will assign a weight and an estimated time needed.
+The issue will then be scheduled to be addressed by the developers (triaging).
+
+Anyone can contribute by opening a merge request to address any issue. It is strongly encouraged to use a Merge Request
+template.
+
+See `CONTRIBUTING.md` for an in-depth explanation.
 
 Please adhere to this project's `code of conduct`.
 
