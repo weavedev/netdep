@@ -26,7 +26,7 @@ type NetworkCall struct {
 	URL        string   `json:"url,omitempty"`
 	MethodName string   `json:"methodName,omitempty"`
 	Arguments  []string `json:"arguments,omitempty"`
-	Location   string   `json:"location"`
+	Locations  []string `json:"locations"`
 }
 
 // ServiceNode represents a node in the output graph, which is a Service
@@ -35,6 +35,8 @@ type ServiceNode struct {
 	IsUnknown     bool   `json:"isUnknown"`
 	IsReferenced  bool   `json:"isReferenced"`
 	IsReferencing bool   `json:"isReferencing"`
+	// Hostname    []string `json:"hostname"`
+	// Endpoints   []string `json:"endpoints"`
 }
 
 // ConnectionEdge represents a directed edge in the output graph
