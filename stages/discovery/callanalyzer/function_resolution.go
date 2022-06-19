@@ -8,7 +8,10 @@ import (
 
 // getInvokedFunctionFromCall takes a call and tries to determine which function is being invoked
 // TODO resolve missing cases
-func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Function {
+func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *ssa.Function {
+	if depth > 30 {
+		return nil
+	}
 	pkg := call.Method.Pkg()
 	name := call.Method.Name()
 	program := frame.pkg.Prog
@@ -17,7 +20,7 @@ func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Functio
 
 	// resolve call to parameter
 	if param, isParam := (*callValue).(*ssa.Parameter); isParam {
-		parValue, _ := resolveParameter(param, frame)
+		parValue, _ := resolveParameter(param, frame, depth)
 		if parValue != nil {
 			callValue = parValue
 		}
@@ -45,10 +48,13 @@ func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Functio
 }
 
 // getCallFunctionFromCall returns the function being call for static calls
-func getCallFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Function {
+func getCallFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *ssa.Function {
+	if depth > 30 {
+		return nil
+	}
 	// resolve parameter
 	if param, isParam := call.Value.(*ssa.Parameter); isParam {
-		parValue, _ := resolveParameter(param, frame)
+		parValue, _ := resolveParameter(param, frame, depth)
 		if paramFn, isFn := (*parValue).(*ssa.Function); isFn {
 			// TODO: does this happen?
 			return paramFn
@@ -60,10 +66,13 @@ func getCallFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Function {
 }
 
 // getFunctionFromCall returns the function being called by either an invocation or a static call
-func getFunctionFromCall(call *ssa.CallCommon, frame *Frame) *ssa.Function {
+func getFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *ssa.Function {
+	if depth > 30 {
+		return nil
+	}
 	if call.IsInvoke() {
-		return getInvokedFunctionFromCall(call, frame)
+		return getInvokedFunctionFromCall(call, frame, depth)
 	} else {
-		return getCallFunctionFromCall(call, frame)
+		return getCallFunctionFromCall(call, frame, depth)
 	}
 }

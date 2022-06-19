@@ -5,12 +5,14 @@ package main
 
 import (
 	"os"
+	"runtime/debug"
 
 	"lab.weave.nl/internships/tud-2022/netDep/cmd"
 )
 
 // main is the entry point to the program
 func main() {
+	debug.SetMaxStack(1000000000)
 	// execute the main logic
 	runRoot()
 }

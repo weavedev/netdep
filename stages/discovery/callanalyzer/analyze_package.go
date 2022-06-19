@@ -113,7 +113,10 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	return callTarget
 }
 
-func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig) {
+func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig, depth int) {
+	if depth > 30 {
+		return
+	}
 	wasInteresting := false
 
 	// Qualified function name is: package + interface + function
@@ -146,18 +149,18 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 	if isInterestingClient {
-		handleInterestingClientCall(call, fn, config, &newFrame)
+		handleInterestingClientCall(call, fn, config, &newFrame, depth)
 		wasInteresting = true
 	}
 
 	_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if isInterestingServer {
-		handleInterestingServerCall(call, fn, config, &newFrame)
+		handleInterestingServerCall(call, fn, config, &newFrame, depth)
 		wasInteresting = true
 	}
 
 	// recurse into arguments if they are functions or calls themselves
-	analyseCallArguments(call, frame, config)
+	analyseCallArguments(call, frame, config, depth)
 
 	// do not recurse down on interesting calls
 	if wasInteresting {
@@ -168,7 +171,7 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	// recurse into function blocks
 	if fn.Blocks != nil {
-		visitBlocks(fn.Blocks, &newFrame, config)
+		visitBlocks(fn.Blocks, &newFrame, config, depth)
 	}
 }
 
@@ -182,18 +185,21 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) {
+func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig, depth int) {
+	if depth > 30 {
+		return
+	}
 	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
 		return
 	}
 
-	fn := getFunctionFromCall(call, frame)
+	fn := getFunctionFromCall(call, frame, depth)
 
 	if fn == nil {
 		return
 	}
 
-	analyzeCallToFunction(call, fn, frame, config)
+	analyzeCallToFunction(call, fn, frame, config, depth)
 }
 
 // getHostFromAnnotation returns the resolved url using the annotated host name for a service
@@ -227,11 +233,14 @@ func getHostFromAnnotation(call *ssa.CallCommon, frame *Frame, config *AnalyserC
 // given that they potentially contain another block of code. That is possible in two cases:
 // 1. argument is a function. For example, a callback.
 // 2. argument is another call. For example. http.Get(getEndpoint(smth))
-func analyseCallArguments(call *ssa.CallCommon, fr *Frame, config *AnalyserConfig) {
+func analyseCallArguments(call *ssa.CallCommon, fr *Frame, config *AnalyserConfig, depth int) {
+	if depth > 30 {
+		return
+	}
 	for _, argument := range call.Args {
 		// visit function as argument
 		if functionArg, ok := argument.(*ssa.Function); ok {
-			visitBlocks(functionArg.Blocks, fr, config)
+			visitBlocks(functionArg.Blocks, fr, config, depth)
 		}
 	}
 }
@@ -239,7 +248,10 @@ func analyseCallArguments(call *ssa.CallCommon, fr *Frame, config *AnalyserConfi
 // handleInterestingServerCall collects the information about a supplied endpoint declaration
 // and adds this information to the targetsServer data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
-func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
+func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame, depth int) {
+	if depth > 30 {
+		return
+	}
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
 	interestingStuffServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if interestingStuffServer.action != Output {
@@ -259,7 +271,7 @@ func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config 
 			// Since the environment can vary on a per-service basis,
 			// a substConfig is created for the specific service
 			substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-			variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig)
+			variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig, depth)
 			// TODO: parse the url
 			callTarget.RequestLocation = strings.Join(variables, "")
 		}
@@ -300,7 +312,10 @@ func defaultCallTarget(packageName, functionName string) *CallTarget {
 // handleInterestingServerCall collects the information about a supplied http client call
 // and adds this information to the targetClient data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
-func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame) {
+func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame, depth int) {
+	if depth > 30 {
+		return
+	}
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
 	interestingStuffClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 
@@ -318,7 +333,7 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 		// Since the environment can vary on a per-service basis,
 		// a substConfig is created for the specific service
 		substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-		variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig)
+		variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig, depth)
 		// TODO: parse the url
 		callTarget.RequestLocation = strings.Join(variables, "")
 	}
@@ -339,7 +354,10 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
+func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, depth int) {
+	if depth > 30 {
+		return
+	}
 	if block.Instrs == nil {
 		return
 	}
@@ -347,7 +365,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case ssa.CallInstruction:
-			analyseCall(instruction.Common(), fr, config)
+			analyseCall(instruction.Common(), fr, config, depth)
 		case *ssa.Store:
 			// for a store to a value
 			if global, ok := instruction.Addr.(*ssa.Global); ok {
@@ -372,9 +390,12 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
+func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, depth int) {
+	if depth > 30 {
+		return
+	}
 	for _, block := range blocks {
-		analyseInstructionsOfBlock(block, fr, config)
+		analyseInstructionsOfBlock(block, fr, config, depth+1)
 	}
 }
 
@@ -424,16 +445,16 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig) ([]*CallTarge
 	}
 
 	// Visit the init function for globals
-	visitBlocks(initFunction.Blocks, &baseFrame, config)
+	visitBlocks(initFunction.Blocks, &baseFrame, config, 0)
 
 	// rest visited
 	baseFrame.visited = make(map[*ssa.CallCommon]bool)
 	baseFrame.singlePass = false
 
 	// Visit each of the block of the main function
-	visitBlocks(mainFunction.Blocks, &baseFrame, config)
+	visitBlocks(mainFunction.Blocks, &baseFrame, config, 0)
 
 	// Here we can return the targets of the base frame: it is just a reference. All frames hold the same reference
-	// to the targets collection.
+	// to the target collection.
 	return baseFrame.targetsCollection.clientTargets, baseFrame.targetsCollection.serverTargets, nil
 }
