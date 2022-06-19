@@ -276,7 +276,9 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	internalClientTargets := make([]*callanalyzer.CallTarget, 0)
 
 	for _, serviceDir := range *services {
-
+		if !strings.HasSuffix(serviceDir, "p4") {
+			continue
+		}
 		color.HiRed("Callstack: ")
 		debug.PrintStack()
 
