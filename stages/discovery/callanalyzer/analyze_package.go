@@ -150,9 +150,6 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	// Keep track of given parameters for resolving
 	for i, par := range fn.Params[offset:] {
-		if _, ok := newFrame.params[par]; ok {
-			fmt.Println("rewriting parameter...")
-		}
 		newFrame.params[par] = &call.Args[i]
 	}
 
