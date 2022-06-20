@@ -138,6 +138,7 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 	// copy trace and append current call
 	copy(newFrame.trace, frame.trace)
 	newFrame.trace = append(newFrame.trace, call)
+	newFrame.params = map[*ssa.Parameter]*ssa.Value{}
 
 	// define offset when function was resolved to an invocation and the first parameter does not exist
 	// this is the case for functions like `func (o obj) name (arg string) {}`
@@ -148,6 +149,9 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	// Keep track of given parameters for resolving
 	for i, par := range fn.Params[offset:] {
+		if _, ok := newFrame.params[par]; ok {
+			fmt.Println("rewriting parameter...")
+		}
 		newFrame.params[par] = &call.Args[i]
 	}
 

@@ -35,15 +35,39 @@ func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
 		}
 	}
 
-	return nil, fr
+	for param, val := range fr.params {
+		if param.Name() == par.Name() {
+			return val, fr.parent
+		}
+	}
+
+	return resolveParameter(par, fr.parent)
 }
 
 // resolveRequestObject attempts to resolve a value for a request object
 // TODO this implementation is very naive and will not cover many cases
 func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (string, bool) {
+	if value == nil {
+		return "", false
+	}
+
 	switch val := (*value).(type) {
+	case *ssa.UnOp:
+		return resolveRequestObject(&val.X, fr, substConf)
+	case *ssa.Alloc:
+		//	TODO: implement
+		break
 	case *ssa.Extract:
 		return resolveRequestObject(&val.Tuple, fr, substConf)
+	case *ssa.FieldAddr:
+		return resolveRequestObject(&val.X, fr, substConf)
+	case *ssa.Parameter:
+		// (recursively) resolve a parameter to a value and return that value, if it is defined
+		parameterValue, resolvedFrame := resolveParameter(val, fr)
+
+		if parameterValue != nil {
+			return resolveRequestObject(parameterValue, resolvedFrame, substConf)
+		}
 	case *ssa.Call:
 		call := val.Common()
 		if call == nil || call.IsInvoke() {
@@ -58,17 +82,23 @@ func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionCon
 		signature, _ := getFunctionQualifiers(fn)
 
 		if signature == "net/http.NewRequest" {
-			return resolveValue(&call.Args[1], fr, substConf)
+			return resolveRequestObject(&call.Args[1], fr, substConf)
+		}
+
+		if signature == "(*net/http.Request).WithContext" {
+			return resolveRequestObject(&call.Args[0], fr, substConf)
 		}
 
 		if signature == "net/http.NewRequestWithContext" {
-			return resolveValue(&call.Args[2], fr, substConf)
+			return resolveRequestObject(&call.Args[2], fr, substConf)
 		}
 
-		// TODO: check for other calls
-		// if packageName == "net/http" {
-		// 	fmt.Println(signature)
-		// }
+	// TODO: check for other calls
+	// if packageName == "net/http" {
+	// 	fmt.Println(signature)
+	// }
+	default:
+		return resolveValue(value, fr, substConf)
 	}
 	return "", false
 }
@@ -147,6 +177,11 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (st
 		}
 	case *ssa.Call:
 		return handleSubstitutableCall(val, substConf)
+	case *ssa.FieldAddr:
+		return resolveValue(&val.X, fr, substConf)
+	case *ssa.Alloc:
+		// TODO: implement
+		return "unknown: allocation not found", false
 	default:
 		return "unknown: the parameter was not resolved", false
 	}

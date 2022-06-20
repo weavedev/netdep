@@ -106,6 +106,18 @@ func TestCallInfo(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("multiple_calls%smultiple_calls.go", string(os.PathSeparator)), res[10].Trace[0].FileName, "Expected file name multiple_calls/multiple_calls.go")
 }
 
+func TestMultipleCalls(t *testing.T) {
+	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "multiple_calls")
+	initial, _ := preprocessing.LoadAndBuildPackages(helpers.RootDir, svcDir)
+	res, _, _ := DiscoverAll(initial, nil)
+
+	assert.Equal(t, "multiple_calls", res[0].ServiceName, "Expected service name multiple_calls.go")
+	for _, ct := range res {
+		assert.True(t, ct.IsResolved)
+	}
+	assert.Equal(t, 5, len(res), "Should resolve should be of length 5")
+}
+
 func TestWrappedNestedUnknown(t *testing.T) {
 	svcDir := filepath.Join(helpers.RootDir, "test", "sample", "http", "nested_unknown")
 
@@ -116,7 +128,7 @@ func TestWrappedNestedUnknown(t *testing.T) {
 	res, _, _ := DiscoverAll(initial, &analyseConfig)
 
 	assert.Equal(t, "nested_unknown", res[0].ServiceName, "Expected service name nested_unknown.go")
-	assert.Equal(t, 4, len(res), "Should resolve should be of length 3")
+	assert.Equal(t, 4, len(res), "Should resolve should be of length 4")
 }
 
 func TestDiscoveryHandleFuncCallBack(t *testing.T) {
