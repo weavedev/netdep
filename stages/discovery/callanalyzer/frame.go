@@ -11,7 +11,7 @@ type Frame struct {
 	pkg               *ssa.Package                  // pkg references the service package
 	parent            *Frame                        // parent is necessary to recursively resolve variables (in different scopes)
 	targetsCollection *TargetsCollection            // targetsCollection is a reference to the collection of found calls
-	singlePass        bool                          // singlePass defines if we should check visited or trace for performance
+	singlePass        bool                          // singlePass defines that nodes should only be visited once (visited should always be set to false)
 	pointerMap        map[*ssa.CallCommon][]*ssa.Function
 }
 

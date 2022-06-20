@@ -173,11 +173,8 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	// do not recurse down on interesting calls
 	if wasInteresting {
-		if frame.singlePass {
-			frame.visited[call] = false
-		} else {
-			frame.visited[call] = true
-		}
+		// should be false even if interesting for singlePass
+		frame.visited[call] = !frame.singlePass
 		return true
 	}
 
@@ -185,11 +182,8 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 	if fn.Blocks != nil {
 		interesting := visitBlocks(fn.Blocks, &newFrame, config)
 
-		if frame.singlePass {
-			frame.visited[call] = false
-		} else {
-			frame.visited[call] = interesting
-		}
+		// should be false even if interesting for singlePass
+		frame.visited[call] = interesting && !frame.singlePass
 	} else {
 		frame.visited[call] = false
 	}
