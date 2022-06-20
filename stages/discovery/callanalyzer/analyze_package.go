@@ -122,7 +122,8 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 // analyzeCallToFunction takes a call and its pointing function and analyses it (recursively)
 // returns whether it found a path to an interesting call.
 func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig) bool {
-	wasInteresting := false
+	// return value, store if anything about this call is interesting
+	isInteresting := false
 
 	// Qualified function name is: package + interface + function
 	qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fn)
@@ -159,20 +160,20 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 	_, isInterestingClient := config.interestingCallsClient[qualifiedFunctionNameOfTarget]
 	if isInterestingClient {
 		handleInterestingClientCall(call, fn, config, &newFrame)
-		wasInteresting = true
+		isInteresting = true
 	}
 
 	_, isInterestingServer := config.interestingCallsServer[qualifiedFunctionNameOfTarget]
 	if isInterestingServer {
 		handleInterestingServerCall(call, fn, config, &newFrame)
-		wasInteresting = true
+		isInteresting = true
 	}
 
 	// recurse into arguments if they are functions or calls themselves
 	analyseCallArguments(call, frame, config)
 
 	// do not recurse down on interesting calls
-	if wasInteresting {
+	if isInteresting {
 		// should be false even if interesting for singlePass
 		frame.visited[call] = !frame.singlePass
 		return true
@@ -206,17 +207,19 @@ func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) boo
 		return false
 	}
 
-	// fn := getFunctionFromCall(call, frame)
 	fns, hasFn := frame.pointerMap[call]
 
 	if !hasFn || len(fns) == 0 {
 		return false
 	}
 
+	// keep track if any function is interesting
 	interesting := false
+
 	for _, fn := range fns {
-		wasInteresting := analyzeCallToFunction(call, fn, frame, config)
-		if wasInteresting {
+		isInteresting := analyzeCallToFunction(call, fn, frame, config)
+
+		if isInteresting {
 			interesting = true
 		}
 	}
@@ -436,6 +439,7 @@ func countVisited(visited map[*ssa.CallCommon]bool) (int, int) {
 // Arguments:
 // pkg is the package to analyse
 // config specifies the behaviour of the analyser,
+// pointerMap is the result of pointer analysis, namely the set of functions a call can point to
 //
 // Returns:
 // List of pointers to callTargets, or an error if something went wrong.

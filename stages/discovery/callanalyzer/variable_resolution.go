@@ -43,9 +43,6 @@ func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionCon
 	switch val := (*value).(type) {
 	case *ssa.UnOp:
 		return resolveRequestObject(&val.X, fr, substConf)
-	case *ssa.Alloc:
-		//	TODO: implement
-		break
 	case *ssa.Extract:
 		return resolveRequestObject(&val.Tuple, fr, substConf)
 	case *ssa.FieldAddr:
@@ -81,11 +78,6 @@ func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionCon
 		if signature == "net/http.NewRequestWithContext" {
 			return resolveRequestObject(&call.Args[2], fr, substConf)
 		}
-
-	// TODO: check for other calls
-	// if packageName == "net/http" {
-	// 	fmt.Println(signature)
-	// }
 	case *ssa.BinOp:
 		return resolveValue(value, fr, substConf)
 	case *ssa.Const:
