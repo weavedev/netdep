@@ -86,7 +86,9 @@ func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionCon
 	// if packageName == "net/http" {
 	// 	fmt.Println(signature)
 	// }
-	default:
+	case *ssa.BinOp:
+		return resolveValue(value, fr, substConf)
+	case *ssa.Const:
 		return resolveValue(value, fr, substConf)
 	}
 	return "", false
