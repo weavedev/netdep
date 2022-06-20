@@ -290,14 +290,16 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 
 		err := preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
-			return nil, nil, nil, err
+			color.HiYellow("Error while loading annotations of %s: %s", serviceName, err)
+			continue
 		}
 
 		// There are some interesting internal calls so the tool should parse all methods
 		if len(internalCalls) != 0 {
 			err = servicecallsanalyzer.LoadServiceCalls(serviceDir, serviceName, internalCalls, &internalClientTargets)
 			if err != nil {
-				return nil, nil, nil, err
+				color.HiYellow("Error while loading service calls of %s: %s", serviceName, err)
+				continue
 			}
 		}
 
@@ -307,14 +309,16 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 			// load packages
 			packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 			if err != nil {
-				return nil, nil, nil, err
+				color.HiYellow("Error while loading packages of %s: %s", serviceName, err)
+				continue
 			}
 			packageCount += len(packagesInService)
 
 			// discover calls
 			clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)
 			if err != nil {
-				return nil, nil, nil, err
+				color.HiYellow("Error while trying to discover network calls of %s: %s", serviceName, err)
+				continue
 			}
 
 			if config.Verbose {
