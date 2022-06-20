@@ -273,6 +273,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 
 	allServerTargets = append(allServerTargets, *serverTargets...)
 	internalClientTargets := make([]*callanalyzer.CallTarget, 0)
+	noneInspected := true
 
 	for _, serviceDir := range *services {
 		serviceName := strings.Split(serviceDir, string(os.PathSeparator))[len(strings.Split(serviceDir, string(os.PathSeparator)))-1]
@@ -324,13 +325,14 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 			// append
 			allClientTargets = append(allClientTargets, clientCalls...)
 			allServerTargets = append(allServerTargets, serverCalls...)
+			noneInspected = false
 		}
 	}
 
 	allClientTargets = append(allClientTargets, internalClientTargets...)
 
-	if !config.Shallow && packageCount == 0 {
-		return nil, nil, nil, fmt.Errorf("no service to analyse were found")
+	if (!config.Shallow && packageCount == 0) || noneInspected {
+		return nil, nil, nil, fmt.Errorf("found no services to analyse")
 	}
 	return allClientTargets, allServerTargets, annotations, nil
 }

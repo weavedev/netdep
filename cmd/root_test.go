@@ -65,7 +65,7 @@ func TestExecuteDepScanNoMainFunctionFound(t *testing.T) {
 
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "no main function found in package package example/pkg/http", err.Error())
+	assert.Equal(t, "found no services to analyse", err.Error())
 }
 
 func TestExecuteDepScanNoGoFiles(t *testing.T) {
@@ -80,7 +80,7 @@ func TestExecuteDepScanNoGoFiles(t *testing.T) {
 	err := runDepScanCmd.Execute()
 	assert.NotNil(t, err)
 	// we found no go files, but that is an error for the builder
-	assert.Equal(t, "no usable packages found", err.Error())
+	assert.Equal(t, "found no services to analyse", err.Error())
 }
 
 // TODO: Good weather tests currently stackoverflow,
