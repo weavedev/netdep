@@ -114,7 +114,7 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 }
 
 func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig, depth int) {
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return
 	}
 	wasInteresting := false
@@ -186,14 +186,14 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig, depth int) {
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return
 	}
-	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
+	if frame.hasVisited(call) {
 		return
 	}
 
-	fn := getFunctionFromCall(call, frame, depth)
+	fn := getFunctionFromCall(call, frame, config, depth)
 
 	if fn == nil {
 		return
@@ -234,7 +234,7 @@ func getHostFromAnnotation(call *ssa.CallCommon, frame *Frame, config *AnalyserC
 // 1. argument is a function. For example, a callback.
 // 2. argument is another call. For example. http.Get(getEndpoint(smth))
 func analyseCallArguments(call *ssa.CallCommon, fr *Frame, config *AnalyserConfig, depth int) {
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return
 	}
 	for _, argument := range call.Args {
@@ -249,7 +249,7 @@ func analyseCallArguments(call *ssa.CallCommon, fr *Frame, config *AnalyserConfi
 // and adds this information to the targetsServer data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
 func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame, depth int) {
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return
 	}
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
@@ -271,7 +271,7 @@ func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config 
 			// Since the environment can vary on a per-service basis,
 			// a substConfig is created for the specific service
 			substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-			variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig, depth)
+			variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffServer.interestingArgs, frame, substitutionConfig, config, depth)
 			// TODO: parse the url
 			callTarget.RequestLocation = strings.Join(variables, "")
 		}
@@ -313,7 +313,7 @@ func defaultCallTarget(packageName, functionName string) *CallTarget {
 // and adds this information to the targetClient data structure. If possible, also calls the function to resolve
 // the parameters of the function call.
 func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config *AnalyserConfig, frame *Frame, depth int) {
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return
 	}
 	qualifiedFunctionNameOfTarget, _ := getFunctionQualifiers(fn)
@@ -333,7 +333,7 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 		// Since the environment can vary on a per-service basis,
 		// a substConfig is created for the specific service
 		substitutionConfig := getSubstConfig(config, callTarget.ServiceName)
-		variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig, depth)
+		variables, callTarget.IsResolved = resolveParameters(call.Args, interestingStuffClient.interestingArgs, frame, substitutionConfig, config, depth)
 		// TODO: parse the url
 		callTarget.RequestLocation = strings.Join(variables, "")
 	}
@@ -355,7 +355,7 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig, depth int) {
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return
 	}
 	if block.Instrs == nil {
@@ -391,7 +391,7 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
 func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig, depth int) {
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return
 	}
 	for _, block := range blocks {

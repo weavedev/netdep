@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 
 	"github.com/fatih/color"
@@ -276,12 +275,6 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 	internalClientTargets := make([]*callanalyzer.CallTarget, 0)
 
 	for _, serviceDir := range *services {
-		if !strings.HasSuffix(serviceDir, "p4") {
-			continue
-		}
-		color.HiRed("Callstack: ")
-		debug.PrintStack()
-
 		serviceName := strings.Split(serviceDir, string(os.PathSeparator))[len(strings.Split(serviceDir, string(os.PathSeparator)))-1]
 
 		if config.Verbose {
@@ -290,7 +283,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 
 		err := preprocessing.LoadAnnotations(serviceDir, serviceName, annotations)
 		if err != nil {
-			color.HiYellow("Error while loading annotations of %s: %s", serviceName, err)
+			handleErr(fmt.Sprintf("Error while loading annotations of %s", serviceName), config.Verbose, err)
 			continue
 		}
 
@@ -298,7 +291,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		if len(internalCalls) != 0 {
 			err = servicecallsanalyzer.LoadServiceCalls(serviceDir, serviceName, internalCalls, &internalClientTargets)
 			if err != nil {
-				color.HiYellow("Error while loading service calls of %s: %s", serviceName, err)
+				handleErr(fmt.Sprintf("Error while loading service calls of %s", serviceName), config.Verbose, err)
 				continue
 			}
 		}
@@ -309,7 +302,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 			// load packages
 			packagesInService, err := preprocessing.LoadAndBuildPackages(config.ProjectDir, serviceDir)
 			if err != nil {
-				color.HiYellow("Error while loading packages of %s: %s", serviceName, err)
+				handleErr(fmt.Sprintf("Error while loading packages of %s", serviceName), config.Verbose, err)
 				continue
 			}
 			packageCount += len(packagesInService)
@@ -317,7 +310,7 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 			// discover calls
 			clientCalls, serverCalls, err := discovery.DiscoverAll(packagesInService, analyserConfig)
 			if err != nil {
-				color.HiYellow("Error while trying to discover network calls of %s: %s", serviceName, err)
+				handleErr(fmt.Sprintf("Error while trying to discover network calls of %s", serviceName), config.Verbose, err)
 				continue
 			}
 
@@ -340,4 +333,11 @@ func processEachService(services *[]string, config *RunConfig, analyserConfig *c
 		return nil, nil, nil, fmt.Errorf("no service to analyse were found")
 	}
 	return allClientTargets, allServerTargets, annotations, nil
+}
+
+func handleErr(sprintf string, verbose bool, err error) {
+	color.HiYellow(sprintf)
+	if verbose {
+		color.HiYellow("%s", err)
+	}
 }

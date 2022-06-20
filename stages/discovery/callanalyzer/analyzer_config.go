@@ -10,7 +10,7 @@ const (
 )
 
 // defaultMaxTraversalDepth is the default max traversal depth for the analyser
-const defaultMaxTraversalDepth = 64
+const defaultMaxTraversalDepth = 30
 
 // defaultMaxTraceDepth defines the maximum number of calls reported
 // when verbosely printing unresolved call stack traces

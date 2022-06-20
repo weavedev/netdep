@@ -8,8 +8,8 @@ import (
 
 // getInvokedFunctionFromCall takes a call and tries to determine which function is being invoked
 // TODO resolve missing cases
-func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *ssa.Function {
-	if depth > 30 {
+func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig, depth int) *ssa.Function {
+	if depth > config.maxTraversalDepth {
 		return nil
 	}
 	pkg := call.Method.Pkg()
@@ -20,7 +20,7 @@ func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *
 
 	// resolve call to parameter
 	if param, isParam := (*callValue).(*ssa.Parameter); isParam {
-		parValue, _ := resolveParameter(param, frame, depth)
+		parValue, _ := resolveParameter(param, frame, config, depth)
 		if parValue != nil {
 			callValue = parValue
 		}
@@ -48,13 +48,13 @@ func getInvokedFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *
 }
 
 // getCallFunctionFromCall returns the function being call for static calls
-func getCallFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *ssa.Function {
-	if depth > 30 {
+func getCallFunctionFromCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig, depth int) *ssa.Function {
+	if depth > config.maxTraversalDepth {
 		return nil
 	}
 	// resolve parameter
 	if param, isParam := call.Value.(*ssa.Parameter); isParam {
-		parValue, _ := resolveParameter(param, frame, depth)
+		parValue, _ := resolveParameter(param, frame, config, depth)
 		if paramFn, isFn := (*parValue).(*ssa.Function); isFn {
 			// TODO: does this happen?
 			return paramFn
@@ -66,13 +66,13 @@ func getCallFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *ssa
 }
 
 // getFunctionFromCall returns the function being called by either an invocation or a static call
-func getFunctionFromCall(call *ssa.CallCommon, frame *Frame, depth int) *ssa.Function {
-	if depth > 30 {
+func getFunctionFromCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig, depth int) *ssa.Function {
+	if depth > config.maxTraversalDepth {
 		return nil
 	}
 	if call.IsInvoke() {
-		return getInvokedFunctionFromCall(call, frame, depth)
+		return getInvokedFunctionFromCall(call, frame, config, depth)
 	} else {
-		return getCallFunctionFromCall(call, frame, depth)
+		return getCallFunctionFromCall(call, frame, config, depth)
 	}
 }

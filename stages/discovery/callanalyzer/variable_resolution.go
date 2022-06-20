@@ -14,8 +14,8 @@ import (
 )
 
 // resolveParameter resolves a parameter in a frame, recursively
-func resolveParameter(par *ssa.Parameter, fr *Frame, depth int) (*ssa.Value, *Frame) {
-	if depth > 30 {
+func resolveParameter(par *ssa.Parameter, fr *Frame, config *AnalyserConfig, depth int) (*ssa.Value, *Frame) {
+	if depth > config.maxTraversalDepth {
 		return nil, fr
 	}
 	if fr == nil {
@@ -31,7 +31,7 @@ func resolveParameter(par *ssa.Parameter, fr *Frame, depth int) (*ssa.Value, *Fr
 		recursionParam, isParam := (*parameterValue).(*ssa.Parameter)
 
 		if isParam {
-			return resolveParameter(recursionParam, fr.parent, depth)
+			return resolveParameter(recursionParam, fr.parent, config, depth)
 		} else {
 			return parameterValue, fr
 		}
@@ -46,8 +46,8 @@ func resolveParameter(par *ssa.Parameter, fr *Frame, depth int) (*ssa.Value, *Fr
 // - call to os.GetEnv
 // - other InterestingCalls with the action Substitute.
 // It also returns a bool which indicates whether the variable was resolved.
-func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig, depth int) (string, bool) {
-	if depth > 30 {
+func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig, config *AnalyserConfig, depth int) (string, bool) {
+	if depth > config.maxTraversalDepth {
 		return "unknown: exceeded recursion depth limit", false
 	}
 	if value == nil {
@@ -57,28 +57,28 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig, dep
 	switch val := (*value).(type) {
 	case *ssa.Parameter:
 		// (recursively) resolve a parameter to a value and return that value, if it is defined
-		parameterValue, resolvedFrame := resolveParameter(val, fr, depth)
+		parameterValue, resolvedFrame := resolveParameter(val, fr, config, depth)
 
 		if parameterValue != nil {
-			return resolveValue(parameterValue, resolvedFrame, substConf, depth)
+			return resolveValue(parameterValue, resolvedFrame, substConf, config, depth)
 		}
 
 		return "unknown: the parameter was not resolved", false
 	case *ssa.Global:
 		if globalValue, ok := fr.globals[val]; ok {
-			return resolveValue(globalValue, fr, substConf, depth)
+			return resolveValue(globalValue, fr, substConf, config, depth)
 		}
 
 		return "unknown: the global was not resolved", false
 
 	case *ssa.UnOp:
-		return resolveValue(&val.X, fr, substConf, depth)
+		return resolveValue(&val.X, fr, substConf, config, depth)
 
 	case *ssa.BinOp:
 		switch val.Op { //nolint:exhaustive
 		case token.ADD:
-			left, isLeftResolved := resolveValue(&val.X, fr, substConf, depth)
-			right, isRightResolved := resolveValue(&val.Y, fr, substConf, depth)
+			left, isLeftResolved := resolveValue(&val.X, fr, substConf, config, depth)
+			right, isRightResolved := resolveValue(&val.Y, fr, substConf, config, depth)
 			if isRightResolved && isLeftResolved {
 				return left + right, true
 			}
@@ -134,16 +134,16 @@ func handleSubstitutableCall(val *ssa.Call, substConf SubstitutionConfig) (strin
 
 // resolveParameters iterates over the parameters, resolving those where possible.
 // It also keeps track of whether all variables could be resolved or not.
-func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, serviceEnv SubstitutionConfig, depth int) ([]string, bool) {
+func resolveParameters(parameters []ssa.Value, positions []int, fr *Frame, substConfig SubstitutionConfig, config *AnalyserConfig, depth int) ([]string, bool) {
 	stringParameters := make([]string, len(positions))
-	if depth > 30 {
+	if depth > config.maxTraversalDepth {
 		return stringParameters, false
 	}
 	wasResolved := true
 
 	for i, idx := range positions {
 		if idx < len(parameters) {
-			variable, isResolved := resolveValue(&parameters[idx], fr, serviceEnv, depth)
+			variable, isResolved := resolveValue(&parameters[idx], fr, substConfig, config, depth)
 			if isResolved {
 				stringParameters[i] = variable
 			} else {
