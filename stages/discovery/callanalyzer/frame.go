@@ -17,16 +17,16 @@ type Frame struct {
 
 // hasVisited returns whether the block has already been trace.
 func (f Frame) hasVisited(call *ssa.CallCommon) bool {
-	if f.singlePass {
-		_, visited := f.visited[call]
-		return visited
-	} else {
-		for _, callee := range f.trace {
-			if callee == call {
-				return true
-			}
-		}
-
-		return false
+	interesting, visited := f.visited[call]
+	if visited && !interesting {
+		return true
 	}
+
+	for _, callee := range f.trace {
+		if callee == call {
+			return true
+		}
+	}
+
+	return false
 }

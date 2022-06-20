@@ -42,8 +42,6 @@ func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function 
 		BuildCallGraph: true,
 	}
 
-	fmt.Println("Running pointer analysis...")
-
 	pointerRes, err := pointer.Analyze(ptConfig)
 
 	if err != nil {
@@ -63,8 +61,6 @@ func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon]*ssa.Function 
 		}
 	}
 
-	fmt.Printf("Found mapping for %d calls", len(baseMap))
-
 	return baseMap
 }
 
@@ -80,7 +76,12 @@ func DiscoverAll(packages []*ssa.Package, config *callanalyzer.AnalyserConfig) (
 		useConfig = &newConfig
 	}
 
+	fmt.Println("Running pointer analysis...")
+
 	callPointer := FindCallPointer(packages)
+
+	fmt.Printf("Found mapping for %d calls\n", len(callPointer))
+	fmt.Println("Running discover analysis...")
 
 	for _, pkg := range packages {
 		if pkg == nil {

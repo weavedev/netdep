@@ -3,6 +3,7 @@ module lab.weave.nl/internships/tud-2022/netDep
 go 1.17
 
 require (
+	github.com/fatih/color v1.13.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/spf13/cobra v1.4.0
@@ -14,7 +15,6 @@ require (
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fatih/color v1.13.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect

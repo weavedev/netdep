@@ -42,7 +42,6 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node2:80/URL_2",
-			Arguments: nil,
 			Locations: []string{"./node1/path/to/some/file.go:24"},
 		},
 		Source: &node1,
@@ -53,7 +52,6 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
 			Locations: []string{"./node1/path/to/some/other/file.go:36"},
 		},
 		Source: &node1,
@@ -64,7 +62,6 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
 			Locations: []string{"./node1/path/to/some/file.go:245"},
 		},
 		Source: &node2,
@@ -75,7 +72,6 @@ func CreateSmallTestGraph() output.NodeGraph {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
 			Locations: []string{"./node2/path/to/some/other/file.go:436"},
 		},
 		Source: &node2,
@@ -86,7 +82,6 @@ func CreateSmallTestGraph() output.NodeGraph {
 			Protocol:   "servicecalls",
 			MethodName: "SomeMethod",
 			URL:        "",
-			Arguments:  nil,
 			Locations:  []string{"./node2/path/to/some/other/file1.go:42"},
 		},
 		Source: &node2,
@@ -281,7 +276,6 @@ func TestWithUnknownService(t *testing.T) {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node2:80/URL_2",
-			Arguments: nil,
 			Locations: []string{"./node1/path/to/some/file.go:24"},
 		},
 		Source: &node1,
@@ -292,7 +286,6 @@ func TestWithUnknownService(t *testing.T) {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node2:80/URL_2",
-			Arguments: nil,
 			Locations: []string{"./node1/path/to/some/other/file.go:436"},
 		},
 		Source: &node1,
@@ -303,7 +296,6 @@ func TestWithUnknownService(t *testing.T) {
 		Call: output.NetworkCall{
 			Protocol:  "HTTP",
 			URL:       "http://Node3:80/URL_3",
-			Arguments: nil,
 			Locations: []string{"./node1/path/to/some/other_file.go:24"},
 		},
 		Source: &node1,

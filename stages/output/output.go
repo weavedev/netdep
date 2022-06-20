@@ -5,6 +5,7 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+<<<<<<< HEAD
 	"os"
 	"sort"
 	"strconv"
@@ -12,7 +13,9 @@ import (
 
 	"github.com/fatih/color"
 
-	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
+	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
+	"sort"
+	"strconv"
 )
 
 /*

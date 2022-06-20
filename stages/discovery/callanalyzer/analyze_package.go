@@ -20,8 +20,10 @@ import (
 
 // CallTargetTrace describes the physical location of a call in the stack trace
 type CallTargetTrace struct {
-	FileName       string // FileName of the file in which the call is made
-	PositionInFile string // PositionInFile defines the line number in the file where the call is made
+	Internal       bool      // Internal defines an internal call
+	Pos            token.Pos // Pos references the location of the call
+	FileName       string    // FileName of the file in which the call is made
+	PositionInFile string    // PositionInFile defines the line number in the file where the call is made
 }
 
 // CallTarget holds information about a certain call made by the analysed package.
@@ -99,12 +101,16 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 
 	// add trace
 	for _, tracedCall := range frame.trace {
-		filePath, position := getPositionFromPos(tracedCall.Pos(), frame.pkg.Prog)
+		pos := tracedCall.Pos()
+		filePath, position := getPositionFromPos(pos, frame.pkg.Prog)
+		Internal := strings.Contains(filePath, string(os.PathSeparator)+callTarget.ServiceName+string(os.PathSeparator))
 
 		newTrace := CallTargetTrace{
 			// split package name and take the last item to get the service name
 			FileName:       filePath[strings.LastIndex(filePath, fmt.Sprintf("%s%s%s", string(os.PathSeparator), callTarget.ServiceName, string(os.PathSeparator)))+1:],
 			PositionInFile: position,
+			Pos:            pos,
+			Internal:       Internal,
 		}
 
 		callTarget.Trace = append(callTarget.Trace, newTrace)
@@ -113,7 +119,7 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	return callTarget
 }
 
-func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig) {
+func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig) bool {
 	wasInteresting := false
 
 	// Qualified function name is: package + interface + function
@@ -122,7 +128,7 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	if _, isIgnored := config.ignoreList[functionPackage]; isIgnored {
 		// do not recurse on uninteresting packages
-		return
+		return false
 	}
 
 	// The following creates a copy of 'frame'.
@@ -165,15 +171,28 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 
 	// do not recurse down on interesting calls
 	if wasInteresting {
-		return
+		if frame.singlePass {
+			frame.visited[call] = false
+		} else {
+			frame.visited[call] = true
+		}
+		return true
 	}
-
-	frame.visited[call] = true
 
 	// recurse into function blocks
 	if fn.Blocks != nil {
-		visitBlocks(fn.Blocks, &newFrame, config)
+		interesting := visitBlocks(fn.Blocks, &newFrame, config)
+
+		if frame.singlePass {
+			frame.visited[call] = false
+		} else {
+			frame.visited[call] = interesting
+		}
+	} else {
+		frame.visited[call] = false
 	}
+
+	return false
 }
 
 // analyseCall recursively traverses the SSA, with call being the starting point,
@@ -186,19 +205,19 @@ func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame,
 // frame is a structure for keeping track of the recursion,
 // config specifies how the analyser should behave, and
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) {
+func analyseCall(call *ssa.CallCommon, frame *Frame, config *AnalyserConfig) bool {
 	if frame.hasVisited(call) || len(frame.trace) > config.maxTraversalDepth {
-		return
+		return false
 	}
 
 	//fn := getFunctionFromCall(call, frame)
 	fn, _ := frame.pointerMap[call]
 
 	if fn == nil {
-		return
+		return false
 	}
 
-	analyzeCallToFunction(call, fn, frame, config)
+	return analyzeCallToFunction(call, fn, frame, config)
 }
 
 // getHostFromAnnotation returns the resolved url using the annotated host name for a service
@@ -344,15 +363,19 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
+func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *AnalyserConfig) bool {
 	if block.Instrs == nil {
-		return
+		return false
 	}
 
+	wasInteresting := false
 	for _, instr := range block.Instrs {
 		switch instruction := instr.(type) {
 		case ssa.CallInstruction:
-			analyseCall(instruction.Common(), fr, config)
+			interesting := analyseCall(instruction.Common(), fr, config)
+			if interesting {
+				wasInteresting = true
+			}
 		case *ssa.Store:
 			// for a store to a value
 			if global, ok := instruction.Addr.(*ssa.Global); ok {
@@ -368,6 +391,8 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 			continue
 		}
 	}
+
+	return wasInteresting
 }
 
 // visitBlocks visits each of the blocks in the specified 'blocks' list and analyses each of the block's instructions.
@@ -377,10 +402,29 @@ func analyseInstructionsOfBlock(block *ssa.BasicBlock, fr *Frame, config *Analys
 // fr keeps track of the traversal,
 // config specifies the behaviour of the analyser,
 // targets is a reference to the ultimate data structure that is to be completed and returned.
-func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) {
+func visitBlocks(blocks []*ssa.BasicBlock, fr *Frame, config *AnalyserConfig) bool {
+	wasInteresting := false
+
 	for _, block := range blocks {
-		analyseInstructionsOfBlock(block, fr, config)
+		interesting := analyseInstructionsOfBlock(block, fr, config)
+		if interesting {
+			wasInteresting = true
+		}
 	}
+
+	return wasInteresting
+}
+
+func countVisited(visited map[*ssa.CallCommon]bool) (int, int) {
+	interesting := 0
+	count := 0
+	for _, interstingVisit := range visited {
+		count++
+		if interstingVisit {
+			interesting++
+		}
+	}
+	return interesting, count
 }
 
 // AnalysePackageCalls takes a main package and finds all 'interesting' methods that are called
@@ -405,20 +449,20 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig, pointerMap ma
 	}
 
 	baseFrame := Frame{
-		trace: make([]*ssa.CallCommon, 0),
+		trace: []*ssa.CallCommon{},
 		// Reference to the final list of all _targets of the entire package
 		pkg:        pkg,
-		visited:    make(map[*ssa.CallCommon]bool),
-		params:     make(map[*ssa.Parameter]*ssa.Value),
-		globals:    make(map[*ssa.Global]*ssa.Value),
+		visited:    map[*ssa.CallCommon]bool{},
+		params:     map[*ssa.Parameter]*ssa.Value{},
+		globals:    map[*ssa.Global]*ssa.Value{},
 		pointerMap: pointerMap,
 		// for the init function we should only pass once
 		// as we don't expect to find a functional call in the setup
 		singlePass: true,
 		// targetsCollection is a pointer to the global target collection.
 		targetsCollection: &TargetsCollection{
-			make([]*CallTarget, 0),
-			make([]*CallTarget, 0),
+			[]*CallTarget{},
+			[]*CallTarget{},
 		},
 	}
 
@@ -432,12 +476,22 @@ func AnalysePackageCalls(pkg *ssa.Package, config *AnalyserConfig, pointerMap ma
 	// Visit the init function for globals
 	visitBlocks(initFunction.Blocks, &baseFrame, config)
 
+	if config.verbose {
+		i, c := countVisited(baseFrame.visited)
+		fmt.Printf("Init: Visited %d nodes, of which %d interesting\n", c, i)
+	}
+
 	// rest visited
-	baseFrame.visited = make(map[*ssa.CallCommon]bool)
+	baseFrame.visited = map[*ssa.CallCommon]bool{}
 	baseFrame.singlePass = false
 
 	// Visit each of the block of the main function
 	visitBlocks(mainFunction.Blocks, &baseFrame, config)
+
+	if config.verbose {
+		i, c := countVisited(baseFrame.visited)
+		fmt.Printf("Main: Visited %d nodes, of which %d interesting\n", c, i)
+	}
 
 	// Here we can return the targets of the base frame: it is just a reference. All frames hold the same reference
 	// to the targets collection.
