@@ -1,19 +1,25 @@
-**netDep demo**
+## netDep demo
 
-*URLs as Literals*
+#### *Build*
+
 ```sh
 go build
+```
+
+### URLs as Literals
+
+```sh
 ./netDep -p ../demo/url-literal -s ../demo/url-literal -v -e "./env.yaml"
 ```
 
-*Unresolved*
+### Unresolved
+
 ```sh
-go build
 ./netDep -p ../demo/unresolved -s ../demo/unresolved -v 
 ```
 
-*User-assisted*
+### User-assisted
+
 ```sh
-go build
-./netDep -p ../demo/annotated -s ../demo/annotated -v 
+./netDep -p ../demo/user-assisted -s ../demo/user-assisted -v 
 ```
