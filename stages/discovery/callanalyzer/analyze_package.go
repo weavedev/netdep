@@ -119,12 +119,13 @@ func getCallInformation(frame *Frame, fn *ssa.Function) *CallTarget {
 	return callTarget
 }
 
+// analyzeCallToFunction takes a call and its pointing function and analyses it (recursively)
+// returns whether it found a path to an interesting call.
 func analyzeCallToFunction(call *ssa.CallCommon, fn *ssa.Function, frame *Frame, config *AnalyserConfig) bool {
 	wasInteresting := false
 
 	// Qualified function name is: package + interface + function
 	qualifiedFunctionNameOfTarget, functionPackage := getFunctionQualifiers(fn)
-	// fmt.Printf("Analysing call to %s\n (%d)", qualifiedFunctionNameOfTarget, len(frame.trace))
 
 	if _, isIgnored := config.ignoreList[functionPackage]; isIgnored {
 		// do not recurse on uninteresting packages
