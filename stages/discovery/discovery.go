@@ -17,6 +17,8 @@ In the Discovery stages, clients and endpoints are discovered and mapped to thei
 Refer to the Project plan, chapter 5.3 for more information.
 */
 
+// runPointerAnalysis perform Pointer Analysis on the given packages.
+// Returns the pointer analysis result, which includes the call graph
 func runPointerAnalysis(packages []*ssa.Package) (*pointer.Result, error) {
 	var mains []*ssa.Package
 	for _, pkg := range packages {
@@ -37,6 +39,9 @@ func runPointerAnalysis(packages []*ssa.Package) (*pointer.Result, error) {
 	return pointer.Analyze(ptConfig)
 }
 
+// FindCallPointer builds the points-to sets for calls
+// It performs pointer analysis, and reformats the call graph
+// The output is mapping from a call to its points-to set of functions
 func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon][]*ssa.Function {
 	baseMap := map[*ssa.CallCommon][]*ssa.Function{}
 	baseMapSet := map[*ssa.CallCommon]map[*ssa.Function]bool{}
