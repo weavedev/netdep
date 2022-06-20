@@ -4,10 +4,12 @@
 package output
 
 import (
-	"github.com/stretchr/testify/assert"
-	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 )
 
 // createSmallTestGraph creates a graph with three nodes, where node 1 had edges to node 2 and 3, and node 2 to node 3

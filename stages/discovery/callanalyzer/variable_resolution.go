@@ -46,25 +46,29 @@ func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionCon
 		return resolveRequestObject(&val.Tuple, fr, substConf)
 	case *ssa.Call:
 		call := val.Common()
-		if call != nil && !call.IsInvoke() {
-			fn := call.StaticCallee()
-			if fn != nil {
-				signature, packageName := getFunctionQualifiers(fn)
-
-				if signature == "net/http.NewRequest" {
-					return resolveValue(&call.Args[1], fr, substConf)
-				}
-
-				if signature == "net/http.NewRequestWithContext" {
-					return resolveValue(&call.Args[2], fr, substConf)
-				}
-
-				if packageName == "net/http" {
-					fmt.Println(signature)
-				}
-			}
+		if call == nil || call.IsInvoke() {
+			break
 		}
-		return "", false
+
+		fn := call.StaticCallee()
+		if fn == nil {
+			break
+		}
+
+		signature, _ := getFunctionQualifiers(fn)
+
+		if signature == "net/http.NewRequest" {
+			return resolveValue(&call.Args[1], fr, substConf)
+		}
+
+		if signature == "net/http.NewRequestWithContext" {
+			return resolveValue(&call.Args[2], fr, substConf)
+		}
+
+		// TODO: check for other calls
+		// if packageName == "net/http" {
+		// 	fmt.Println(signature)
+		// }
 	}
 	return "", false
 }

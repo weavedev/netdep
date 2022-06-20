@@ -131,7 +131,7 @@ func ensureAbsolutePath(cwd, pth string) string {
 // printOutput writes the output to the target file (btw stdout is also a file on UNIX)
 func printOutput(targetFileName, jsonString string, noReferenceToServices []string, noReferenceToAndFromServices []string) error {
 	if targetFileName != "" {
-		const filePerm = 0o600
+		const filePerm os.FileMode = 0o600
 		err := os.WriteFile(targetFileName, []byte(jsonString), filePerm)
 		if err == nil {
 			color.HiGreen("Successfully analysed, the dependencies have been output to %v\n", targetFileName)

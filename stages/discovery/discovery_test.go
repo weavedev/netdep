@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"golang.org/x/tools/go/ssa"
+
 	"lab.weave.nl/internships/tud-2022/netDep/stages/discovery/callanalyzer"
 	"lab.weave.nl/internships/tud-2022/netDep/stages/preprocessing"
 
@@ -222,4 +224,21 @@ func TestGlobalVariableCall(t *testing.T) {
 	assert.Equal(t, true, res[0].IsResolved, "Expected call to be fully resolved")
 	assert.Equal(t, "https://example.com/endpoint", res[0].RequestLocation, "Expected correct URL \"http://example.com/endpoint\"")
 	assert.Equal(t, "https://example2.com/endpoint", res[1].RequestLocation, "Expected correct URL \"http://example2.com/endpoint\"")
+}
+
+func TestNullPackage(t *testing.T) {
+	_, err := runPointerAnalysis([]*ssa.Package{{}})
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "no main/test packages")
+}
+
+func TestNullPackageCallPointer(t *testing.T) {
+	res := FindCallPointer([]*ssa.Package{{}})
+	assert.Nil(t, res)
+}
+
+func TestNullPackageDiscover(t *testing.T) {
+	_, _, err := DiscoverAll([]*ssa.Package{{}}, nil)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "no main function found in package")
 }

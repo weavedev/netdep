@@ -95,16 +95,6 @@ func createEndpointMap(endpoints []*callanalyzer.CallTarget) map[string]string {
 	return endpointMap
 }
 
-func getRelevantCallLocation(calls []callanalyzer.CallTargetTrace) []string {
-	ret := make([]string, 0)
-	for i := range calls {
-		call := &calls[i]
-		ret = append(ret, fmt.Sprintf("%s:%s", call.FileName, call.PositionInFile))
-	}
-
-	return ret
-}
-
 // CreateDependencyGraph creates the nodes and edges of a dependency graph, given the discovered calls and endpoints
 func CreateDependencyGraph(dependencies *structures.Dependencies) output.NodeGraph {
 	if dependencies == nil {

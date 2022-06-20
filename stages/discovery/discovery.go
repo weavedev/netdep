@@ -21,9 +21,6 @@ func runPointerAnalysis(packages []*ssa.Package) (*pointer.Result, error) {
 	var mains []*ssa.Package
 	for _, pkg := range packages {
 		if pkg == nil || pkg.Pkg == nil {
-			if pkg != nil {
-				return nil, fmt.Errorf("no package for " + pkg.String())
-			}
 			continue
 		}
 
@@ -42,6 +39,7 @@ func runPointerAnalysis(packages []*ssa.Package) (*pointer.Result, error) {
 
 func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon][]*ssa.Function {
 	baseMap := map[*ssa.CallCommon][]*ssa.Function{}
+	baseMapSet := map[*ssa.CallCommon]map[*ssa.Function]bool{}
 
 	if len(packages) == 0 {
 		return baseMap
@@ -61,25 +59,29 @@ func FindCallPointer(packages []*ssa.Package) map[*ssa.CallCommon][]*ssa.Functio
 			if edge.Site == nil {
 				continue
 			}
+
+			// get call
 			call := edge.Site.Common()
 			_, has := baseMap[call]
+
+			// first time this call is found, create a new set
 			if !has {
 				baseMap[call] = []*ssa.Function{
 					edge.Callee.Func,
 				}
+				baseMapSet[call] = map[*ssa.Function]bool{
+					edge.Callee.Func: true,
+				}
 				continue
 			}
 
-			shouldAdd := true
-			for _, fn := range baseMap[call] {
-				if fn == edge.Callee.Func {
-					shouldAdd = false
-					break
-				}
-			}
+			// otherwise, check for uniqueness
+			_, isNotUnique := baseMapSet[call][edge.Callee.Func]
 
-			if shouldAdd {
+			// add to set
+			if !isNotUnique {
 				baseMap[call] = append(baseMap[call], edge.Callee.Func)
+				baseMapSet[call][edge.Callee.Func] = true
 			}
 		}
 	}

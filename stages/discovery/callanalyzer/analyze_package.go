@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
+
 	"golang.org/x/tools/go/ssa"
 )
 
@@ -298,7 +300,7 @@ func handleInterestingServerCall(call *ssa.CallCommon, fn *ssa.Function, config 
 	callTarget.RequestLocation = getHostFromAnnotation(call, frame, config, callTarget)
 
 	if !callTarget.IsResolved && config.Verbose {
-		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
+		color.Yellow("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 		PrintTraceToCall(frame, config)
 	}
 
@@ -354,7 +356,7 @@ func handleInterestingClientCall(call *ssa.CallCommon, fn *ssa.Function, config 
 	}
 
 	if !callTarget.IsResolved && config.Verbose {
-		fmt.Println("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
+		color.Yellow("Could not resolve variable(s) for call to " + qualifiedFunctionNameOfTarget)
 		PrintTraceToCall(frame, config)
 	}
 
