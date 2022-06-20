@@ -14,34 +14,23 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-// resolveParameter resolves a parameter in a frame, recursively
-func resolveParameter(par *ssa.Parameter, fr *Frame) (*ssa.Value, *Frame) {
+// resolveParameter resolves a parameter in a frame
+func resolveParameter(par *ssa.Parameter, fr *Frame) *ssa.Value {
 	if fr == nil {
-		return nil, fr
+		return nil
 	}
 
-	// fetch saved parameter link
-	parameterValue, hasParam := fr.params[par]
-
-	if hasParam {
-		// check if the value is a parameter again.
-		// if that is the case, we recurse on the parameter in the PARENT frame
-		recursionParam, isParam := (*parameterValue).(*ssa.Parameter)
-
-		if isParam {
-			return resolveParameter(recursionParam, fr.parent)
-		} else {
-			return parameterValue, fr
-		}
+	if parameterValue, ok := fr.params[par]; ok {
+		return parameterValue
 	}
 
 	for param, val := range fr.params {
 		if param.Name() == par.Name() {
-			return val, fr.parent
+			return val
 		}
 	}
 
-	return resolveParameter(par, fr.parent)
+	return nil
 }
 
 // resolveRequestObject attempts to resolve a value for a request object
@@ -63,10 +52,10 @@ func resolveRequestObject(value *ssa.Value, fr *Frame, substConf SubstitutionCon
 		return resolveRequestObject(&val.X, fr, substConf)
 	case *ssa.Parameter:
 		// (recursively) resolve a parameter to a value and return that value, if it is defined
-		parameterValue, resolvedFrame := resolveParameter(val, fr)
+		parameterValue := resolveParameter(val, fr.parent)
 
 		if parameterValue != nil {
-			return resolveRequestObject(parameterValue, resolvedFrame, substConf)
+			return resolveRequestObject(parameterValue, fr.parent, substConf)
 		}
 	case *ssa.Call:
 		call := val.Common()
@@ -137,11 +126,11 @@ func resolveValue(value *ssa.Value, fr *Frame, substConf SubstitutionConfig) (st
 
 	switch val := (*value).(type) {
 	case *ssa.Parameter:
-		// (recursively) resolve a parameter to a value and return that value, if it is defined
-		parameterValue, resolvedFrame := resolveParameter(val, fr)
+		// resolve a parameter to a value and return that value, if it is defined
+		parameterValue := resolveParameter(val, fr.parent)
 
 		if parameterValue != nil {
-			return resolveValue(parameterValue, resolvedFrame, substConf)
+			return resolveValue(parameterValue, fr.parent, substConf)
 		}
 
 		return "unknown: the parameter was not resolved", false
