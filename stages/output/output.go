@@ -153,6 +153,24 @@ func SerializeAdjacencyList(adjacencyList AdjacencyList, pretty bool) (string, e
 	return string(output), err
 }
 
+func PrintDotOutput(adjacencyList AdjacencyList) {
+
+	fmt.Println("strict digraph \"\" {")
+	fmt.Println("	graph [size=\"100,100\"];")
+
+	for k, v := range adjacencyList {
+		empty := true
+		for _, svc := range v {
+			empty = false
+			fmt.Println("	\"" + k + "\" -> \"" + svc.Service + "\" [label=" + strconv.Itoa(svc.NumberOfCalls) + "];")
+		}
+		if empty {
+			fmt.Println("	\"" + k + "\";")
+		}
+	}
+	fmt.Println("}")
+}
+
 // PrintAnnotationSuggestions prints suggestions to add annotations for the list of callanalyzer.CallTarget it's provided.
 // Intended to be used for unresolved targets.
 func PrintAnnotationSuggestions(targets []*callanalyzer.CallTarget) {

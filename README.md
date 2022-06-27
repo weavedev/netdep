@@ -184,6 +184,7 @@ Available verbs:
 | `-c, --servicecalls-directory` | The path to the servicecalls package directory. Must be a valid path.                                         | ``       |
 | `-n, --no-color`               | Disable colorful terminal output.                                                                             | `false`  |
 | `-S, --shallow`                | Toggle shallow scanning.                                                                                      | `false`  |
+| `--dot`                        | Toggle graph output in dot format.                                                                            | `false`  |
 
 ## Color-coded output
 
@@ -199,7 +200,16 @@ Unless the `--no-color` flag is passed, the following color scheme is used:
 | Red    | Error                                             |
 | Cyan   | Action for the user (suggestion i.e. to annotate) |
 
-:
+## Visualisation
+
+netDep can output the dependency graph in the [dot format](https://en.wikipedia.org/wiki/DOT_(graph_description_language)). This output can then be
+copied into a `.dot` extension file and used to generate a visualisation of the graph by a tool such as [Graphviz](https://graphviz.org/).
+
+Various options can be provided when generating the graph with Graphviz, but a relatively simple command that has worked quite well is:
+
+```sh
+dot -Tsvg graph.dot > graph.svg
+```
 
 ## Documentation
 

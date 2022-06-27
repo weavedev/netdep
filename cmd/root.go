@@ -33,6 +33,7 @@ type RunConfig struct {
 	Verbose         bool
 	ServiceCallsDir string
 	Shallow         bool
+	Dot             bool
 }
 
 // RootCmd creates and returns a depScan command object
@@ -47,6 +48,7 @@ func RootCmd() *cobra.Command {
 		serviceCallsDir string
 		shallow         bool
 		noColor         bool
+		dot             bool
 	)
 
 	cmd := &cobra.Command{
@@ -78,6 +80,7 @@ Output is an adjacency list of service dependencies in a JSON format`,
 				EnvFile:         envVars,
 				ServiceCallsDir: serviceCallsDir,
 				Shallow:         shallow,
+				Dot:             dot,
 			}
 
 			// CALL OUR MAIN FUNCTIONALITY LOGIC FROM HERE AND SUPPLY BOTH PROJECT DIR AND SERVICE DIR
@@ -89,6 +92,10 @@ Output is an adjacency list of service dependencies in a JSON format`,
 			// generate output
 			graph := matching.CreateDependencyGraph(dependencies)
 			adjacencyList := output.ConstructAdjacencyList(graph)
+			// print the adjacency list in dot format (can be used for graphviz visualisations)
+			if config.Dot {
+				output.PrintDotOutput(adjacencyList)
+			}
 			jsonString, err := output.SerializeAdjacencyList(adjacencyList, true)
 			if err != nil {
 				return err
@@ -116,6 +123,8 @@ Output is an adjacency list of service dependencies in a JSON format`,
 	cmd.Flags().StringVarP(&serviceCallsDir, "servicecalls-directory", "c", "", "servicecalls package directory")
 	cmd.Flags().BoolVarP(&noColor, "no-color", "n", false, "disable colourful terminal output")
 	cmd.Flags().BoolVarP(&shallow, "shallow", "S", false, "toggle shallow scanning")
+	cmd.Flags().BoolVar(&dot, "dot", false, "toggle dot output printing")
+
 	return cmd
 }
 
